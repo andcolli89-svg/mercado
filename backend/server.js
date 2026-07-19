@@ -4,14 +4,6 @@ const http = require('node:http');
 const { URL } = require('node:url');
 
 const PORT = Number(process.env.PORT || 10000);
-const MELI_CLIENT_ID = process.env.MELI_CLIENT_ID || '';
-const MELI_CLIENT_SECRET = process.env.MELI_CLIENT_SECRET || '';
-const MELI_REDIRECT_URI = process.env.MELI_REDIRECT_URI || '';
-let runtimeTokens = {
-  accessToken: process.env.MELI_ACCESS_TOKEN || '',
-  refreshToken: process.env.MELI_REFRESH_TOKEN || '',
-  expiresAt: 0
-};
 const ALLOWED_HOST = /(^|\.)(meli\.la|mercadolivre\.com\.br|mercadolibre\.com|mercadolibre\.com\.br|mlstatic\.com)$/i;
 const HEADERS = {
   'user-agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36',
@@ -20,6 +12,11 @@ const HEADERS = {
   'cache-control': 'no-cache',
   pragma: 'no-cache'
 };
+
+function apiHeaders() {
+  const token = process.env.MELI_ACCESS_TOKEN || process.env.ACCESS_TOKEN || '';
+  return token ? { ...HEADERS, accept: 'application/json', authorization: `Bearer ${token}` } : { ...HEADERS, accept: 'application/json' };
+}
 
 function cors(extra = {}) {
   return {
@@ -67,33 +64,32 @@ function numeric(value) {
   return normalized ? Number(normalized.replace(',', '.')) : NaN;
 }
 
-function itemIdFrom(text = '') {
-  let raw = String(text);
-
-  // Alguns links chegam codificados uma ou duas vezes (%3A, %253A etc.).
+function safeDecode(value = '') {
+  let result = String(value);
   for (let i = 0; i < 3; i += 1) {
     try {
-      const decoded = decodeURIComponent(raw);
-      if (decoded === raw) break;
-      raw = decoded;
-    } catch {
-      break;
-    }
+      const decoded = decodeURIComponent(result);
+      if (decoded === result) break;
+      result = decoded;
+    } catch { break; }
   }
+  return result;
+}
 
-  // Prioriza o ID real do anúncio (MLB), nunca o ID de catálogo (MLBU).
+function itemIdFrom(text = '') {
+  const raw = safeDecode(text);
   const patterns = [
-    /(?:pdp_filters=)?item_id(?:%3A|:|=)MLB-?(\d{6,})/i,
-    /[?&#]wid=MLB-?(\d{6,})/i,
-    /[?&#]item_id=MLB-?(\d{6,})/i,
-    /"item_id"\s*:\s*"?MLB-?(\d{6,})/i,
-    /"id"\s*:\s*"MLB(\d{6,})"/i,
-    /\bMLB-?(\d{6,})\b/i
+    /(?:item_id|wid)(?:=|:)(MLB-?\d{6,})/i,
+    /[?&#](?:item_id|wid)=MLB-?(\d{6,})/i,
+    /"item_id"\s*:\s*"?(MLB-?\d{6,})/i,
+    /"id"\s*:\s*"(MLB\d{6,})"/i,
+    /\b(MLB-?\d{6,})\b/i
   ];
-
   for (const pattern of patterns) {
     const match = raw.match(pattern);
-    if (match) return `MLB${match[1]}`;
+    if (!match) continue;
+    const value = String(match[1]).replace('-', '').toUpperCase();
+    return value.startsWith('MLB') ? value : `MLB${value}`;
   }
   return '';
 }
@@ -102,39 +98,10 @@ async function fetchWithTimeout(url, options = {}, timeout = 20000) {
   return fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(timeout), ...options });
 }
 
-
-function authHeader() {
-  const token = runtimeTokens.accessToken || process.env.MELI_ACCESS_TOKEN || '';
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function exchangeAuthorizationCode(code) {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: MELI_CLIENT_ID,
-    client_secret: MELI_CLIENT_SECRET,
-    code,
-    redirect_uri: MELI_REDIRECT_URI
-  });
-  const response = await fetchWithTimeout('https://api.mercadolibre.com/oauth/token', {
-    method: 'POST',
-    headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
-    body
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || data.error || `Falha OAuth (${response.status})`);
-  runtimeTokens = {
-    accessToken: data.access_token || '',
-    refreshToken: data.refresh_token || '',
-    expiresAt: Date.now() + Number(data.expires_in || 0) * 1000
-  };
-  return data;
-}
-
 async function fetchSeller(sellerId) {
   if (!sellerId) return '';
   try {
-    const response = await fetchWithTimeout(`https://api.mercadolibre.com/users/${sellerId}`, { headers: { ...HEADERS, ...authHeader() } });
+    const response = await fetchWithTimeout(`https://api.mercadolibre.com/users/${sellerId}`, { headers: apiHeaders() });
     if (!response.ok) return '';
     const data = await response.json();
     return data.nickname || data.first_name || '';
@@ -194,7 +161,7 @@ async function fetchApiPrices(id) {
   for (const url of urls) {
     try {
       const response = await fetchWithTimeout(url, {
-        headers: { ...HEADERS, accept: 'application/json', ...authHeader() }
+        headers: apiHeaders()
       });
       if (!response.ok) continue;
       const result = normalize(await response.json());
@@ -206,16 +173,18 @@ async function fetchApiPrices(id) {
 
 async function fetchApiItem(id) {
   if (!id) return null;
-  const response = await fetchWithTimeout(`https://api.mercadolibre.com/items/${id}`, { headers: { ...HEADERS, ...authHeader() } });
+  const response = await fetchWithTimeout(`https://api.mercadolibre.com/items/${id}`, { headers: apiHeaders() });
   if (!response.ok) return null;
   const item = await response.json();
   const seller = item.seller?.nickname || await fetchSeller(item.seller_id || item.seller?.id);
   return {
     id: item.id || id,
     title: item.title || '',
-    price: money(item.price),
-    oldPrice: money(item.original_price),
+    price: money(item.sale_price?.amount || item.price),
+    oldPrice: money(item.sale_price?.regular_amount || item.original_price),
     seller,
+    sellerId: item.seller_id || item.seller?.id || '',
+    catalogProductId: item.catalog_product_id || '',
     image: item.pictures?.[0]?.secure_url || item.pictures?.[0]?.url || item.secure_thumbnail || item.thumbnail || '',
     permalink: item.permalink || '',
     full: item.shipping?.logistic_type === 'fulfillment' || (item.tags || []).some(tag => /full|fulfillment/i.test(tag))
@@ -347,13 +316,23 @@ async function productFromUrl(source) {
   const image = api?.image || structured.image || meta(html, 'og:image');
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
+  const installmentMatch = text.match(/(?:em\s+)?(\d{1,2})x\s+(?:de\s+)?R\$\s*([\d.]+(?:,\d{2})?)(?:\s+(sem juros|com juros))?/i);
+  const chosenPrice = apiPrices?.price || prices.price || structured.price || api?.price || '';
+  const chosenOldPrice = apiPrices?.oldPrice || prices.oldPrice || structured.oldPrice || api?.oldPrice || '';
+
   return {
     id: api?.id || id,
     title,
-    price: apiPrices?.price || prices.price || structured.price || api?.price || '',
-    oldPrice: apiPrices?.oldPrice || prices.oldPrice || structured.oldPrice || api?.oldPrice || '',
+    price: chosenPrice,
+    pixPrice: chosenPrice,
+    oldPrice: chosenOldPrice,
     otherPrice: prices.otherPrice || '',
+    otherPaymentPrice: prices.otherPrice || '',
     seller,
+    store: seller,
+    installments: installmentMatch?.[1] || '',
+    installmentAmount: money(installmentMatch?.[2] || ''),
+    installmentInterest: installmentMatch?.[3] || '',
     image,
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
     permalink: finalUrl || api?.permalink || input.href,
@@ -378,37 +357,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/auth/login') {
-      if (!MELI_CLIENT_ID || !MELI_REDIRECT_URI) return json(res, 500, { error: 'Configure MELI_CLIENT_ID e MELI_REDIRECT_URI no Render.' });
-      const auth = new URL('https://auth.mercadolivre.com.br/authorization');
-      auth.searchParams.set('response_type', 'code');
-      auth.searchParams.set('client_id', MELI_CLIENT_ID);
-      auth.searchParams.set('redirect_uri', MELI_REDIRECT_URI);
-      res.writeHead(302, { Location: auth.toString(), 'Cache-Control': 'no-store' });
-      return res.end();
-    }
-    if (url.pathname === '/auth/callback') {
-      const code = url.searchParams.get('code');
-      const oauthError = url.searchParams.get('error');
-      if (oauthError) return json(res, 400, { error: oauthError, description: url.searchParams.get('error_description') || '' });
-      if (!code) return json(res, 400, { error: 'Código de autorização não recebido.' });
-      const token = await exchangeAuthorizationCode(code);
-      return json(res, 200, {
-        status: 'authorized',
-        message: 'Mercado Livre autorizado. O token ficou ativo nesta instância do servidor.',
-        expires_in: token.expires_in,
-        user_id: token.user_id,
-        has_refresh_token: Boolean(token.refresh_token)
-      });
-    }
-    if (url.pathname === '/auth/status') {
-      return json(res, 200, {
-        configured: Boolean(MELI_CLIENT_ID && MELI_CLIENT_SECRET && MELI_REDIRECT_URI),
-        authorized: Boolean(runtimeTokens.accessToken || process.env.MELI_ACCESS_TOKEN),
-        expires_at: runtimeTokens.expiresAt || null
-      });
-    }
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '18.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '19.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -424,4 +373,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V18 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V19 disponível na porta ${PORT}`));
