@@ -117,7 +117,7 @@ async function fetchProduct(card) {
     const set = (selector, value) => { $(selector, card).value = value || ''; };
     set('.p-title', product.title);
     set('.p-old', product.oldPrice);
-    set('.p-new', product.price);
+    set('.p-new', product.pixPrice || product.price || product.otherPaymentPrice);
     set('.p-store', product.seller || product.store);
     set('.p-installments', product.installments);
     set('.p-installment-value', product.installmentAmount);
@@ -131,7 +131,7 @@ async function fetchProduct(card) {
     }
     if (!$('.p-joke', card).value) $('.p-joke', card).value = jokeForProduct(product.title || '');
 
-    setStatus(card, 'Produto preenchido. Confira preço, título e cupom antes de publicar.', 'success');
+    setStatus(card, product.pixPrice && product.otherPaymentPrice ? `Produto preenchido. Pix: R$ ${product.pixPrice}; outros meios: R$ ${product.otherPaymentPrice}. Confira antes de publicar.` : 'Produto preenchido. Confira preço, título, vendedor e cupom antes de publicar.', 'success');
     generate();
   } catch (error) {
     const message = error instanceof TypeError

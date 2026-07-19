@@ -318,6 +318,48 @@ function pageProduct(html, permalink) {
   return { title: decodeHtml(title).replace(/\s*\|\s*Mercado Livre.*$/i, '').trim(), price, oldPrice, seller: finalSeller, full, image, permalink, ...installment };
 }
 
+
+
+function visibleOfferDetails(html = '') {
+  const plain = decodeHtml(html)
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const money = (raw = '') => numberBR(String(raw).replace(/\s/g, ''));
+  const first = (patterns) => {
+    for (const pattern of patterns) {
+      const m = plain.match(pattern) || html.match(pattern);
+      if (m?.[1]) return money(m[1]);
+    }
+    return '';
+  };
+
+  // O preço destacado pode ser diferente conforme a forma de pagamento.
+  const pixPrice = first([
+    /R\$\s*([\d.]+(?:,\d{2})?)\s*(?:no\s+Pix|com\s+Pix|via\s+Pix)/i,
+    /(?:price_to_pay|priceToPay)[\s\S]{0,500}?(?:amount|value|decimal_price|decimalPrice)\"?\s*:\s*\"?([\d.]+(?:[.,]\d{1,2})?)/i
+  ]);
+  const otherPaymentPrice = first([
+    /ou\s+R\$\s*([\d.]+(?:,\d{2})?)\s+em\s+outros\s+meios/i,
+    /R\$\s*([\d.]+(?:,\d{2})?)\s+em\s+outros\s+meios/i
+  ]);
+  const listPrice = first([
+    /\d{1,2}%\s*OFF\s*R\$\s*([\d.]+(?:,\d{2})?)/i,
+    /(?:original_price|originalPrice|price_before_discount|previous_price)[\s\S]{0,300}?\"?([\d.]+(?:[.,]\d{1,2})?)/i
+  ]);
+
+  let seller = capture(plain, [
+    /Loja\s+oficial\s+([A-Za-zÀ-ÿ0-9._ -]{2,80}?)(?=\s+(?:Compartilhar|Conferir|Ganhos|Provar|$))/i,
+    /Vendido\s+por\s+([A-Za-zÀ-ÿ0-9._ -]{2,80}?)(?=\s+(?:MercadoLíder|MercadoLider|Compra|Devolução|$))/i
+  ]).trim();
+  if (!seller) seller = meta(html, 'seller') || meta(html, 'product:seller');
+
+  return { pixPrice, otherPaymentPrice, listPrice, seller };
+}
+
 async function request(url, options = {}) {
   return fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(18000), ...options });
 }
@@ -383,6 +425,14 @@ async function fetchItem(url) {
   id = itemIdFrom(finalUrl) || itemIdFrom(html);
 
   const fromPage = pageProduct(html, finalUrl);
+  const offer = visibleOfferDetails(html);
+  if (fromPage) {
+    fromPage.price = offer.pixPrice || offer.otherPaymentPrice || fromPage.price;
+    fromPage.oldPrice = offer.listPrice || fromPage.oldPrice;
+    fromPage.seller = offer.seller || fromPage.seller;
+    fromPage.pixPrice = offer.pixPrice;
+    fromPage.otherPaymentPrice = offer.otherPaymentPrice;
+  }
   if (fromPage && !fromPage.seller) fromPage.seller = await fetchSellerName(sellerIdFrom(html));
   if (id) {
     const apiItem = await fetchApiItem(id);
@@ -391,9 +441,11 @@ async function fetchItem(url) {
       return {
         ...apiItem,
         title: fromPage?.title || apiItem.title,
-        price: fromPage?.price || apiItem.price,
-        oldPrice: fromPage?.oldPrice || apiItem.oldPrice,
-        seller: fromPage?.seller || apiItem.seller,
+        price: offer.pixPrice || offer.otherPaymentPrice || fromPage?.price || apiItem.price,
+        pixPrice: offer.pixPrice || '',
+        otherPaymentPrice: offer.otherPaymentPrice || '',
+        oldPrice: offer.listPrice || fromPage?.oldPrice || apiItem.oldPrice,
+        seller: offer.seller || fromPage?.seller || apiItem.seller,
         full: Boolean(fromPage?.full || apiItem.full),
         installments: fromPage?.installments || apiItem.installments || '',
         installmentAmount: fromPage?.installmentAmount || apiItem.installmentAmount || '',
@@ -413,11 +465,11 @@ async function proxyImage(source, res) {
   if (!['http:', 'https:'].includes(imageUrl.protocol) || !ALLOWED_HOST.test(imageUrl.hostname)) {
     return send(res, 403, 'Imagem não permitida');
   }
-  const response = await request(imageUrl.href, { headers: { 'user-agent': PAGE_HEADERS['user-agent'], accept: 'image/avif,image/webp,image/*,*/*;q=0.8' } });
+  const response = await request(imageUrl.href, { headers: { 'user-agent': PAGE_HEADERS['user-agent'], accept: 'image/avif,image/webp,image/*,*/*;q=0.8', referer: 'https://www.mercadolivre.com.br/' } });
   if (!response.ok) return send(res, response.status, 'Imagem indisponível');
   const contentType = response.headers.get('content-type') || 'image/jpeg';
   const buffer = Buffer.from(await response.arrayBuffer());
-  return send(res, 200, buffer, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
+  return send(res, 200, buffer, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*', 'Cross-Origin-Resource-Policy': 'cross-origin', 'Content-Disposition': 'inline', 'Cache-Control': 'public, max-age=3600' });
 }
 
 http.createServer(async (req, res) => {

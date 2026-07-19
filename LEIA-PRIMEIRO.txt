@@ -1,17 +1,18 @@
-PROMOZAP MELI ANDROID V14
+PROMOZAP MELI — VERSÃO REORGANIZADA 15
 
-Este pacote contém:
-1. pasta android: projeto pronto para abrir no Android Studio e gerar o APK;
-2. pasta backend: servidor Node.js responsável por consultar os anúncios.
+Backend no Render:
+- Root Directory: backend
+- Build Command: npm install
+- Start Command: npm start
 
-COMO GERAR O APK
-1. Instale o Android Studio.
-2. Abra a pasta android.
-3. Aguarde a sincronização do Gradle.
-4. Menu Build > Build Bundle(s) / APK(s) > Build APK(s).
-5. O arquivo será criado em app/build/outputs/apk/debug/app-debug.apk.
+O aplicativo separa, quando disponíveis:
+- preço no Pix/destaque;
+- preço em outros meios;
+- preço anterior;
+- vendedor;
+- imagem por proxy do backend.
 
-IMPORTANTE
-O APK não executa o server.js dentro do celular. Publique a pasta backend em um servidor Node.js (Render, Railway, VPS etc.). Depois, no aplicativo, informe o endereço HTTPS do servidor no campo “Servidor de consulta”.
+IMPORTANTE: preços do Mercado Livre podem mudar por variante, conta, região e forma de pagamento. Sempre confira os dados antes de publicar.
 
-Sem um servidor, ainda é possível preencher os dados manualmente, mas a busca automática não funciona.
+APK AUTOMÁTICO NO GITHUB:
+Após enviar o projeto, abra a aba Ações > Gerar APK. Ao concluir, baixe o artefato PromoZap-APK.
