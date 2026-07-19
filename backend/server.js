@@ -257,10 +257,18 @@ function extractPriceCandidates(html, text, apiPrice) {
   const current = [];
   const old = [];
   const other = [];
-  const add = (list, value) => { const n = numeric(value); if (Number.isFinite(n) && n > 1 && n < 1000000 && !list.some(x => Math.abs(x - n) < 0.005)) list.push(n); };
+  const add = (list, value) => {
+    const n = numeric(value);
+    if (Number.isFinite(n) && n > 1 && n < 1000000 && !list.some(x => Math.abs(x - n) < 0.005)) list.push(n);
+  };
 
+  // Primeiro olha apenas a área principal de preço da página. Isso evita capturar
+  // valores de cashback, outras variações e recomendações.
   const priceAreaIndex = html.search(/ui-pdp-price__main-container|ui-pdp-price__second-line|ui-pdp-price/i);
-  const area = priceAreaIndex >= 0 ? html.slice(Math.max(0, priceAreaIndex - 2000), priceAreaIndex + 30000) : html.slice(0, 120000);
+  const area = priceAreaIndex >= 0
+    ? html.slice(Math.max(0, priceAreaIndex - 4000), priceAreaIndex + 45000)
+    : html.slice(0, 160000);
+
   for (const tag of area.match(/<(?:span|div)\b[^>]*(?:andes-money-amount|aria-label=["'][^"']*(?:reais?|R\$))[^>]*>/gi) || []) {
     const aria = attr(tag, 'aria-label');
     const match = aria.match(/(?:R\$\s*)?([\d.]+(?:,\d{1,2})?)/i);
@@ -269,33 +277,99 @@ function extractPriceCandidates(html, text, apiPrice) {
     else add(current, match[1]);
   }
 
+  // Marcações internas atuais do Mercado Livre.
   const jsonPatterns = [
-    /"priceToPay"\s*:\s*\{[\s\S]{0,1200}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*"?([\d.]+(?:,\d{1,2})?)/gi,
-    /"(?:price_to_pay|sale_price|discounted_price|bestPrice|currentPrice)"\s*:\s*(?:\{[\s\S]{0,500}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
+    /"priceToPay"\s*:\s*\{[\s\S]{0,1600}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*"?([\d.]+(?:,\d{1,2})?)/gi,
+    /"(?:price_to_pay|sale_price|discounted_price|bestPrice|currentPrice)"\s*:\s*(?:\{[\s\S]{0,800}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
   ];
   for (const pattern of jsonPatterns) {
-    let m; while ((m = pattern.exec(html))) add(current, m[1]);
+    let m;
+    while ((m = pattern.exec(area))) add(current, m[1]);
   }
 
   const oldPatterns = [
-    /"(?:original_price|originalPrice|price_before_discount|previous_price|regular_price)"\s*:\s*(?:\{[\s\S]{0,500}?"(?:amount|value)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
+    /"(?:original_price|originalPrice|price_before_discount|previous_price|regular_price)"\s*:\s*(?:\{[\s\S]{0,800}?"(?:amount|value)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
   ];
-  for (const pattern of oldPatterns) { let m; while ((m = pattern.exec(html))) add(old, m[1]); }
+  for (const pattern of oldPatterns) {
+    let m;
+    while ((m = pattern.exec(area))) add(old, m[1]);
+  }
 
-  const promo = text.match(/(?:OFERTA DO DIA\s*)?(\d{1,2})%\s*OFF\s*R\$\s*([\d.]+(?:,\d{2})?)\s*R\$\s*([\d.]+(?:,\d{2})?)/i);
-  if (promo) { add(old, promo[2]); add(current, promo[3]); }
+  // Texto visível: cobre "51% OFF R$ 345 R$ 169" e pequenas variações.
+  const promoPatterns = [
+    /(?:\d{1,2}%\s*OFF\s*)R\$\s*([\d.]+(?:,\d{2})?)\s*R\$\s*([\d.]+(?:,\d{2})?)/i,
+    /R\$\s*([\d.]+(?:,\d{2})?)\s*(?:\d{1,2}%\s*OFF\s*)R\$\s*([\d.]+(?:,\d{2})?)/i,
+    /(?:de\s*)?R\$\s*([\d.]+(?:,\d{2})?)\s*(?:por\s*)R\$\s*([\d.]+(?:,\d{2})?)/i
+  ];
+  for (const pattern of promoPatterns) {
+    const match = text.match(pattern);
+    if (match) { add(old, match[1]); add(current, match[2]); break; }
+  }
+
   const otherMatch = text.match(/ou\s+R\$\s*([\d.]+(?:,\d{2})?)\s+em outros meios/i);
   if (otherMatch) add(other, otherMatch[1]);
 
   const api = numeric(apiPrice);
-  const sensible = current.filter(n => !Number.isFinite(api) || n >= api * 0.25 && n <= api * 1.35);
-  const chosenCurrent = sensible.length ? Math.min(...sensible) : (current.length ? current[0] : api);
-  const chosenOld = old.filter(n => n > chosenCurrent).sort((a, b) => a - b)[0] || (Number.isFinite(api) && api > chosenCurrent ? api : NaN);
+  // O preço visual é a fonte principal. Entre candidatos visuais, o menor costuma
+  // ser o preço promocional, mas descartamos valores absurdamente distantes da API.
+  const sensible = current.filter(n => !Number.isFinite(api) || (n >= api * 0.25 && n <= api * 1.6));
+  const chosenCurrent = sensible.length ? Math.min(...sensible) : (current.length ? Math.min(...current) : api);
+  const chosenOld = old.filter(n => n > chosenCurrent).sort((a, b) => a - b)[0]
+    || (Number.isFinite(api) && api > chosenCurrent ? api : NaN);
+
   return {
     price: Number.isFinite(chosenCurrent) ? money(chosenCurrent) : '',
     oldPrice: Number.isFinite(chosenOld) ? money(chosenOld) : '',
-    otherPrice: other.length ? money(other[0]) : ''
+    otherPrice: other.length ? money(other[0]) : '',
+    pageDetected: current.length > 0
   };
+}
+
+function extractInstallments(html, text, selectedPrice) {
+  const candidates = [];
+  const add = (count, amount, interest = '') => {
+    const n = Number(count);
+    const value = numeric(amount);
+    if (!Number.isInteger(n) || n < 2 || n > 48 || !Number.isFinite(value) || value <= 0) return;
+    if (!candidates.some(x => x.count === n && Math.abs(x.amount - value) < 0.005)) {
+      candidates.push({ count: n, amount: value, interest });
+    }
+  };
+
+  const patterns = [
+    /(\d{1,2})x\s+(?:de\s+)?R\$\s*([\d.]+[,\.]\d{2})(?:\s+(sem juros|com juros))?/gi,
+    /(\d{1,2})x\s+(?:de\s+)?R\$\s*([\d.]+)\s+(\d{2})(?:\s+(sem juros|com juros))?/gi
+  ];
+  for (const pattern of patterns) {
+    let m;
+    while ((m = pattern.exec(text))) {
+      const amount = m[3] && /^\d{2}$/.test(m[3]) ? `${m[2]},${m[3]}` : m[2];
+      const interest = m[4] || (m[3] && !/^\d{2}$/.test(m[3]) ? m[3] : '');
+      add(m[1], amount, interest);
+    }
+  }
+
+  // Dados estruturados usados pelo front-end do anúncio.
+  const jsonPatterns = [
+    /"installments"\s*:\s*(\d{1,2})[\s\S]{0,400}?"(?:installment_amount|amount)"\s*:\s*([\d.]+)/gi,
+    /"quantity"\s*:\s*(\d{1,2})[\s\S]{0,400}?"amount"\s*:\s*([\d.]+)/gi
+  ];
+  for (const pattern of jsonPatterns) {
+    let m;
+    while ((m = pattern.exec(html))) add(m[1], m[2], '');
+  }
+
+  if (!candidates.length) return { count: '', amount: '', interest: '' };
+  const price = numeric(selectedPrice);
+  let chosen = candidates[0];
+  if (Number.isFinite(price)) {
+    chosen = [...candidates].sort((a, b) => {
+      const da = Math.abs((a.count * a.amount) - price) / price;
+      const db = Math.abs((b.count * b.amount) - price) / price;
+      return da - db;
+    })[0];
+  }
+  return { count: String(chosen.count), amount: money(chosen.amount), interest: chosen.interest || '' };
 }
 
 async function productFromUrl(source) {
@@ -316,9 +390,11 @@ async function productFromUrl(source) {
   const image = api?.image || structured.image || meta(html, 'og:image');
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
-  const installmentMatch = text.match(/(?:em\s+)?(\d{1,2})x\s+(?:de\s+)?R\$\s*([\d.]+(?:,\d{2})?)(?:\s+(sem juros|com juros))?/i);
-  const chosenPrice = apiPrices?.price || prices.price || structured.price || api?.price || '';
-  const chosenOldPrice = apiPrices?.oldPrice || prices.oldPrice || structured.oldPrice || api?.oldPrice || '';
+  // O valor exibido na página deve vencer o valor genérico da API, pois pode
+  // haver promoção, preço por contexto ou variação selecionada.
+  const chosenPrice = prices.price || structured.price || apiPrices?.price || api?.price || '';
+  const chosenOldPrice = prices.oldPrice || structured.oldPrice || apiPrices?.oldPrice || api?.oldPrice || '';
+  const installment = extractInstallments(html, text, chosenPrice);
 
   return {
     id: api?.id || id,
@@ -330,14 +406,14 @@ async function productFromUrl(source) {
     otherPaymentPrice: prices.otherPrice || '',
     seller,
     store: seller,
-    installments: installmentMatch?.[1] || '',
-    installmentAmount: money(installmentMatch?.[2] || ''),
-    installmentInterest: installmentMatch?.[3] || '',
+    installments: installment.count,
+    installmentAmount: installment.amount,
+    installmentInterest: installment.interest,
     image,
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
     permalink: finalUrl || api?.permalink || input.href,
     full: Boolean(api?.full),
-    source: { itemId: id || null, priceSource: apiPrices?.source || (prices.price ? 'page' : 'items'), pagePriceDetected: Boolean(prices.price) }
+    source: { itemId: id || null, priceSource: prices.pageDetected ? 'page' : (apiPrices?.source || 'items'), pagePriceDetected: Boolean(prices.pageDetected) }
   };
 }
 
@@ -357,7 +433,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '19.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '20.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -373,4 +449,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V19 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V20 disponível na porta ${PORT}`));
