@@ -68,13 +68,29 @@ function numeric(value) {
 }
 
 function itemIdFrom(text = '') {
-  const raw = String(text);
+  let raw = String(text);
+
+  // Alguns links chegam codificados uma ou duas vezes (%3A, %253A etc.).
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const decoded = decodeURIComponent(raw);
+      if (decoded === raw) break;
+      raw = decoded;
+    } catch {
+      break;
+    }
+  }
+
+  // Prioriza o ID real do anúncio (MLB), nunca o ID de catálogo (MLBU).
   const patterns = [
-    /\bMLB-?(\d{6,})\b/i,
-    /[?&]item_id=MLB-?(\d{6,})/i,
+    /(?:pdp_filters=)?item_id(?:%3A|:|=)MLB-?(\d{6,})/i,
+    /[?&#]wid=MLB-?(\d{6,})/i,
+    /[?&#]item_id=MLB-?(\d{6,})/i,
     /"item_id"\s*:\s*"?MLB-?(\d{6,})/i,
-    /"id"\s*:\s*"MLB(\d{6,})"/i
+    /"id"\s*:\s*"MLB(\d{6,})"/i,
+    /\bMLB-?(\d{6,})\b/i
   ];
+
   for (const pattern of patterns) {
     const match = raw.match(pattern);
     if (match) return `MLB${match[1]}`;
@@ -392,7 +408,7 @@ http.createServer(async (req, res) => {
         expires_at: runtimeTokens.expiresAt || null
       });
     }
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '17.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '18.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -408,4 +424,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V17 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V18 disponível na porta ${PORT}`));
