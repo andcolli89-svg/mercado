@@ -188,14 +188,88 @@ function installmentData(html = '', price = '', priceArea = '') {
   };
 }
 
-function pageProduct(html, permalink) {
-  const title = meta(html, 'og:title') || meta(html, 'twitter:title') || capture(html, [/<title[^>]*>([^<]+)<\/title>/i]);
-  const image = meta(html, 'og:image') || meta(html, 'twitter:image') || capture(html, [/"secure_url"\s*:\s*"([^"]+)"/i, /"thumbnail"\s*:\s*"([^"]+)"/i]);
 
-  // O preço visível da oferta é priorizado. O Mercado Livre pode devolver na API
-  // o preço-base da variação, enquanto a página mostra o preço promocional real.
+function jsonLdProduct(html = '') {
+  const scripts = html.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+  const visit = (value) => {
+    if (!value) return null;
+    if (Array.isArray(value)) {
+      for (const item of value) { const found = visit(item); if (found) return found; }
+      return null;
+    }
+    if (typeof value !== 'object') return null;
+    const type = String(value['@type'] || '').toLowerCase();
+    if (type === 'product') return value;
+    for (const child of Object.values(value)) { const found = visit(child); if (found) return found; }
+    return null;
+  };
+  for (const script of scripts) {
+    const raw = script.replace(/^<script\b[^>]*>/i, '').replace(/<\/script>$/i, '').trim();
+    try {
+      const product = visit(JSON.parse(decodeHtml(raw)));
+      if (!product) continue;
+      const offers = Array.isArray(product.offers) ? product.offers[0] : (product.offers || {});
+      const seller = offers.seller || product.seller || {};
+      return {
+        title: product.name || '',
+        image: Array.isArray(product.image) ? product.image[0] : (product.image?.url || product.image || ''),
+        price: numberBR(offers.price || offers.lowPrice || ''),
+        oldPrice: numberBR(offers.highPrice || ''),
+        seller: seller.name || seller.alternateName || ''
+      };
+    } catch { /* JSON-LD inválido; continua nos demais */ }
+  }
+  return {};
+}
+
+function mainPriceData(html = '') {
+  const lower = html.toLowerCase();
+  const anchors = ['ui-pdp-price__main-container', 'ui-pdp-price__second-line', 'ui-pdp-price'];
+  let start = -1;
+  for (const anchor of anchors) {
+    start = lower.indexOf(anchor);
+    if (start >= 0) break;
+  }
+  const area = start >= 0 ? html.slice(Math.max(0, start - 800), start + 22000) : html.slice(0, 60000);
+  const amounts = [];
+  const tags = area.match(/<(?:span|div)\b[^>]*(?:andes-money-amount|aria-label=["'][^"']*(?:reais?|R\$))[^>]*>/gi) || [];
+  for (const tag of tags) {
+    const aria = attr(tag, 'aria-label');
+    const value = aria ? moneyFromAriaLabel(aria) : '';
+    if (!value) continue;
+    const normalizedTag = tag.toLowerCase();
+    const previous = /previous|original|price-tag-previous|ui-pdp-price__original-value/.test(normalizedTag);
+    amounts.push({ value, previous });
+  }
+  const unique = [];
+  for (const item of amounts) if (!unique.some(x => x.value === item.value && x.previous === item.previous)) unique.push(item);
+  return {
+    current: unique.find(x => !x.previous)?.value || '',
+    old: unique.find(x => x.previous)?.value || '',
+    all: unique.map(x => x.value),
+    area
+  };
+}
+
+function sellerIdFrom(html = '') {
+  return capture(html, [
+    /"seller_id"\s*:\s*"?(\d{4,})/i,
+    /"sellerId"\s*:\s*"?(\d{4,})/i,
+    /seller_id=(\d{4,})/i,
+    /\/users\/(\d{4,})/i
+  ]);
+}
+
+function pageProduct(html, permalink) {
+  const structured = jsonLdProduct(html);
+  const title = structured.title || meta(html, 'og:title') || meta(html, 'twitter:title') || capture(html, [/<title[^>]*>([^<]+)<\/title>/i]);
+  const image = structured.image || meta(html, 'og:image') || meta(html, 'twitter:image') || capture(html, [/"secure_url"\s*:\s*"([^"]+)"/i, /"thumbnail"\s*:\s*"([^"]+)"/i]);
+
+  // Prioriza o bloco principal e o JSON-LD do produto. Isso evita capturar preços
+  // de parcelas, recomendações ou de outra variação escondida na página.
+  const main = mainPriceData(html);
   const visible = visiblePrices(html);
-  const rawPrice = visible.current || capture(html, [
+  const rawPrice = main.current || structured.price || visible.current || capture(html, [
     /"priceToPay"\s*:\s*\{[^{}]{0,900}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*"?([\d.,]+)/i,
     /"(?:price_to_pay|sale_price|discounted_price|bestPrice|currentPrice)"\s*:\s*(?:\{[^{}]{0,600}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*)?"?([\d.,]+)/i,
     /"offers"\s*:\s*\{[^{}]{0,1200}?"price"\s*:\s*"?([\d.,]+)/i,
@@ -203,12 +277,12 @@ function pageProduct(html, permalink) {
     /andes-money-amount__fraction[^>]*>\s*([\d.]+)\s*</i
   ]) || meta(html, 'product:price:amount') || meta(html, 'price');
 
-  const rawOld = visible.old || capture(html, [
+  const rawOld = main.old || structured.oldPrice || visible.old || capture(html, [
     /"(?:original_price|originalPrice|price_before_discount|previous_price|regular_price)"\s*:\s*(?:\{[^{}]{0,600}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*)?"?([\d.,]+)/i,
     /andes-money-amount--previous[^>]*[\s\S]{0,500}?andes-money-amount__fraction[^>]*>\s*([\d.]+)\s*</i
   ]);
 
-  const seller = capture(html, [
+  const seller = structured.seller || capture(html, [
     /"seller"\s*:\s*\{[^{}]{0,1800}?"(?:nickname|name|seller_name|official_store_name)"\s*:\s*"([^"]+)"/i,
     /"(?:seller_name|sellerName|official_store_name|officialStoreName|nickname)"\s*:\s*"([^"]+)"/i,
     /Vendido\s+por[\s\S]{0,900}?<a[^>]*>([\s\S]{0,160}?)<\/a>/i,
@@ -227,10 +301,15 @@ function pageProduct(html, permalink) {
   let price = numberBR(rawPrice);
   let oldPrice = numberBR(rawOld);
   const discount = discountPercent(html);
-  const installment = installmentData(html, price, visible.area);
+  const installment = installmentData(html, price, main.area || visible.area);
 
-
-  if (oldPrice && (!price || price === oldPrice) && discount) price = calculateDiscountPrice(oldPrice, discount);
+  // Quando a página informa o desconto, usa o maior valor visível plausível como
+  // preço anterior e calcula o preço atual apenas se o atual não foi encontrado.
+  const candidateNumbers = (main.all || []).map(value => Number(value.replace(/\./g, '').replace(',', '.'))).filter(Number.isFinite);
+  const currentNumber = Number(String(price || '').replace(/\./g, '').replace(',', '.'));
+  const plausibleOld = candidateNumbers.filter(value => !Number.isFinite(currentNumber) || value > currentNumber).sort((a, b) => b - a)[0];
+  if (!oldPrice && Number.isFinite(plausibleOld)) oldPrice = numberBR(plausibleOld);
+  if ((!price || (oldPrice && price === oldPrice)) && oldPrice && discount) price = calculateDiscountPrice(oldPrice, discount);
   if (price && oldPrice && price === oldPrice) oldPrice = '';
   const currentN = Number(String(price || '').replace(/\./g, '').replace(',', '.'));
   const oldN = Number(String(oldPrice || '').replace(/\./g, '').replace(',', '.'));
@@ -304,6 +383,7 @@ async function fetchItem(url) {
   id = itemIdFrom(finalUrl) || itemIdFrom(html);
 
   const fromPage = pageProduct(html, finalUrl);
+  if (fromPage && !fromPage.seller) fromPage.seller = await fetchSellerName(sellerIdFrom(html));
   if (id) {
     const apiItem = await fetchApiItem(id);
     if (apiItem) {

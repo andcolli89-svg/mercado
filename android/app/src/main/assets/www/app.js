@@ -123,7 +123,12 @@ async function fetchProduct(card) {
     set('.p-installment-value', product.installmentAmount);
     set('.p-installment-interest', product.installmentInterest);
     $('.p-full', card).checked = Boolean(product.full);
-    if (product.image) setProductImage(card, product.imageProxy || product.image);
+    if (product.image) {
+      const proxyUrl = product.imageProxy
+        ? (product.imageProxy.startsWith('/') ? `${apiBase}${product.imageProxy}` : product.imageProxy)
+        : product.image;
+      setProductImage(card, proxyUrl);
+    }
     if (!$('.p-joke', card).value) $('.p-joke', card).value = jokeForProduct(product.title || '');
 
     setStatus(card, 'Produto preenchido. Confira preço, título e cupom antes de publicar.', 'success');
