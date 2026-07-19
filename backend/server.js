@@ -88,6 +88,69 @@ async function fetchSeller(sellerId) {
   } catch { return ''; }
 }
 
+
+async function fetchApiPrices(id) {
+  if (!id) return null;
+
+  const normalize = data => {
+    if (!data || typeof data !== 'object') return null;
+
+    // /sale_price retorna diretamente amount e regular_amount.
+    if (data.amount != null) {
+      return {
+        price: money(data.amount),
+        oldPrice: money(data.regular_amount),
+        source: 'sale_price'
+      };
+    }
+
+    // /prices retorna uma lista de preços por contexto.
+    const list = Array.isArray(data.prices) ? data.prices : [];
+    if (!list.length) return null;
+    const now = Date.now();
+    const active = list.filter(entry => {
+      const conditions = entry.conditions || {};
+      const start = conditions.start_time ? Date.parse(conditions.start_time) : NaN;
+      const end = conditions.end_time ? Date.parse(conditions.end_time) : NaN;
+      return (!Number.isFinite(start) || start <= now) && (!Number.isFinite(end) || end >= now);
+    });
+    const marketplace = active.filter(entry => {
+      const restrictions = entry.conditions?.context_restrictions || [];
+      return !restrictions.length || restrictions.includes('channel_marketplace');
+    });
+    const candidates = marketplace.length ? marketplace : active;
+    const promotions = candidates.filter(entry => entry.type === 'promotion' && numeric(entry.amount) > 0);
+    const standards = candidates.filter(entry => entry.type === 'standard' && numeric(entry.amount) > 0);
+    const winner = promotions.sort((a, b) => numeric(a.amount) - numeric(b.amount))[0]
+      || standards.sort((a, b) => numeric(a.amount) - numeric(b.amount))[0]
+      || candidates.find(entry => numeric(entry.amount) > 0);
+    if (!winner) return null;
+    const standard = standards.sort((a, b) => numeric(a.amount) - numeric(b.amount))[0];
+    const current = money(winner.amount);
+    let previous = money(winner.regular_amount);
+    if (!previous && standard && numeric(standard.amount) > numeric(winner.amount)) previous = money(standard.amount);
+    return { price: current, oldPrice: previous, source: 'prices' };
+  };
+
+  // O endpoint contextual é o que mais se aproxima do preço mostrado no marketplace.
+  const urls = [
+    `https://api.mercadolibre.com/items/${id}/sale_price?context=channel_marketplace`,
+    `https://api.mercadolibre.com/items/${id}/prices`
+  ];
+
+  for (const url of urls) {
+    try {
+      const response = await fetchWithTimeout(url, {
+        headers: { ...HEADERS, accept: 'application/json' }
+      });
+      if (!response.ok) continue;
+      const result = normalize(await response.json());
+      if (result?.price) return result;
+    } catch { /* tenta o próximo recurso */ }
+  }
+  return null;
+}
+
 async function fetchApiItem(id) {
   if (!id) return null;
   const response = await fetchWithTimeout(`https://api.mercadolibre.com/items/${id}`, { headers: HEADERS });
@@ -222,10 +285,10 @@ async function productFromUrl(source) {
   const finalUrl = landing.url;
   const html = await landing.text();
   const id = itemIdFrom(finalUrl) || itemIdFrom(html);
-  const api = await fetchApiItem(id);
+  const [api, apiPrices] = await Promise.all([fetchApiItem(id), fetchApiPrices(id)]);
   const structured = jsonLd(html);
   const text = pageText(html);
-  const prices = extractPriceCandidates(html, text, api?.price || structured.price);
+  const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
   const seller = extractSeller(html, text) || structured.seller || api?.seller || '';
   const title = structured.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
   const image = api?.image || structured.image || meta(html, 'og:image');
@@ -234,15 +297,15 @@ async function productFromUrl(source) {
   return {
     id: api?.id || id,
     title,
-    price: prices.price || structured.price || api?.price || '',
-    oldPrice: prices.oldPrice || structured.oldPrice || api?.oldPrice || '',
+    price: apiPrices?.price || prices.price || structured.price || api?.price || '',
+    oldPrice: apiPrices?.oldPrice || prices.oldPrice || structured.oldPrice || api?.oldPrice || '',
     otherPrice: prices.otherPrice || '',
     seller,
     image,
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
     permalink: finalUrl || api?.permalink || input.href,
     full: Boolean(api?.full),
-    source: { itemId: id || null, pagePriceDetected: Boolean(prices.price) }
+    source: { itemId: id || null, priceSource: apiPrices?.source || (prices.price ? 'page' : 'items'), pagePriceDetected: Boolean(prices.price) }
   };
 }
 
@@ -262,7 +325,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '16.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '17.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -278,4 +341,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V16 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V17 disponível na porta ${PORT}`));

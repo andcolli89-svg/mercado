@@ -1,10 +1,10 @@
-PROMOZAP MELI V16
+PROMOZAP MELI V17
 
 1. Copie todo o conteúdo desta pasta para a raiz do repositório mercado.
 2. Execute: git add .
-3. Execute: git commit -m "Projeto limpo V16"
+3. Execute: git commit -m "Projeto limpo V17"
 4. Execute: git push origin main
 5. Aguarde o Render ficar Live.
-6. Em GitHub > Actions, baixe PromoZap-MELI-V16-APK.
+6. Em GitHub > Actions, baixe PromoZap-MELI-V17-APK.
 
 Observação: o preço exibido pelo Mercado Livre pode variar por conta, CEP, forma de pagamento e variante. O backend prioriza a oferta visível na página e usa a API oficial como fallback.

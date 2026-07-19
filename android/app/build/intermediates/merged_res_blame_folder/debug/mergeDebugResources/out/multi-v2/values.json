@@ -4,7 +4,7 @@
             "outputFile": "com.promozap.meli.app-mergeDebugResources-2:/values/values.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\Fabio\\Desktop\\joao\\Programa do Mercado Livre\\PromoZap_MELI_ANDROID_V14\\android\\app\\src\\main\\res\\values\\styles.xml",
+                    "source": "C:\\Users\\Fabio\\Desktop\\joao\\Programa do Mercado Livre\\promozap_v16\\android\\app\\src\\main\\res\\values\\styles.xml",
                     "from": {
                         "startLines": "1",
                         "startColumns": "4",

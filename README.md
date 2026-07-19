@@ -1,4 +1,4 @@
-# PromoZap MELI V16
+# PromoZap MELI V17
 
 Projeto limpo com:
 - Android WebView sem bibliotecas externas;
@@ -13,4 +13,4 @@ Build Command: `npm install`
 Start Command: `npm start`
 
 ## APK
-Abra **Actions > Gerar APK V16** e baixe o artefato `PromoZap-MELI-V16-APK`.
+Abra **Actions > Gerar APK V17** e baixe o artefato `PromoZap-MELI-V17-APK`.
