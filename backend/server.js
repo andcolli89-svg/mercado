@@ -18,7 +18,13 @@ const PAGE_HEADERS = {
 };
 
 const send = (res, status, body, headers = {}) => {
-  res.writeHead(status, { 'Cache-Control': 'no-store', ...headers });
+  res.writeHead(status, {
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    ...headers
+  });
   res.end(body);
 };
 
@@ -337,6 +343,13 @@ async function proxyImage(source, res) {
 http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (req.method === 'OPTIONS') return send(res, 204, '');
+    if (url.pathname === '/') {
+      return send(res, 200, JSON.stringify({
+        status: 'ok',
+        message: 'Servidor PromoZap funcionando'
+      }), { 'Content-Type': 'application/json; charset=utf-8' });
+    }
     if (url.pathname === '/api/product') {
       const source = cleanProductUrl(url.searchParams.get('url'));
       if (!source) return send(res, 400, JSON.stringify({ error: 'Informe o link do produto.' }), { 'Content-Type': 'application/json; charset=utf-8' });

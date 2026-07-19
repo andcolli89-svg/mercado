@@ -18,29 +18,33 @@
 14-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:18-44
 15        android:debuggable="true"
 16        android:extractNativeLibs="false"
-17        android:label="PromoZap MELI"
-17-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:45-74
-18        android:theme="@style/AppTheme"
-18-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:75-106
-19        android:usesCleartextTraffic="true" >
-19-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:107-142
-20        <activity
-20-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:4:9-9:20
-21            android:name="com.promozap.meli.MainActivity"
-21-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:4:19-47
-22            android:exported="true" >
-22-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:4:48-71
-23            <intent-filter>
-23-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:5:13-8:29
-24                <action android:name="android.intent.action.MAIN" />
-24-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:6:17-69
-24-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:6:25-66
-25
-26                <category android:name="android.intent.category.LAUNCHER" />
-26-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:7:17-77
-26-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:7:27-74
-27            </intent-filter>
-28        </activity>
-29    </application>
-30
-31</manifest>
+17        android:icon="@mipmap/ic_launcher"
+17-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:45-79
+18        android:label="PromoZap MELI"
+18-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:126-155
+19        android:roundIcon="@mipmap/ic_launcher_round"
+19-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:80-125
+20        android:theme="@style/AppTheme"
+20-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:156-187
+21        android:usesCleartextTraffic="true" >
+21-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:3:188-223
+22        <activity
+22-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:4:9-9:20
+23            android:name="com.promozap.meli.MainActivity"
+23-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:4:19-47
+24            android:exported="true" >
+24-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:4:48-71
+25            <intent-filter>
+25-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:5:13-8:29
+26                <action android:name="android.intent.action.MAIN" />
+26-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:6:17-69
+26-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:6:25-66
+27
+28                <category android:name="android.intent.category.LAUNCHER" />
+28-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:7:17-77
+28-->C:\Users\Fabio\Desktop\joao\Programa do Mercado Livre\PromoZap_MELI_ANDROID_V14\android\app\src\main\AndroidManifest.xml:7:27-74
+29            </intent-filter>
+30        </activity>
+31    </application>
+32
+33</manifest>
