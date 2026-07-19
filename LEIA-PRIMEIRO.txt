@@ -1,0 +1,17 @@
+PROMOZAP MELI ANDROID V14
+
+Este pacote contém:
+1. pasta android: projeto pronto para abrir no Android Studio e gerar o APK;
+2. pasta backend: servidor Node.js responsável por consultar os anúncios.
+
+COMO GERAR O APK
+1. Instale o Android Studio.
+2. Abra a pasta android.
+3. Aguarde a sincronização do Gradle.
+4. Menu Build > Build Bundle(s) / APK(s) > Build APK(s).
+5. O arquivo será criado em app/build/outputs/apk/debug/app-debug.apk.
+
+IMPORTANTE
+O APK não executa o server.js dentro do celular. Publique a pasta backend em um servidor Node.js (Render, Railway, VPS etc.). Depois, no aplicativo, informe o endereço HTTPS do servidor no campo “Servidor de consulta”.
+
+Sem um servidor, ainda é possível preencher os dados manualmente, mas a busca automática não funciona.

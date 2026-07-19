@@ -1,0 +1,13 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.promozap.meli'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.promozap.meli'
+        minSdk 24
+        targetSdk 35
+        versionCode 14
+        versionName '14.0'
+    }
+}

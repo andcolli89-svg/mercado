@@ -1,0 +1,7 @@
+Servidor do PromoZap MELI
+
+Execute:
+  npm install
+  npm start
+
+Para usar no APK, publique este servidor em um endereço HTTPS e informe esse endereço na primeira caixa do aplicativo.
