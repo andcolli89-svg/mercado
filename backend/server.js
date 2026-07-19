@@ -4,6 +4,14 @@ const http = require('node:http');
 const { URL } = require('node:url');
 
 const PORT = Number(process.env.PORT || 10000);
+const MELI_CLIENT_ID = process.env.MELI_CLIENT_ID || '';
+const MELI_CLIENT_SECRET = process.env.MELI_CLIENT_SECRET || '';
+const MELI_REDIRECT_URI = process.env.MELI_REDIRECT_URI || '';
+let runtimeTokens = {
+  accessToken: process.env.MELI_ACCESS_TOKEN || '',
+  refreshToken: process.env.MELI_REFRESH_TOKEN || '',
+  expiresAt: 0
+};
 const ALLOWED_HOST = /(^|\.)(meli\.la|mercadolivre\.com\.br|mercadolibre\.com|mercadolibre\.com\.br|mlstatic\.com)$/i;
 const HEADERS = {
   'user-agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36',
@@ -78,10 +86,39 @@ async function fetchWithTimeout(url, options = {}, timeout = 20000) {
   return fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(timeout), ...options });
 }
 
+
+function authHeader() {
+  const token = runtimeTokens.accessToken || process.env.MELI_ACCESS_TOKEN || '';
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function exchangeAuthorizationCode(code) {
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: MELI_CLIENT_ID,
+    client_secret: MELI_CLIENT_SECRET,
+    code,
+    redirect_uri: MELI_REDIRECT_URI
+  });
+  const response = await fetchWithTimeout('https://api.mercadolibre.com/oauth/token', {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || data.error || `Falha OAuth (${response.status})`);
+  runtimeTokens = {
+    accessToken: data.access_token || '',
+    refreshToken: data.refresh_token || '',
+    expiresAt: Date.now() + Number(data.expires_in || 0) * 1000
+  };
+  return data;
+}
+
 async function fetchSeller(sellerId) {
   if (!sellerId) return '';
   try {
-    const response = await fetchWithTimeout(`https://api.mercadolibre.com/users/${sellerId}`, { headers: HEADERS });
+    const response = await fetchWithTimeout(`https://api.mercadolibre.com/users/${sellerId}`, { headers: { ...HEADERS, ...authHeader() } });
     if (!response.ok) return '';
     const data = await response.json();
     return data.nickname || data.first_name || '';
@@ -141,7 +178,7 @@ async function fetchApiPrices(id) {
   for (const url of urls) {
     try {
       const response = await fetchWithTimeout(url, {
-        headers: { ...HEADERS, accept: 'application/json' }
+        headers: { ...HEADERS, accept: 'application/json', ...authHeader() }
       });
       if (!response.ok) continue;
       const result = normalize(await response.json());
@@ -153,7 +190,7 @@ async function fetchApiPrices(id) {
 
 async function fetchApiItem(id) {
   if (!id) return null;
-  const response = await fetchWithTimeout(`https://api.mercadolibre.com/items/${id}`, { headers: HEADERS });
+  const response = await fetchWithTimeout(`https://api.mercadolibre.com/items/${id}`, { headers: { ...HEADERS, ...authHeader() } });
   if (!response.ok) return null;
   const item = await response.json();
   const seller = item.seller?.nickname || await fetchSeller(item.seller_id || item.seller?.id);
@@ -325,6 +362,36 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (url.pathname === '/auth/login') {
+      if (!MELI_CLIENT_ID || !MELI_REDIRECT_URI) return json(res, 500, { error: 'Configure MELI_CLIENT_ID e MELI_REDIRECT_URI no Render.' });
+      const auth = new URL('https://auth.mercadolivre.com.br/authorization');
+      auth.searchParams.set('response_type', 'code');
+      auth.searchParams.set('client_id', MELI_CLIENT_ID);
+      auth.searchParams.set('redirect_uri', MELI_REDIRECT_URI);
+      res.writeHead(302, { Location: auth.toString(), 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+    if (url.pathname === '/auth/callback') {
+      const code = url.searchParams.get('code');
+      const oauthError = url.searchParams.get('error');
+      if (oauthError) return json(res, 400, { error: oauthError, description: url.searchParams.get('error_description') || '' });
+      if (!code) return json(res, 400, { error: 'Código de autorização não recebido.' });
+      const token = await exchangeAuthorizationCode(code);
+      return json(res, 200, {
+        status: 'authorized',
+        message: 'Mercado Livre autorizado. O token ficou ativo nesta instância do servidor.',
+        expires_in: token.expires_in,
+        user_id: token.user_id,
+        has_refresh_token: Boolean(token.refresh_token)
+      });
+    }
+    if (url.pathname === '/auth/status') {
+      return json(res, 200, {
+        configured: Boolean(MELI_CLIENT_ID && MELI_CLIENT_SECRET && MELI_REDIRECT_URI),
+        authorized: Boolean(runtimeTokens.accessToken || process.env.MELI_ACCESS_TOKEN),
+        expires_at: runtimeTokens.expiresAt || null
+      });
+    }
     if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '17.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
