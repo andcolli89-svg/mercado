@@ -233,6 +233,72 @@ function jsonLd(html) {
   return {};
 }
 
+
+function embeddedJsonObjects(html) {
+  const values = [];
+  const scripts = html.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) || [];
+  for (const script of scripts) {
+    const raw = script.replace(/^<script\b[^>]*>/i, '').replace(/<\/script>$/i, '').trim();
+    if (!raw || raw.length > 5000000) continue;
+    const candidates = [raw];
+    const firstBrace = raw.indexOf('{');
+    const lastBrace = raw.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace > firstBrace) candidates.push(raw.slice(firstBrace, lastBrace + 1));
+    for (const candidate of candidates) {
+      try {
+        const parsed = JSON.parse(decodeHtml(candidate));
+        values.push(parsed);
+        break;
+      } catch { /* scripts de aplicação nem sempre são JSON puro */ }
+    }
+  }
+  return values;
+}
+
+function findStructuredCommerce(html) {
+  const result = { price: '', oldPrice: '', installments: '', installmentAmount: '', seller: '' };
+  const seen = new Set();
+  const visit = (value, depth = 0) => {
+    if (!value || depth > 14 || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1);
+      return;
+    }
+
+    const get = (...keys) => {
+      for (const key of keys) if (value[key] !== undefined && value[key] !== null) return value[key];
+      return undefined;
+    };
+    const amountOf = candidate => {
+      if (candidate && typeof candidate === 'object') return get.call(candidate, 'amount', 'value', 'decimal_price', 'decimalPrice');
+      return candidate;
+    };
+
+    const currentRaw = get('priceToPay', 'price_to_pay', 'sale_price', 'salePrice', 'discounted_price', 'discountedPrice', 'currentPrice', 'bestPrice');
+    const oldRaw = get('original_price', 'originalPrice', 'regular_amount', 'regularAmount', 'previous_price', 'previousPrice', 'price_before_discount');
+    const current = money(currentRaw && typeof currentRaw === 'object' ? (currentRaw.amount ?? currentRaw.value ?? currentRaw.decimal_price ?? currentRaw.decimalPrice) : currentRaw);
+    const previous = money(oldRaw && typeof oldRaw === 'object' ? (oldRaw.amount ?? oldRaw.value) : oldRaw);
+    if (!result.price && current) result.price = current;
+    if (!result.oldPrice && previous) result.oldPrice = previous;
+
+    const count = Number(get('installments', 'installment_quantity', 'installmentQuantity', 'quantity'));
+    const installmentRaw = get('installment_amount', 'installmentAmount');
+    const installment = money(installmentRaw && typeof installmentRaw === 'object' ? (installmentRaw.amount ?? installmentRaw.value) : installmentRaw);
+    if (!result.installments && Number.isInteger(count) && count >= 2 && count <= 48 && installment) {
+      result.installments = String(count);
+      result.installmentAmount = installment;
+    }
+
+    const seller = get('official_store_name', 'seller_name', 'sellerName', 'nickname');
+    if (!result.seller && typeof seller === 'string' && seller.trim().length >= 2) result.seller = clean(seller);
+
+    for (const child of Object.values(value)) visit(child, depth + 1);
+  };
+  for (const value of embeddedJsonObjects(html)) visit(value);
+  return result;
+}
+
 function pageText(html) {
   return decodeHtml(html)
     .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
@@ -383,32 +449,49 @@ async function productFromUrl(source) {
   const id = itemIdFrom(finalUrl) || itemIdFrom(html);
   const [api, apiPrices] = await Promise.all([fetchApiItem(id), fetchApiPrices(id)]);
   const structured = jsonLd(html);
+  const commerce = findStructuredCommerce(html);
   const text = pageText(html);
   const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
-  const seller = extractSeller(html, text) || structured.seller || api?.seller || '';
+  const seller = extractSeller(html, text) || commerce.seller || structured.seller || api?.seller || '';
   const title = structured.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
   const image = api?.image || structured.image || meta(html, 'og:image');
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
   // O valor exibido na página deve vencer o valor genérico da API, pois pode
   // haver promoção, preço por contexto ou variação selecionada.
-  const chosenPrice = prices.price || structured.price || apiPrices?.price || api?.price || '';
-  const chosenOldPrice = prices.oldPrice || structured.oldPrice || apiPrices?.oldPrice || api?.oldPrice || '';
-  const installment = extractInstallments(html, text, chosenPrice);
+  const chosenPrice = prices.price || commerce.price || structured.price || apiPrices?.price || api?.price || '';
+  const chosenOldPrice = prices.oldPrice || commerce.oldPrice || structured.oldPrice || apiPrices?.oldPrice || api?.oldPrice || '';
+  const parsedInstallment = extractInstallments(html, text, chosenPrice);
+  const installment = parsedInstallment.count ? parsedInstallment : {
+    count: commerce.installments || '',
+    amount: commerce.installmentAmount || '',
+    interest: ''
+  };
+  const currentNumber = numeric(chosenPrice);
+  const oldNumber = numeric(chosenOldPrice);
+  const discount = Number.isFinite(currentNumber) && Number.isFinite(oldNumber) && oldNumber > currentNumber
+    ? Math.round((1 - currentNumber / oldNumber) * 100)
+    : '';
 
   return {
     id: api?.id || id,
     title,
     price: chosenPrice,
+    currentPrice: chosenPrice,
+    salePrice: chosenPrice,
     pixPrice: chosenPrice,
     oldPrice: chosenOldPrice,
+    originalPrice: chosenOldPrice,
+    listPrice: chosenOldPrice,
     otherPrice: prices.otherPrice || '',
     otherPaymentPrice: prices.otherPrice || '',
     seller,
     store: seller,
     installments: installment.count,
     installmentAmount: installment.amount,
+    installmentValue: installment.amount,
     installmentInterest: installment.interest,
+    discount,
     image,
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
     permalink: finalUrl || api?.permalink || input.href,
@@ -433,7 +516,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '20.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '21.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -449,4 +532,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V20 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V21 disponível na porta ${PORT}`));
