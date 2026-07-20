@@ -171,6 +171,78 @@ async function fetchApiPrices(id) {
   return null;
 }
 
+
+function commerceFromObject(data, preferredId = '') {
+  const result = { price: '', oldPrice: '', seller: '', sellerId: '', image: '', title: '', permalink: '', source: '' };
+  const seen = new Set();
+  const preferred = String(preferredId || '').replace('-', '').toUpperCase();
+
+  const readAmount = value => {
+    if (value && typeof value === 'object') {
+      return money(value.amount ?? value.value ?? value.decimal_price ?? value.decimalPrice);
+    }
+    return money(value);
+  };
+
+  const visit = (value, depth = 0, path = '') => {
+    if (!value || depth > 14 || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    if (Array.isArray(value)) {
+      const exact = value.find(x => String(x?.id || '').replace('-', '').toUpperCase() === preferred);
+      if (exact) visit(exact, depth + 1, `${path}.preferred`);
+      for (const item of value) visit(item, depth + 1, path);
+      return;
+    }
+
+    const objectId = String(value.id || value.item_id || value.itemId || '').replace('-', '').toUpperCase();
+    const isPreferred = preferred && objectId === preferred;
+    const price = readAmount(value.sale_price ?? value.salePrice ?? value.price_to_pay ?? value.priceToPay ?? value.price);
+    const oldPrice = readAmount(value.original_price ?? value.originalPrice ?? value.regular_amount ?? value.regularAmount ?? value.list_price ?? value.listPrice);
+
+    // Evita confundir valor de parcela com preço do produto.
+    if (price && !/installment|financing|shipping/i.test(path)) {
+      if (!result.price || isPreferred) {
+        result.price = price;
+        result.source = path || 'api-object';
+      }
+    }
+    if (oldPrice && numeric(oldPrice) > numeric(result.price || price)) result.oldPrice = oldPrice;
+
+    const seller = value.seller?.nickname || value.seller_name || value.sellerName || value.official_store_name || value.nickname;
+    if (!result.seller && typeof seller === 'string') result.seller = clean(seller);
+    result.sellerId ||= value.seller_id || value.seller?.id || '';
+    result.title ||= typeof value.title === 'string' ? value.title : '';
+    result.permalink ||= typeof value.permalink === 'string' ? value.permalink : '';
+    result.image ||= value.pictures?.[0]?.secure_url || value.pictures?.[0]?.url || value.secure_thumbnail || value.thumbnail || value.image || '';
+
+    for (const [key, child] of Object.entries(value)) visit(child, depth + 1, `${path}.${key}`);
+  };
+
+  visit(data);
+  return result;
+}
+
+async function fetchApiFallbacks(id, catalogProductId = '') {
+  const endpoints = [];
+  if (catalogProductId) {
+    endpoints.push(
+      [`https://api.mercadolibre.com/products/${catalogProductId}`, 'catalog-product'],
+      [`https://api.mercadolibre.com/products/${catalogProductId}/items`, 'catalog-items']
+    );
+  }
+  if (id) endpoints.push([`https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(id)}`, 'search']);
+
+  for (const [url, source] of endpoints) {
+    try {
+      const response = await fetchWithTimeout(url, { headers: apiHeaders() });
+      if (!response.ok) continue;
+      const found = commerceFromObject(await response.json(), id);
+      if (found.price) return { ...found, source };
+    } catch { /* tenta o próximo endpoint */ }
+  }
+  return null;
+}
+
 async function fetchApiItem(id) {
   if (!id) return null;
   const response = await fetchWithTimeout(`https://api.mercadolibre.com/items/${id}`, { headers: apiHeaders() });
@@ -447,20 +519,26 @@ async function productFromUrl(source) {
   const finalUrl = landing.url;
   const html = await landing.text();
   const id = itemIdFrom(finalUrl) || itemIdFrom(html);
-  const [api, apiPrices] = await Promise.all([fetchApiItem(id), fetchApiPrices(id)]);
+  const api = await fetchApiItem(id);
+  const [apiPrices, apiFallback] = await Promise.all([
+    fetchApiPrices(id),
+    fetchApiFallbacks(id, api?.catalogProductId || '')
+  ]);
   const structured = jsonLd(html);
+  const metaPrice = money(meta(html, 'product:price:amount') || meta(html, 'og:price:amount'));
+  const metaOldPrice = money(meta(html, 'product:original_price:amount') || meta(html, 'product:price:original_amount'));
   const commerce = findStructuredCommerce(html);
   const text = pageText(html);
   const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
-  const seller = extractSeller(html, text) || commerce.seller || structured.seller || api?.seller || '';
-  const title = structured.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
-  const image = api?.image || structured.image || meta(html, 'og:image');
+  const seller = extractSeller(html, text) || commerce.seller || structured.seller || apiFallback?.seller || api?.seller || '';
+  const title = structured.title || apiFallback?.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
+  const image = api?.image || apiFallback?.image || structured.image || meta(html, 'og:image');
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
   // O valor exibido na página deve vencer o valor genérico da API, pois pode
   // haver promoção, preço por contexto ou variação selecionada.
-  const chosenPrice = prices.price || commerce.price || structured.price || apiPrices?.price || api?.price || '';
-  const chosenOldPrice = prices.oldPrice || commerce.oldPrice || structured.oldPrice || apiPrices?.oldPrice || api?.oldPrice || '';
+  const chosenPrice = prices.price || commerce.price || structured.price || metaPrice || apiPrices?.price || apiFallback?.price || api?.price || '';
+  const chosenOldPrice = prices.oldPrice || commerce.oldPrice || structured.oldPrice || metaOldPrice || apiPrices?.oldPrice || apiFallback?.oldPrice || api?.oldPrice || '';
   const parsedInstallment = extractInstallments(html, text, chosenPrice);
   const installment = parsedInstallment.count ? parsedInstallment : {
     count: commerce.installments || '',
@@ -496,7 +574,7 @@ async function productFromUrl(source) {
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
     permalink: finalUrl || api?.permalink || input.href,
     full: Boolean(api?.full),
-    source: { itemId: id || null, priceSource: prices.pageDetected ? 'page' : (apiPrices?.source || 'items'), pagePriceDetected: Boolean(prices.pageDetected) }
+    source: { itemId: id || null, priceSource: prices.pageDetected ? 'page' : (metaPrice ? 'meta' : (apiPrices?.source || apiFallback?.source || 'items')), pagePriceDetected: Boolean(prices.pageDetected) }
   };
 }
 
@@ -516,7 +594,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '21.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '22.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -532,4 +610,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V21 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V22 disponível na porta ${PORT}`));
