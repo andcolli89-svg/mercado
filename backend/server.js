@@ -391,49 +391,117 @@ function extractSeller(html, text) {
   return clean(candidates.find(Boolean) || '').replace(/\s+/g, ' ');
 }
 
+function extractMoneyFromBlock(block = '') {
+  const aria = attr(block.match(/<[^>]+>/)?.[0] || '', 'aria-label');
+  if (aria) {
+    const m = aria.match(/(?:R\$\s*)?([\d.]+(?:,\d{1,2})?)/i);
+    if (m) return money(m[1]);
+  }
+  const fraction = block.match(/andes-money-amount__fraction[^>]*>\s*([\d.]+)/i)?.[1];
+  const cents = block.match(/andes-money-amount__cents[^>]*>\s*(\d{1,2})/i)?.[1];
+  if (fraction) return money(`${fraction}${cents ? `,${cents.padEnd(2, '0')}` : ''}`);
+  const visible = decodeHtml(block).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  const m = visible.match(/R\$\s*([\d.]+(?:,\d{1,2})?)/i);
+  return m ? money(m[1]) : '';
+}
+
+function extractAssignedJson(html, marker) {
+  const positions = [];
+  let offset = 0;
+  while ((offset = html.indexOf(marker, offset)) >= 0) { positions.push(offset); offset += marker.length; }
+  const results = [];
+  for (const pos of positions) {
+    let i = html.indexOf('{', pos + marker.length);
+    if (i < 0) continue;
+    let depth = 0, quote = '', escaped = false;
+    for (let j = i; j < html.length; j += 1) {
+      const ch = html[j];
+      if (quote) {
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === quote) quote = '';
+        continue;
+      }
+      if (ch === '"' || ch === "'") { quote = ch; continue; }
+      if (ch === '{') depth += 1;
+      else if (ch === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          try { results.push(JSON.parse(html.slice(i, j + 1))); } catch { /* ignora */ }
+          break;
+        }
+      }
+    }
+  }
+  return results;
+}
+
 function extractPriceCandidates(html, text, apiPrice) {
   const current = [];
   const old = [];
   const other = [];
-  const add = (list, value) => {
+  const sources = [];
+  const add = (list, value, source = '') => {
     const n = numeric(value);
-    if (Number.isFinite(n) && n > 1 && n < 1000000 && !list.some(x => Math.abs(x - n) < 0.005)) list.push(n);
+    if (Number.isFinite(n) && n > 1 && n < 1000000 && !list.some(x => Math.abs(x - n) < 0.005)) {
+      list.push(n);
+      if (source) sources.push(source);
+    }
   };
 
-  // Primeiro olha apenas a área principal de preço da página. Isso evita capturar
-  // valores de cashback, outras variações e recomendações.
   const priceAreaIndex = html.search(/ui-pdp-price__main-container|ui-pdp-price__second-line|ui-pdp-price/i);
   const area = priceAreaIndex >= 0
-    ? html.slice(Math.max(0, priceAreaIndex - 4000), priceAreaIndex + 45000)
-    : html.slice(0, 160000);
+    ? html.slice(Math.max(0, priceAreaIndex - 8000), priceAreaIndex + 90000)
+    : html.slice(0, 350000);
 
-  for (const tag of area.match(/<(?:span|div)\b[^>]*(?:andes-money-amount|aria-label=["'][^"']*(?:reais?|R\$))[^>]*>/gi) || []) {
-    const aria = attr(tag, 'aria-label');
-    const match = aria.match(/(?:R\$\s*)?([\d.]+(?:,\d{1,2})?)/i);
-    if (!match) continue;
-    if (/previous|original|antes|tachado|ui-pdp-price__original-value/i.test(tag)) add(old, match[1]);
-    else add(current, match[1]);
+  // O preço atual do ML costuma vir em blocos aninhados, com parte inteira e centavos separados.
+  const moneyBlocks = area.match(/<(?:span|div)\b[^>]*class=["'][^"']*andes-money-amount[^"']*["'][^>]*>[\s\S]{0,1600}?<\/(?:span|div)>/gi) || [];
+  for (const block of moneyBlocks) {
+    const value = extractMoneyFromBlock(block);
+    if (!value) continue;
+    if (/original|previous|before|tachado|strikethrough|ui-pdp-price__original-value/i.test(block)) add(old, value, 'money-block-old');
+    else if (/installment|fraction|shipping|cashback/i.test(block) && !/ui-pdp-price__second-line|ui-pdp-price__main/i.test(block)) add(other, value, 'money-block-other');
+    else add(current, value, 'money-block-current');
   }
 
-  // Marcações internas atuais do Mercado Livre.
+  // Também lê aria-label quando o bloco não foi capturado integralmente.
+  for (const tag of area.match(/<(?:span|div)\b[^>]*(?:andes-money-amount|aria-label=["'][^"']*(?:reais?|R\$))[^>]*>/gi) || []) {
+    const value = extractMoneyFromBlock(tag);
+    if (!value) continue;
+    if (/previous|original|antes|tachado|ui-pdp-price__original-value/i.test(tag)) add(old, value, 'aria-old');
+    else add(current, value, 'aria-current');
+  }
+
+  // Estados JavaScript mais comuns usados pelo front-end.
+  const stateObjects = [
+    ...extractAssignedJson(html, '__PRELOADED_STATE__'),
+    ...extractAssignedJson(html, '__INITIAL_STATE__'),
+    ...extractAssignedJson(html, 'window.__STATE__'),
+    ...embeddedJsonObjects(html)
+  ];
+  for (const object of stateObjects) {
+    const found = commerceFromObject(object);
+    if (found.price) add(current, found.price, 'embedded-json');
+    if (found.oldPrice) add(old, found.oldPrice, 'embedded-json-old');
+  }
+
   const jsonPatterns = [
-    /"priceToPay"\s*:\s*\{[\s\S]{0,1600}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*"?([\d.]+(?:,\d{1,2})?)/gi,
-    /"(?:price_to_pay|sale_price|discounted_price|bestPrice|currentPrice)"\s*:\s*(?:\{[\s\S]{0,800}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
+    /"priceToPay"\s*:\s*\{[\s\S]{0,1800}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*"?([\d.]+(?:,\d{1,2})?)/gi,
+    /"(?:price_to_pay|sale_price|salePrice|discounted_price|discountedPrice|bestPrice|currentPrice)"\s*:\s*(?:\{[\s\S]{0,1000}?"(?:amount|value|decimal_price|decimalPrice)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
   ];
   for (const pattern of jsonPatterns) {
     let m;
-    while ((m = pattern.exec(area))) add(current, m[1]);
+    while ((m = pattern.exec(html))) add(current, m[1], 'json-regex');
   }
 
   const oldPatterns = [
-    /"(?:original_price|originalPrice|price_before_discount|previous_price|regular_price)"\s*:\s*(?:\{[\s\S]{0,800}?"(?:amount|value)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
+    /"(?:original_price|originalPrice|price_before_discount|previous_price|regular_price|regularAmount|regular_amount)"\s*:\s*(?:\{[\s\S]{0,1000}?"(?:amount|value)"\s*:\s*)?"?([\d.]+(?:,\d{1,2})?)/gi
   ];
   for (const pattern of oldPatterns) {
     let m;
-    while ((m = pattern.exec(area))) add(old, m[1]);
+    while ((m = pattern.exec(html))) add(old, m[1], 'json-regex-old');
   }
 
-  // Texto visível: cobre "51% OFF R$ 345 R$ 169" e pequenas variações.
   const promoPatterns = [
     /(?:\d{1,2}%\s*OFF\s*)R\$\s*([\d.]+(?:,\d{2})?)\s*R\$\s*([\d.]+(?:,\d{2})?)/i,
     /R\$\s*([\d.]+(?:,\d{2})?)\s*(?:\d{1,2}%\s*OFF\s*)R\$\s*([\d.]+(?:,\d{2})?)/i,
@@ -441,16 +509,14 @@ function extractPriceCandidates(html, text, apiPrice) {
   ];
   for (const pattern of promoPatterns) {
     const match = text.match(pattern);
-    if (match) { add(old, match[1]); add(current, match[2]); break; }
+    if (match) { add(old, match[1], 'visible-promo-old'); add(current, match[2], 'visible-promo'); break; }
   }
 
   const otherMatch = text.match(/ou\s+R\$\s*([\d.]+(?:,\d{2})?)\s+em outros meios/i);
-  if (otherMatch) add(other, otherMatch[1]);
+  if (otherMatch) add(other, otherMatch[1], 'other-payment');
 
   const api = numeric(apiPrice);
-  // O preço visual é a fonte principal. Entre candidatos visuais, o menor costuma
-  // ser o preço promocional, mas descartamos valores absurdamente distantes da API.
-  const sensible = current.filter(n => !Number.isFinite(api) || (n >= api * 0.25 && n <= api * 1.6));
+  const sensible = current.filter(n => !Number.isFinite(api) || (n >= api * 0.20 && n <= api * 2.0));
   const chosenCurrent = sensible.length ? Math.min(...sensible) : (current.length ? Math.min(...current) : api);
   const chosenOld = old.filter(n => n > chosenCurrent).sort((a, b) => a - b)[0]
     || (Number.isFinite(api) && api > chosenCurrent ? api : NaN);
@@ -459,7 +525,13 @@ function extractPriceCandidates(html, text, apiPrice) {
     price: Number.isFinite(chosenCurrent) ? money(chosenCurrent) : '',
     oldPrice: Number.isFinite(chosenOld) ? money(chosenOld) : '',
     otherPrice: other.length ? money(other[0]) : '',
-    pageDetected: current.length > 0
+    pageDetected: current.length > 0,
+    candidates: {
+      current: current.map(money),
+      old: old.map(money),
+      other: other.map(money),
+      sources: [...new Set(sources)]
+    }
   };
 }
 
@@ -574,7 +646,19 @@ async function productFromUrl(source) {
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
     permalink: finalUrl || api?.permalink || input.href,
     full: Boolean(api?.full),
-    source: { itemId: id || null, priceSource: prices.pageDetected ? 'page' : (metaPrice ? 'meta' : (apiPrices?.source || apiFallback?.source || 'items')), pagePriceDetected: Boolean(prices.pageDetected) }
+    source: {
+      itemId: id || null,
+      priceSource: prices.pageDetected ? 'page' : (commerce.price ? 'embedded' : (structured.price ? 'jsonld' : (metaPrice ? 'meta' : (apiPrices?.source || apiFallback?.source || 'items')))),
+      pagePriceDetected: Boolean(prices.pageDetected),
+      apiPriceDetected: Boolean(apiPrices?.price || apiFallback?.price || api?.price),
+      accessTokenConfigured: Boolean(process.env.MELI_ACCESS_TOKEN || process.env.ACCESS_TOKEN),
+      priceCandidates: prices.candidates,
+      warnings: [
+        !chosenPrice ? 'Preço não encontrado. Configure MELI_ACCESS_TOKEN no Render para habilitar o endpoint oficial /items/{id}/prices.' : '',
+        !chosenOldPrice ? 'Preço anterior não encontrado.' : '',
+        !seller ? 'Vendedor não encontrado.' : ''
+      ].filter(Boolean)
+    }
   };
 }
 
@@ -594,7 +678,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '22.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '23.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -610,4 +694,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V22 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V23 disponível na porta ${PORT}`));
