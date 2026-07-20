@@ -437,11 +437,35 @@ function extractAssignedJson(html, marker) {
 }
 
 
-function extractPrimaryOffer(html) {
+function extractPrimaryOffer(html, itemId = '') {
   const result = {
     pixPrice: '', normalPrice: '', oldPrice: '', discount: '', seller: '', sellerId: '',
     installments: '', installmentAmount: '', source: ''
   };
+
+  // Perfis de afiliados e páginas intermediárias podem trazer dezenas de cards.
+  // Quando conhecemos o ID do anúncio, lemos somente o card cujo metadata.id
+  // corresponde ao item solicitado. Isso impede capturar preços de recomendações.
+  if (itemId) {
+    const safeId = String(itemId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const targetPattern = new RegExp('"metadata"\\s*:\\s*\\{[\\s\\S]{0,900}?"id"\\s*:\\s*"' + safeId + '"[\\s\\S]{0,9000}', 'i');
+    const targetMatch = html.match(targetPattern);
+    const target = targetMatch ? targetMatch[0] : '';
+    if (target) {
+      const current = target.match(/"current_price"\s*:\s*\{[\s\S]{0,220}?"value"\s*:\s*([\d.]+)/i);
+      const previous = target.match(/"previous_price"\s*:\s*\{[\s\S]{0,220}?"value"\s*:\s*([\d.]+)/i);
+      const discountText = target.match(/"discount_label"\s*:\s*\{[\s\S]{0,260}?"text"\s*:\s*"([^"]+)"/i);
+      const otherPayment = target.match(/"installments"\s*:\s*\{[\s\S]{0,1200}?"key"\s*:\s*"price_total"[\s\S]{0,300}?"price"\s*:\s*\{[\s\S]{0,180}?"value"\s*:\s*([\d.]+)/i);
+      if (current) result.pixPrice = money(current[1]);
+      if (previous) result.oldPrice = money(previous[1]);
+      if (otherPayment) result.normalPrice = money(otherPayment[1]);
+      if (discountText) {
+        const number = discountText[1].match(/(\d{1,3})\s*%/);
+        if (number) result.discount = Number(number[1]);
+      }
+      if (result.pixPrice) result.source = 'target-item-polycard';
+    }
+  }
 
   // O componente principal da oferta do Mercado Livre possui id/type/state e
   // contém o preço Pix, o preço anterior e o preço dos demais meios.
@@ -449,7 +473,7 @@ function extractPrimaryOffer(html) {
   const blockMatch = html.match(priceBlockPattern);
   const block = blockMatch ? blockMatch[0] : '';
 
-  if (block) {
+  if (block && !result.pixPrice) {
     const primary = block.match(/"price"\s*:\s*\{\s*"type"\s*:\s*"price"\s*,\s*"value"\s*:\s*([\d.]+)[\s\S]{0,400}?"original_value"\s*:\s*([\d.]+)/i);
     if (primary) {
       result.pixPrice = money(primary[1]);
@@ -666,7 +690,7 @@ async function productFromUrl(source) {
   const metaOldPrice = money(meta(html, 'product:original_price:amount') || meta(html, 'product:price:original_amount'));
   const commerce = findStructuredCommerce(html);
   const text = pageText(html);
-  const primaryOffer = extractPrimaryOffer(html);
+  const primaryOffer = extractPrimaryOffer(html, id);
   const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
   const seller = primaryOffer.seller || extractSeller(html, text) || commerce.seller || structured.seller || apiFallback?.seller || api?.seller || '';
   const title = structured.title || apiFallback?.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
@@ -761,4 +785,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V24 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V25 disponível na porta ${PORT}`));
