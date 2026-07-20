@@ -436,6 +436,71 @@ function extractAssignedJson(html, marker) {
   return results;
 }
 
+
+function extractPrimaryOffer(html) {
+  const result = {
+    pixPrice: '', normalPrice: '', oldPrice: '', discount: '', seller: '', sellerId: '',
+    installments: '', installmentAmount: '', source: ''
+  };
+
+  // O componente principal da oferta do Mercado Livre possui id/type/state e
+  // contém o preço Pix, o preço anterior e o preço dos demais meios.
+  const priceBlockPattern = /"price"\s*:\s*\{\s*"id"\s*:\s*"price"\s*,\s*"type"\s*:\s*"price"\s*,\s*"state"\s*:\s*"VISIBLE"[\s\S]{0,12000}?"plus_button"\s*:/i;
+  const blockMatch = html.match(priceBlockPattern);
+  const block = blockMatch ? blockMatch[0] : '';
+
+  if (block) {
+    const primary = block.match(/"price"\s*:\s*\{\s*"type"\s*:\s*"price"\s*,\s*"value"\s*:\s*([\d.]+)[\s\S]{0,400}?"original_value"\s*:\s*([\d.]+)/i);
+    if (primary) {
+      result.pixPrice = money(primary[1]);
+      result.oldPrice = money(primary[2]);
+      result.source = 'primary-price-component';
+    }
+    const discount = block.match(/"discount_label"\s*:\s*\{[\s\S]{0,300}?"value"\s*:\s*(\d{1,3})/i);
+    if (discount) result.discount = Number(discount[1]);
+    const normal = block.match(/"id"\s*:\s*"pricing_price_subtitle"[\s\S]{0,1600}?"total_price"\s*:\s*\{[\s\S]{0,500}?"value"\s*:\s*([\d.]+)/i);
+    if (normal) result.normalPrice = money(normal[1]);
+  }
+
+  // Fallback mais restrito para páginas em que o componente mudou de ordem.
+  if (!result.pixPrice) {
+    const primary = html.match(/"price"\s*:\s*\{\s*"type"\s*:\s*"price"\s*,\s*"value"\s*:\s*([\d.]+)\s*,\s*"original_value"\s*:\s*([\d.]+)[\s\S]{0,800}?"discount_label"/i);
+    if (primary) {
+      result.pixPrice = money(primary[1]);
+      result.oldPrice = money(primary[2]);
+      result.source = 'primary-price-fallback';
+    }
+  }
+
+  if (!result.normalPrice) {
+    const normal = html.match(/"id"\s*:\s*"pricing_price_subtitle"[\s\S]{0,1800}?"total_price"\s*:\s*\{[\s\S]{0,500}?"value"\s*:\s*([\d.]+)/i);
+    if (normal) result.normalPrice = money(normal[1]);
+  }
+
+  const seller = html.match(/"seller_id"\s*:\s*(\d+)[\s\S]{0,180}?"seller_name"\s*:\s*"([^"]+)"/i)
+    || html.match(/"seller_name"\s*:\s*"([^"]+)"[\s\S]{0,180}?"seller_id"\s*:\s*(\d+)/i);
+  if (seller) {
+    if (/^\d+$/.test(seller[1])) {
+      result.sellerId = seller[1];
+      result.seller = clean(decodeHtml(seller[2]));
+    } else {
+      result.seller = clean(decodeHtml(seller[1]));
+      result.sellerId = seller[2];
+    }
+  }
+
+  const installment = html.match(/"recommended_methods"\s*:\s*\[[\s\S]{0,2200}?"installments"\s*:\s*(\d{1,2})\s*,\s*"installment_amount"\s*:\s*([\d.]+)/i);
+  if (installment) {
+    result.installments = installment[1];
+    result.installmentAmount = money(installment[2]);
+  } else {
+    const count = html.match(/"installment_info"\s*:\s*"?(\d{1,2})"?/i) || html.match(/"installmentInfo"\s*:\s*"?(\d{1,2})"?/i);
+    if (count) result.installments = count[1];
+  }
+
+  return result;
+}
+
 function extractPriceCandidates(html, text, apiPrice) {
   const current = [];
   const old = [];
@@ -601,17 +666,18 @@ async function productFromUrl(source) {
   const metaOldPrice = money(meta(html, 'product:original_price:amount') || meta(html, 'product:price:original_amount'));
   const commerce = findStructuredCommerce(html);
   const text = pageText(html);
+  const primaryOffer = extractPrimaryOffer(html);
   const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
-  const seller = extractSeller(html, text) || commerce.seller || structured.seller || apiFallback?.seller || api?.seller || '';
+  const seller = primaryOffer.seller || extractSeller(html, text) || commerce.seller || structured.seller || apiFallback?.seller || api?.seller || '';
   const title = structured.title || apiFallback?.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
   const image = api?.image || apiFallback?.image || structured.image || meta(html, 'og:image');
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
   // O valor exibido na página deve vencer o valor genérico da API, pois pode
   // haver promoção, preço por contexto ou variação selecionada.
-  const chosenPrice = prices.price || commerce.price || structured.price || metaPrice || apiPrices?.price || apiFallback?.price || api?.price || '';
-  const chosenOldPrice = prices.oldPrice || commerce.oldPrice || structured.oldPrice || metaOldPrice || apiPrices?.oldPrice || apiFallback?.oldPrice || api?.oldPrice || '';
-  const parsedInstallment = extractInstallments(html, text, chosenPrice);
+  const chosenPrice = primaryOffer.pixPrice || prices.price || commerce.price || structured.price || metaPrice || apiPrices?.price || apiFallback?.price || api?.price || '';
+  const chosenOldPrice = primaryOffer.oldPrice || prices.oldPrice || commerce.oldPrice || structured.oldPrice || metaOldPrice || apiPrices?.oldPrice || apiFallback?.oldPrice || api?.oldPrice || '';
+  const parsedInstallment = primaryOffer.installments ? { count: primaryOffer.installments, amount: primaryOffer.installmentAmount, interest: '' } : extractInstallments(html, text, chosenPrice);
   const installment = parsedInstallment.count ? parsedInstallment : {
     count: commerce.installments || '',
     amount: commerce.installmentAmount || '',
@@ -619,9 +685,9 @@ async function productFromUrl(source) {
   };
   const currentNumber = numeric(chosenPrice);
   const oldNumber = numeric(chosenOldPrice);
-  const discount = Number.isFinite(currentNumber) && Number.isFinite(oldNumber) && oldNumber > currentNumber
+  const discount = primaryOffer.discount || (Number.isFinite(currentNumber) && Number.isFinite(oldNumber) && oldNumber > currentNumber
     ? Math.round((1 - currentNumber / oldNumber) * 100)
-    : '';
+    : '');
 
   return {
     id: api?.id || id,
@@ -633,8 +699,8 @@ async function productFromUrl(source) {
     oldPrice: chosenOldPrice,
     originalPrice: chosenOldPrice,
     listPrice: chosenOldPrice,
-    otherPrice: prices.otherPrice || '',
-    otherPaymentPrice: prices.otherPrice || '',
+    otherPrice: primaryOffer.normalPrice || prices.otherPrice || '',
+    otherPaymentPrice: primaryOffer.normalPrice || prices.otherPrice || '',
     seller,
     store: seller,
     installments: installment.count,
@@ -648,8 +714,9 @@ async function productFromUrl(source) {
     full: Boolean(api?.full),
     source: {
       itemId: id || null,
-      priceSource: prices.pageDetected ? 'page' : (commerce.price ? 'embedded' : (structured.price ? 'jsonld' : (metaPrice ? 'meta' : (apiPrices?.source || apiFallback?.source || 'items')))),
-      pagePriceDetected: Boolean(prices.pageDetected),
+      priceSource: primaryOffer.source || (prices.pageDetected ? 'page' : (commerce.price ? 'embedded' : (structured.price ? 'jsonld' : (metaPrice ? 'meta' : (apiPrices?.source || apiFallback?.source || 'items'))))),
+      pagePriceDetected: Boolean(primaryOffer.pixPrice || prices.pageDetected),
+      primaryOffer,
       apiPriceDetected: Boolean(apiPrices?.price || apiFallback?.price || api?.price),
       accessTokenConfigured: Boolean(process.env.MELI_ACCESS_TOKEN || process.env.ACCESS_TOKEN),
       priceCandidates: prices.candidates,
@@ -678,7 +745,7 @@ http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '23.0', message: 'Servidor PromoZap funcionando' });
+    if (url.pathname === '/' || url.pathname === '/health') return json(res, 200, { status: 'ok', version: '24.0', message: 'Servidor PromoZap funcionando' });
     if (url.pathname === '/api/product') {
       const source = url.searchParams.get('url');
       if (!source) return json(res, 400, { error: 'Informe o link do produto.' });
@@ -694,4 +761,4 @@ http.createServer(async (req, res) => {
     console.error(error);
     return json(res, 422, { error: error.message || 'Não foi possível consultar o produto.' });
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V23 disponível na porta ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`PromoZap V24 disponível na porta ${PORT}`));
