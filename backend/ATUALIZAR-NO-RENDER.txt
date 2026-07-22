@@ -1,20 +1,18 @@
-ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 4.0.1
+ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 4.1.0
 
-1. Envie todo o conteúdo da pasta backend para o serviço no Render.
-2. Ambiente: Node.js 20 ou superior.
-3. Build Command: deixe vazio ou use npm install.
+1. Substitua a pasta backend do repositório por esta versão.
+2. No Render, mantenha Root Directory como backend.
+3. Build Command: npm install
 4. Start Command: npm start
-5. Opcional: configure MELI_ACCESS_TOKEN para ampliar o acesso à API do Mercado Livre.
-6. Abra /health no endereço publicado.
-7. A resposta correta informa version 4.0.1 e os recursos produto, radar, cupons-inteligentes, historico e favoritos.
+5. Health Check Path: /health
+6. Opcional: configure MELI_ACCESS_TOKEN.
+7. Abra /health e confirme version 4.1.0.
+
+CORREÇÃO PRINCIPAL
+- Valores brasileiros com ponto de milhares são preservados.
+- Exemplo: 2.500 = R$ 2.500,00; 1.499,90 = R$ 1.499,90.
+- O Radar deixa de exibir R$ 2,50 para produtos de R$ 2.500,00.
 
 VALIDAÇÃO LOCAL
 - npm run check
 - npm test
-
-ESTRUTURA
-- server.js: inicialização do processo
-- src/app.js: rotas HTTP
-- src/config.js: configuração e variáveis de ambiente
-- src/lib: utilitários
-- src/services: produto, Radar e imagens

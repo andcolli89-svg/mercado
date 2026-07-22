@@ -1,6 +1,6 @@
 {
   "name": "cbofertas-backend-v4",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "private": true,
   "scripts": {
     "start": "node server.js",
@@ -10,5 +10,5 @@
   "engines": {
     "node": ">=20"
   },
-  "description": "Backend modular do CbOfertas V4.0"
+  "description": "Backend modular do CbOfertas V4.1"
 }

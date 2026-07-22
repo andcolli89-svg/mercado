@@ -18,9 +18,9 @@ function createRequestHandler() {
       if (url.pathname === '/' || url.pathname === '/health') {
         return json(res, 200, {
           status: 'ok',
-          version: '4.0.1',
+          version: '4.1.0',
           app: 'CbOfertas',
-          features: ['produto', 'radar', 'cupons-inteligentes', 'historico', 'favoritos']
+          features: ['produto', 'radar', 'cupons-inteligentes', 'historico', 'favoritos', 'link-afiliado-assistido']
         });
       }
 

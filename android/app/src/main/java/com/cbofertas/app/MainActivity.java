@@ -33,6 +33,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 3201;
@@ -40,6 +42,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private boolean pageReady = false;
     private Intent pendingScheduledIntent;
+    private String pendingSharedProductLink;
     private ValueCallback<Uri[]> fileChooserCallback;
 
     private final ArrayList<ShareQueueItem> separateShareQueue = new ArrayList<>();
@@ -135,6 +138,11 @@ public class MainActivity extends Activity {
                     pendingScheduledIntent = null;
                     deliverScheduledShare(intent);
                 }
+                if (pendingSharedProductLink != null) {
+                    String link = pendingSharedProductLink;
+                    pendingSharedProductLink = null;
+                    deliverSharedProductLink(link);
+                }
             }
         });
         webView.loadUrl("file:///android_asset/www/index.html");
@@ -183,9 +191,53 @@ public class MainActivity extends Activity {
     }
 
     private void handleIntent(Intent intent) {
-        if (intent == null || !intent.getBooleanExtra("scheduled_share", false)) return;
-        if (!pageReady) pendingScheduledIntent = intent;
-        else deliverScheduledShare(intent);
+        if (intent == null) return;
+
+        if (intent.getBooleanExtra("scheduled_share", false)) {
+            if (!pageReady) pendingScheduledIntent = intent;
+            else deliverScheduledShare(intent);
+            return;
+        }
+
+        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            CharSequence shared = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+            if ((shared == null || shared.toString().trim().isEmpty()) && intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
+                shared = intent.getClipData().getItemAt(0).coerceToText(this);
+            }
+            String link = firstMercadoLivreLink(shared == null ? "" : shared.toString());
+            intent.removeExtra(Intent.EXTRA_TEXT);
+            intent.setAction(Intent.ACTION_MAIN);
+            if (link != null) {
+                if (!pageReady) pendingSharedProductLink = link;
+                else deliverSharedProductLink(link);
+            } else {
+                Toast.makeText(this, "O compartilhamento não contém um link de produto do Mercado Livre.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private String firstMercadoLivreLink(String text) {
+        Matcher matcher = Pattern.compile("https?://[^\\s<>\"']+", Pattern.CASE_INSENSITIVE).matcher(text == null ? "" : text);
+        while (matcher.find()) {
+            String candidate = matcher.group().replaceAll("[),.;!?]+$", "");
+            try {
+                Uri uri = Uri.parse(candidate);
+                String host = uri.getHost();
+                if (host == null) continue;
+                String normalized = host.toLowerCase();
+                if (normalized.equals("meli.la") || normalized.endsWith(".meli.la") ||
+                        normalized.contains("mercadolivre.com") || normalized.contains("mercadolibre.com")) {
+                    return candidate;
+                }
+            } catch (Exception ignored) { }
+        }
+        return null;
+    }
+
+    private void deliverSharedProductLink(String link) {
+        final String javascript = "window.CbOfertasReceiveSharedLink && window.CbOfertasReceiveSharedLink(" + JSONObject.quote(link) + ");";
+        new Handler(Looper.getMainLooper()).postDelayed(() -> webView.evaluateJavascript(javascript, null), 180);
+        Toast.makeText(this, "Link compartilhado recebido no CbOfertas.", Toast.LENGTH_SHORT).show();
     }
 
     private void deliverScheduledShare(Intent intent) {
@@ -200,6 +252,22 @@ public class MainActivity extends Activity {
     }
 
     public class AndroidBridge {
+        @JavascriptInterface
+        public void openExternalLink(String value) {
+            final String link = value == null ? "" : value.trim();
+            if (firstMercadoLivreLink(link) == null) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Link do Mercado Livre inválido.", Toast.LENGTH_LONG).show());
+                return;
+            }
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(link)));
+                } catch (Exception error) {
+                    Toast.makeText(MainActivity.this, "Não foi possível abrir o Mercado Livre.", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
         @JavascriptInterface
         public void shareImageAndText(String imageUrl, String text) {
             new Thread(() -> {

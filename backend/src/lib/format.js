@@ -13,14 +13,57 @@ function decodeHtml(value = '') {
     .replace(/\\u0026/g, '&').replace(/\\u003D/g, '=');
 }
 
-function money(value) {
-  if (value === null || value === undefined || value === '') return '';
+function localizedNumber(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+  if (value === null || value === undefined || value === '') return NaN;
+
   let raw = String(value).trim().replace(/[^\d,.-]/g, '');
-  if (!raw) return '';
-  if (raw.includes(',') && raw.includes('.')) {
-    raw = raw.lastIndexOf(',') > raw.lastIndexOf('.') ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, '');
-  } else if (raw.includes(',')) raw = raw.replace(',', '.');
-  const n = Number(raw);
+  if (!raw) return NaN;
+
+  const negative = raw.startsWith('-');
+  raw = raw.replace(/-/g, '');
+  const commaCount = (raw.match(/,/g) || []).length;
+  const dotCount = (raw.match(/\./g) || []).length;
+
+  if (commaCount && dotCount) {
+    // O último separador é o decimal; os anteriores são milhares.
+    if (raw.lastIndexOf(',') > raw.lastIndexOf('.')) {
+      raw = raw.replace(/\./g, '').replace(/,(?=[^,]*$)/, '.').replace(/,/g, '');
+    } else {
+      raw = raw.replace(/,/g, '');
+    }
+  } else if (commaCount) {
+    const groups = raw.split(',');
+    const decimalDigits = groups[groups.length - 1].length;
+    if (commaCount > 1 && groups.slice(1).every(group => group.length === 3)) {
+      raw = groups.join('');
+    } else if (decimalDigits === 1 || decimalDigits === 2) {
+      raw = `${groups.slice(0, -1).join('')}.${groups[groups.length - 1]}`;
+    } else if (decimalDigits === 3 && groups[0] !== '0') {
+      // Em páginas brasileiras, "2,500" também pode representar 2.500.
+      raw = groups.join('');
+    } else {
+      raw = groups.join('');
+    }
+  } else if (dotCount) {
+    const groups = raw.split('.');
+    const decimalDigits = groups[groups.length - 1].length;
+    if (dotCount > 1 && groups.slice(1).every(group => group.length === 3)) {
+      raw = groups.join('');
+    } else if (dotCount > 1 && (decimalDigits === 1 || decimalDigits === 2)) {
+      raw = `${groups.slice(0, -1).join('')}.${groups[groups.length - 1]}`;
+    } else if (dotCount === 1 && decimalDigits === 3 && groups[0].length >= 1 && groups[0].length <= 3 && groups[0] !== '0') {
+      // O Mercado Livre escreve milhares como "2.500 reais" em atributos HTML.
+      raw = groups.join('');
+    }
+  }
+
+  const parsed = Number(`${negative ? '-' : ''}${raw}`);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function money(value) {
+  const n = localizedNumber(value);
   return Number.isFinite(n) && n > 0 ? n.toFixed(2).replace('.', ',') : '';
 }
 
@@ -80,4 +123,4 @@ function absoluteUrl(value = '', base = RADAR_SOURCE_URL) {
   try { return new URL(decodeHtml(value), base).href; } catch { return ''; }
 }
 
-module.exports = { clean, decodeHtml, money, numeric, safeDecode, itemIdFrom, attr, meta, stripTags, absoluteUrl };
+module.exports = { clean, decodeHtml, localizedNumber, money, numeric, safeDecode, itemIdFrom, attr, meta, stripTags, absoluteUrl };

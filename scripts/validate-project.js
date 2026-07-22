@@ -35,18 +35,22 @@ const html = fs.readFileSync(path.join(root, 'android/app/src/main/assets/www/in
 const app = fs.readFileSync(path.join(root, 'android/app/src/main/assets/www/app.js'), 'utf8');
 const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');
 const workflow = fs.readFileSync(path.join(root, '.github/workflows/build-apk.yml'), 'utf8');
+const manifest = fs.readFileSync(path.join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
 
-for (const id of ['radarPage', 'historyPage', 'favoritesPage', 'couponsPage', 'favoritesList']) {
+for (const id of ['radarPage', 'historyPage', 'favoritesPage', 'couponsPage', 'favoritesList', 'affiliateLinkBtn', 'affiliateStatus']) {
   if (!html.includes(`id="${id}"`)) errors.push(`Interface sem o elemento #${id}`);
 }
-for (const marker of ['FAVORITES_STORAGE_KEY', 'getAutomaticCouponCodes', 'renderRadarOffers', 'renderPublications', 'renderFavorites']) {
+for (const marker of ['FAVORITES_STORAGE_KEY', 'getAutomaticCouponCodes', 'renderRadarOffers', 'renderPublications', 'renderFavorites', 'CbOfertasReceiveSharedLink', 'openAffiliateGenerator']) {
   if (!app.includes(marker)) errors.push(`app.js sem o recurso ${marker}`);
 }
-if (!gradle.includes("versionName '4.0'") || !gradle.includes('versionCode 400')) {
-  errors.push('Versão Android não está configurada como 4.0/400');
+if (!gradle.includes("versionName '4.1'") || !gradle.includes('versionCode 410')) {
+  errors.push('Versão Android não está configurada como 4.1/410');
 }
-if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V4.0.apk')) {
-  errors.push('Workflow não valida backend e APK da V4.0');
+if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V4.1.apk')) {
+  errors.push('Workflow não valida backend e APK da V4.1');
+}
+if (!manifest.includes('android.intent.action.SEND') || !manifest.includes('text/plain')) {
+  errors.push('Android não está registrado para receber o link compartilhado pelo Mercado Livre');
 }
 
 const idMatches = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
@@ -64,4 +68,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`CbOfertas V4.0 validado: ${requiredFiles.length} arquivos essenciais e ${ids.size} IDs de interface.`);
+console.log(`CbOfertas V4.1 validado: ${requiredFiles.length} arquivos essenciais e ${ids.size} IDs de interface.`);

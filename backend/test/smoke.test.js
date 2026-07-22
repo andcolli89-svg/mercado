@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const { createServer } = require('../src/app');
 const { productFromUrl } = require('../src/services/productService');
 const { normalizeRadarItem } = require('../src/services/radarService');
+const { localizedNumber, money } = require('../src/lib/format');
 
 async function withServer(callback) {
   const server = createServer();
@@ -16,12 +17,12 @@ async function withServer(callback) {
   }
 }
 
-test('health informa versão e recursos da V4.0', async () => {
+test('health informa versão e recursos da V4.1', async () => {
   await withServer(async port => {
     const response = await fetch(`http://127.0.0.1:${port}/health`);
     assert.equal(response.status, 200);
     const data = await response.json();
-    assert.equal(data.version, '4.0.1');
+    assert.equal(data.version, '4.1.0');
     assert.ok(data.features.includes('favoritos'));
   });
 });
@@ -68,3 +69,24 @@ test('Radar calcula desconto e pontuação de uma oferta normalizada', () => {
   assert.equal(item.category, 'fitness');
   assert.ok(item.score > 0);
 });
+
+test('conversor brasileiro preserva separador de milhares', () => {
+  assert.equal(localizedNumber('2.500'), 2500);
+  assert.equal(localizedNumber('1.500'), 1500);
+  assert.equal(localizedNumber('1.499,90'), 1499.9);
+  assert.equal(localizedNumber('868,63'), 868.63);
+  assert.equal(money('2.500'), '2500,00');
+});
+
+test('Radar não transforma milhares em centavos', () => {
+  const item = normalizeRadarItem({
+    title: 'Smart TV 43 polegadas',
+    price: '2.500',
+    oldPrice: '3.000',
+    link: 'https://produto.mercadolivre.com.br/MLB-123456789'
+  });
+  assert.equal(item.price, '2500,00');
+  assert.equal(item.oldPrice, '3000,00');
+  assert.equal(item.discount, 17);
+});
+

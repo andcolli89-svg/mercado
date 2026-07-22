@@ -1,39 +1,29 @@
-CBOFERTAS V4.0
+CBOFERTAS V4.1
 
-ANTES DE USAR O RADAR
-- Publique a pasta backend desta versão no Render.
-- O comando de inicialização é npm start.
-- Abra /health e confirme version 4.0.0.
+CORREÇÕES IMPORTANTES
+- Valores como 2.500 e 1.500 agora são tratados como R$ 2.500,00 e R$ 1.500,00.
+- O Radar não transforma mais milhares em centavos.
+- O backend deve mostrar version 4.1.0 em /health.
 
-TELA INICIAL
-1. Cole o link do produto e toque em Buscar.
-2. Confira título, imagem, preços, vendedor, frete e parcelamento.
-3. Os cupons compatíveis podem ser selecionados automaticamente.
-4. Gere a mensagem, compartilhe, favorite ou salve no histórico.
+LINK DE AFILIADO
+1. Busque ou escolha o produto no CbOfertas.
+2. Toque em Gerar link de afiliado.
+3. No Mercado Livre, toque em Compartilhar na faixa Ganhos.
+4. Escolha CbOfertas na lista de aplicativos.
+5. O link recebido será aplicado automaticamente à oferta.
 
-RADAR
-- Pesquisa promoções e classifica por desconto, frete, FULL e qualidade dos dados.
-- Permite filtrar por palavra-chave, categoria, desconto e preço.
-- Registra o menor preço observado localmente.
-- Permite usar, abrir, favoritar ou ocultar uma oferta.
+IMPORTANTE
+- O CbOfertas não inventa parâmetros de afiliado.
+- O link é criado pelo próprio Mercado Livre na conta conectada ao aplicativo oficial.
+- Mensagens, favoritos e histórico usarão o link recebido.
 
-CUPONS INTELIGENTES
-- Cada cupom pode ter categoria, palavras-chave, preço mínimo, desconto mínimo, validade e prioridade.
-- Cupons vencidos não são aplicados automaticamente.
-- Cupons de prioridade maior aparecem primeiro.
-- A seleção automática pode ser alterada manualmente na oferta.
+ATUALIZAR O RENDER
+- Root Directory: backend
+- Build Command: npm install
+- Start Command: npm start
+- Health Check Path: /health
 
-HISTÓRICO
-- Cada produto é salvo como uma publicação separada.
-- É possível editar, favoritar, excluir, agendar ou enviar cada item.
-- Os agendamentos são restaurados após reiniciar o aparelho.
-
-FAVORITOS
-- Favoritos não entram automaticamente na fila de publicações.
-- É possível pesquisar, abrir o anúncio e carregar o produto no editor.
-- Um favorito pode ser salvo no histórico depois da conferência.
-
-APK NO GITHUB
-- Envie todo o projeto para a raiz do repositório.
-- Execute o workflow Validar e Gerar APK CbOfertas V4.0.
-- O artefato gerado contém CbOfertas-V4.0.apk e o arquivo SHA-256.
+GERAR O APK
+- Envie o projeto completo para o GitHub.
+- Execute Validar e Gerar APK CbOfertas V4.1.
+- Baixe CbOfertas-V4.1-APK.

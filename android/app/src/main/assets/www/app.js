@@ -11,7 +11,9 @@ const state = {
   editingCouponId: null,
   lastAutoCouponCodes: [],
   radarItems: [],
-  radarLoading: false
+  radarLoading: false,
+  affiliateLinkReceived: false,
+  receivedAffiliateLink: ''
 };
 
 const el = {
@@ -59,6 +61,8 @@ const el = {
   sellerSuggestions: $('#sellerSuggestions'),
   phrase: $('#smartPhrase'),
   fetchStatus: $('#fetchStatus'),
+  affiliateLinkBtn: $('#affiliateLinkBtn'),
+  affiliateStatus: $('#affiliateStatus'),
   preview: $('#preview'),
   finalText: $('#finalText'),
   fullBadge: $('#fullBadge'),
@@ -406,6 +410,55 @@ function normalizeServer(value = '') {
 function apiBase() {
   return normalizeServer(localStorage.getItem('cbofertas-api') || DEFAULT_API_SERVER);
 }
+
+function isMercadoLivreProductLink(value = '') {
+  try {
+    const url = new URL(String(value).trim());
+    const host = url.hostname.toLowerCase();
+    return ['http:', 'https:'].includes(url.protocol)
+      && (host === 'meli.la' || host.endsWith('.meli.la') || host.includes('mercadolivre.com') || host.includes('mercadolibre.com'));
+  } catch {
+    return false;
+  }
+}
+
+function updateAffiliateUi() {
+  if (!el.affiliateLinkBtn) return;
+  const link = String(el.link?.value || '').trim();
+  const ready = Boolean(state.affiliateLinkReceived && state.receivedAffiliateLink === link);
+  el.affiliateLinkBtn.disabled = state.editorCollapsed || !isMercadoLivreProductLink(link);
+  el.affiliateLinkBtn.classList.toggle('ready', ready);
+  el.affiliateLinkBtn.textContent = ready ? '✅ Link de afiliado aplicado' : '💰 Gerar link de afiliado';
+}
+
+function openAffiliateGenerator() {
+  const link = String(el.link?.value || '').trim();
+  if (!isMercadoLivreProductLink(link)) {
+    setStatus(el.affiliateStatus, 'Cole ou selecione primeiro um produto do Mercado Livre.', 'error');
+    return;
+  }
+  setStatus(el.affiliateStatus, 'No Mercado Livre, toque em Compartilhar na faixa Ganhos e escolha CbOfertas.', 'success');
+  if (window.Android?.openExternalLink) window.Android.openExternalLink(link);
+  else window.open(link, '_blank');
+}
+
+window.CbOfertasReceiveSharedLink = async (sharedLink) => {
+  const link = String(sharedLink || '').trim();
+  if (!isMercadoLivreProductLink(link)) {
+    setStatus(el.affiliateStatus, 'O compartilhamento recebido não contém um link válido do Mercado Livre.', 'error');
+    return;
+  }
+  state.affiliateLinkReceived = true;
+  state.receivedAffiliateLink = link;
+  el.link.value = link;
+  state.previewIndex = 0;
+  setEditorCollapsed(false);
+  showPage('offers');
+  renderCurrent();
+  setStatus(el.affiliateStatus, 'Link oficial recebido e aplicado. As mensagens, o histórico e os favoritos usarão este link.', 'success');
+  setStatus(el.topActionStatus, 'Link de afiliado recebido do compartilhamento do Mercado Livre.', 'success');
+  await fetchProduct();
+};
 
 function safeJson(value, fallback) {
   try {
@@ -1028,6 +1081,8 @@ async function approveRadarOffer(item) {
   used.add(radarItemKey(item));
   saveRadarStoredSet(RADAR_USED_STORAGE_KEY, used);
   clearForm({ expand: true, status: false });
+  state.affiliateLinkReceived = false;
+  state.receivedAffiliateLink = '';
   el.link.value = item.link || '';
   el.title.value = item.title || '';
   el.old.value = item.oldPrice || '';
@@ -1269,6 +1324,7 @@ function renderCurrent() {
   renderOfferCouponChoices();
   if (el.charCounter) el.charCounter.textContent = `${el.finalText.value.length}/1200`;
   syncCurrentFavoriteButton();
+  updateAffiliateUi();
 }
 
 function setEditorCollapsed(collapsed) {
@@ -1278,12 +1334,15 @@ function setEditorCollapsed(collapsed) {
   el.fetchBtn.disabled = state.editorCollapsed;
   el.saveItemBtn.disabled = state.editorCollapsed;
   el.clearBtn.disabled = state.editorCollapsed;
+  updateAffiliateUi();
 }
 
 function clearForm({ expand = true, status = true } = {}) {
   state.editingId = null;
   state.previewIndex = 0;
   state.full = false;
+  state.affiliateLinkReceived = false;
+  state.receivedAffiliateLink = '';
   setSelectedStyle('divertido');
   el.link.value = '';
   el.title.value = '';
@@ -1310,6 +1369,8 @@ function applyPublicationToForm(publication) {
   state.editingId = publication.id;
   state.previewIndex = 0;
   state.full = Boolean(publication.full);
+  state.affiliateLinkReceived = false;
+  state.receivedAffiliateLink = '';
   setSelectedStyle(publication.style || 'divertido');
   el.link.value = publication.link || '';
   el.title.value = publication.title || '';
@@ -1431,6 +1492,8 @@ function applyFavoriteToForm(favorite) {
   clearForm({ expand: true, status: false });
   state.editingId = null;
   state.full = Boolean(item.full);
+  state.affiliateLinkReceived = false;
+  state.receivedAffiliateLink = '';
   setSelectedStyle(item.style || 'divertido');
   el.link.value = item.link || '';
   el.title.value = item.title || '';
@@ -1967,6 +2030,7 @@ el.newItemBtn.onclick = () => {
   setTimeout(() => el.link.focus(), 100);
 };
 el.fetchBtn.onclick = fetchProduct;
+el.affiliateLinkBtn?.addEventListener('click', openAffiliateGenerator);
 el.saveItemBtn.onclick = saveCurrentPublication;
 el.favoriteCurrentBtn.onclick = () => toggleFavorite(captureForm(), el.topActionStatus);
 el.clearBtn.onclick = () => clearForm({ expand: true, status: true });
@@ -2000,6 +2064,11 @@ $('#imageFile').onchange = (event) => {
 [el.link, el.title, el.old, el.offer, el.installmentQty, el.installmentValue, el.phrase, el.seller]
   .forEach((node) => node.addEventListener('input', () => {
     if (node === el.link || node === el.title) state.previewIndex = 0;
+    if (node === el.link && String(el.link.value || '').trim() !== state.receivedAffiliateLink) {
+      state.affiliateLinkReceived = false;
+      state.receivedAffiliateLink = '';
+      setStatus(el.affiliateStatus, '');
+    }
     renderCurrent();
   }));
 

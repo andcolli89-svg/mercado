@@ -1,0 +1,18 @@
+ALTERAÇÕES — CBOFERTAS V4.1
+
+1. PREÇOS BRASILEIROS
+- Novo conversor numérico para ponto de milhares e vírgula decimal.
+- Testes para 2.500, 1.500, 1.499,90 e 868,63.
+- Teste do Radar garantindo que R$ 2.500,00 não vire R$ 2,50.
+
+2. LINK DE AFILIADO
+- CbOfertas registrado como destino de compartilhamento text/plain no Android.
+- Recebe links do Mercado Livre e meli.la.
+- Novo botão Gerar link de afiliado.
+- O usuário gera o rastreamento pela faixa Ganhos do Mercado Livre e escolhe CbOfertas.
+- O link recebido é aplicado automaticamente à oferta e usado nas mensagens.
+
+3. VERSÕES
+- Android: versionCode 410 / versionName 4.1.
+- Backend: 4.1.0.
+- GitHub Actions: artefato CbOfertas-V4.1-APK.

@@ -7,7 +7,7 @@
   <title>CbOfertas</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=400">
+  <link rel="stylesheet" href="style.css?v=410">
 </head>
 <body>
   <div id="menuOverlay" class="menu-overlay hidden"></div>
@@ -66,6 +66,11 @@
             <button id="fetchBtn" class="btn search-button" type="button">⌕ <span>Buscar</span></button>
           </div>
           <p id="fetchStatus" class="status" aria-live="polite"></p>
+          <div class="affiliate-link-box">
+            <button id="affiliateLinkBtn" class="btn affiliate-button" type="button" disabled>💰 Gerar link de afiliado</button>
+            <small>O Mercado Livre gera o rastreamento da sua conta. Abra o produto, toque em <b>Compartilhar</b> na faixa <b>Ganhos</b> e escolha <b>CbOfertas</b>.</small>
+          </div>
+          <p id="affiliateStatus" class="status affiliate-status" aria-live="polite"></p>
         </section>
 
         <section class="step-card product-step">
@@ -302,6 +307,11 @@
         </div>
         <p id="serverStatus" class="status"></p>
       </section>
+      <section class="card setting-card affiliate-setting-card">
+        <div class="setting-title"><span>💰</span><div><h2>Links de afiliado</h2><p>O CbOfertas recebe o link oficial criado pelo Mercado Livre e o aplica automaticamente à oferta.</p></div></div>
+        <ol class="affiliate-steps"><li>Abra ou busque o produto no CbOfertas.</li><li>Toque em <b>Gerar link de afiliado</b>.</li><li>No Mercado Livre, toque em <b>Compartilhar</b> na faixa Ganhos.</li><li>Escolha <b>CbOfertas</b> na lista de aplicativos.</li></ol>
+        <small class="setting-help">Não é necessário informar senha, token ou código de afiliado ao CbOfertas.</small>
+      </section>
       <section class="card setting-card">
         <div class="setting-title"><span>🧹</span><div><h2>Formulário</h2><p>Limpe os campos sem apagar as ofertas já salvas.</p></div></div>
         <button id="settingsNewItemBtn" class="btn primary full" type="button">＋ Abrir nova oferta</button>
@@ -312,7 +322,7 @@
         <label class="check-option radar-setting-toggle"><input id="settingsRadarAuto" type="checkbox" checked><span>Atualizar automaticamente ao abrir</span></label>
         <small class="setting-help">As ofertas repetidas são reconhecidas pelo link e podem ficar ocultas depois de usadas.</small>
       </section>
-      <section class="card about-card"><b>CbOfertas V4.0</b><p>Backend modular, Radar com pontuação, cupons inteligentes, histórico, favoritos e automação de build no GitHub.</p></section>
+      <section class="card about-card"><b>CbOfertas V4.1</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
     </section>
   </main>
 
@@ -325,6 +335,6 @@
     <button id="showSettingsPageBtn" class="bottom-tab" data-page="settings" type="button"><span>⚙</span><b>Configurações</b></button>
   </nav>
 
-  <script src="app.js?v=400"></script>
+  <script src="app.js?v=410"></script>
 </body>
 </html>

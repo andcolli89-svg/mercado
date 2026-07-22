@@ -100,5 +100,8 @@ vm.runInContext(source, context, { filename: appPath, timeout: 5000 });
 if (!storage.has('cbofertas-theme')) {
   // A ausência é válida; apenas confirma que a inicialização chegou ao fim.
 }
+if (typeof windowObject.CbOfertasReceiveSharedLink !== 'function') {
+  throw new Error('Fluxo de recebimento do link compartilhado não foi inicializado.');
+}
 
-console.log(`Web app V4.0 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);
+console.log(`Web app V4.1 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);
