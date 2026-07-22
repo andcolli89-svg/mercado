@@ -1,8 +1,0 @@
-1. Copie os arquivos da pasta backend para Desktop/mercado/backend, substituindo.
-2. Execute git add ., git commit e git push.
-3. Aguarde o Render ficar Live.
-4. Abra https://mercado-yvqn.onrender.com/auth/login
-5. Autorize no Mercado Livre.
-6. Confira https://mercado-yvqn.onrender.com/auth/status
-
-IMPORTANTE: gere uma nova chave secreta no Mercado Livre, pois a anterior foi mostrada em uma foto.

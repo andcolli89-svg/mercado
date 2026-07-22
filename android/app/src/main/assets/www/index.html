@@ -3,54 +3,328 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#ffe000">
-  <title>PromoZap ML</title>
+  <meta name="theme-color" content="#dff7cf">
+  <title>CbOfertas</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=400">
 </head>
 <body>
-<header class="app-header"><img src="logo.jpg" alt="PromoZap ML"><span style="margin-left:auto;margin-right:10px;color:#5b4b00;font-weight:800;font-size:13px">Versão Android 14</span><button id="installBtn" class="icon-btn hidden">⬇ Instalar</button></header>
-<main>
-<section class="panel server-panel">
-  <div class="panel-title"><span>🌐</span><div><h2>Servidor de consulta</h2><p>Necessário para buscar preço, vendedor e parcelamento.</p></div></div>
-  <label>Endereço do servidor<input id="apiServer" type="url" placeholder="Ex.: https://meu-promozap.onrender.com"></label>
-  <div class="row-actions"><button id="saveServerBtn" class="btn blue" type="button">Salvar servidor</button><button id="testServerBtn" class="btn light" type="button">Testar conexão</button></div>
-  <p id="serverStatus" class="fetch-status"></p>
-</section>
-<section class="panel">
-  <div class="panel-title"><span>🔗</span><div><h1>Links das promoções</h1><p>Cole o link e toque em “Buscar produto”.</p></div></div>
-  <div id="linksList"></div>
-  <div class="row-actions"><button id="addLinkBtn" class="btn blue">＋ Adicionar promoção</button><button id="pasteLinksBtn" class="btn light">📋 Colar vários links</button></div>
-  <label>Cupons para todas as publicações <small>(aplicados automaticamente em cada promoção)</small><input id="globalCoupons" placeholder="Ex.: MELIMODA ou CHEGUEI"></label>
-  <div class="styles"><b>Estilo:</b><button class="chip active" data-style="comedia">🤣 Comédia</button><button class="chip" data-style="urgente">🔥 Urgente</button><button class="chip" data-style="direto">⚡ Direto</button><button class="chip" data-style="familia">👨‍👩‍👧 Família</button></div>
-  <p class="hint">A busca usa dados públicos do Mercado Livre. Confira o preço antes de enviar.</p>
-  <button id="generateAllBtn" class="btn yellow big">👀 Gerar texto das promoções</button>
-</section>
-<section class="panel preview-panel">
-  <div class="panel-title"><span>👁</span><div><h2>Prévia da postagem</h2><p id="countLabel">0 produtos</p></div></div>
-  <div id="preview" class="preview"><div class="empty">Adicione uma promoção para começar.</div></div>
-  <textarea id="finalText" rows="14" placeholder="O texto final aparecerá aqui"></textarea>
-  <div class="share-grid"><button id="whatsappBtn" class="btn whatsapp">◉ Enviar para WhatsApp</button><button id="shareBtn" class="btn blue">↥ Compartilhar imagem + texto</button><button id="copyBtn" class="btn light">▣ Copiar texto</button><button id="saveBtn" class="btn light">💾 Salvar no histórico</button></div>
-</section>
-<section class="panel"><div class="panel-title"><span>🕘</span><div><h2>Histórico recente</h2><p>Salvo somente neste aparelho.</p></div></div><div id="history"></div></section>
-</main>
-<template id="promoTemplate">
-  <article class="promo-card">
-    <div class="promo-head"><strong class="promo-number"></strong><button class="remove" title="Remover">×</button></div>
-    <label>Link do Mercado Livre <div class="input-action link-actions"><input class="p-link" type="url" placeholder="https://meli.la/... ou link completo"><button class="fetch-product" type="button">Buscar produto</button><button class="open-link" type="button">Abrir</button></div></label>
-    <p class="fetch-status" aria-live="polite"></p>
-    <div class="product-grid"><div class="image-box"><img class="p-preview" alt="Imagem do produto"><label class="upload">📷 Imagem<input class="p-file" type="file" accept="image/*" hidden></label></div><div>
-      <label>Título<input class="p-title" placeholder="Nome do produto"></label>
-      <div class="two"><label>Preço anterior<input class="p-old" inputmode="decimal" placeholder="Preenchido quando houver desconto"></label><label>Preço da oferta<input class="p-new" inputmode="decimal" placeholder="Preço no Pix ou destaque"></label></div>
-      <label>Vendido por<input class="p-store" placeholder="Confirme o vendedor antes de publicar"></label>
-      <div class="installment-grid"><label>Parcelas<input class="p-installments" inputmode="numeric" placeholder="12"></label><label>Valor da parcela<input class="p-installment-value" inputmode="decimal" placeholder="29,92"></label></div>
-      <label>Juros<select class="p-installment-interest"><option value="">Não informado</option><option value="sem juros">Sem juros</option><option value="com juros">Com juros</option></select></label>
-      <label class="full-check"><input class="p-full" type="checkbox"> 🚚 Entrega FULL</label>
-      <label>Título/frase engraçada relacionada ao produto<div class="input-action"><input class="p-joke" placeholder="Gerada automaticamente"><button class="joke-btn" type="button">Gerar</button></div></label>
-    </div></div>
-  </article>
-</template>
-<script src="app.js?v=14"></script>
+  <div id="menuOverlay" class="menu-overlay hidden"></div>
+  <aside id="sideMenu" class="side-menu" aria-label="Menu principal">
+    <div class="side-menu-head">
+      <div class="mini-logo">🏷️</div>
+      <div><b>CbOfertas</b><small>Criador de Ofertas Inteligente</small></div>
+      <button id="closeMenuBtn" type="button" aria-label="Fechar menu">✕</button>
+    </div>
+    <button class="menu-link" data-page="offers" type="button">⌂ <span>Início</span></button>
+    <button class="menu-link" data-page="radar" type="button">⚡ <span>Radar automático</span></button>
+    <button class="menu-link" data-page="history" type="button">◷ <span>Histórico e agendamentos</span></button>
+    <button class="menu-link" data-page="favorites" type="button">★ <span>Favoritos</span></button>
+    <button class="menu-link" data-page="coupons" type="button">🎟️ <span>Cupons inteligentes</span></button>
+    <button class="menu-link" data-page="settings" type="button">⚙️ <span>Configurações</span></button>
+    <div class="side-menu-separator"></div>
+    <button id="menuNewItemBtn" class="menu-link" type="button">＋ <span>Nova oferta</span></button>
+    <button id="menuClearBtn" class="menu-link danger-link" type="button">🧹 <span>Limpar formulário</span></button>
+  </aside>
+
+  <header class="app-header">
+    <button id="menuBtn" class="header-icon" type="button" aria-label="Abrir menu">☰</button>
+    <div class="header-brand">
+      <div class="brand-mark">🏷️</div>
+      <div>
+        <div class="brand"><span>Cb</span><b>Ofertas</b></div>
+        <small>Criador de Ofertas Inteligente</small>
+      </div>
+    </div>
+    <button id="themeToggleBtn" class="header-icon theme-button" type="button" aria-label="Alternar tema">☾</button>
+  </header>
+
+  <nav id="offersToolbar" class="hidden" aria-hidden="true"></nav>
+  <p id="topActionStatus" class="top-action-status" aria-live="polite"></p>
+
+  <main>
+    <section id="offersPage" class="page-view">
+      <section id="editorCollapsedNotice" class="card saved-notice hidden">
+        <div class="saved-check">✓</div>
+        <div>
+          <b>Oferta salva no histórico</b>
+          <p>Toque em <strong>Nova oferta</strong> para cadastrar outro produto ou abra o histórico para publicar.</p>
+        </div>
+        <button id="newItemBtn" class="btn compact primary" type="button">＋ Nova oferta</button>
+      </section>
+
+      <div id="editorArea" class="editor-area">
+        <section class="step-card search-step">
+          <div class="step-heading">
+            <span class="step-number">1</span>
+            <div><h2>Buscar Produto</h2><p>Cole o link do Mercado Livre ou Shopee</p></div>
+            <button id="pasteLinkBtn" class="round-soft" type="button" title="Colar link">🔗</button>
+          </div>
+          <div class="search-row">
+            <div class="input-with-icon"><span>🔗</span><input id="productLink" type="url" placeholder="https://produto.mercadolivre.com.br/..."></div>
+            <button id="fetchBtn" class="btn search-button" type="button">⌕ <span>Buscar</span></button>
+          </div>
+          <p id="fetchStatus" class="status" aria-live="polite"></p>
+        </section>
+
+        <section class="step-card product-step">
+          <div class="step-heading">
+            <span class="step-number">2</span>
+            <div><h2>Informações do Produto</h2><p>Confira os dados encontrados e ajuste o que precisar</p></div>
+            <span id="productFoundBadge" class="found-badge hidden">✓ Produto encontrado</span>
+          </div>
+
+          <div class="product-overview">
+            <div class="image-box">
+              <img id="productImage" alt="Imagem do produto">
+              <label class="image-picker">📷 Trocar foto<input id="imageFile" type="file" accept="image/*" hidden></label>
+            </div>
+            <div class="product-main">
+              <div class="badge-line"><span id="fullBadge" class="full-badge hidden">FULL</span><span id="discountBadge" class="discount-badge hidden"></span></div>
+              <label class="title-field">Título<input id="productTitle" placeholder="Nome do produto"></label>
+              <button id="openLinkBtn" class="text-link" type="button">↗ Abrir anúncio original</button>
+            </div>
+          </div>
+
+          <div class="price-summary">
+            <label class="price-cell old-cell"><span>Preço original</span><input id="oldPrice" inputmode="decimal" placeholder="399,90"></label>
+            <label class="price-cell offer-cell"><span>Preço final</span><input id="offerPrice" inputmode="decimal" placeholder="351,91"></label>
+            <div class="price-cell save-cell"><span>Você economiza</span><strong id="savingsValue">R$ 0,00</strong></div>
+          </div>
+
+          <div class="product-meta">
+            <label class="meta-cell coupon-meta-cell"><span>🏷️ Cupons da oferta</span><input id="coupon" placeholder="OFERTA10 ou FRETEGRATIS" autocomplete="off"><small>Você pode digitar, alterar ou selecionar vários cupons.</small><div id="offerCouponQuickList" class="coupon-quick-list"></div><button id="openCouponManagerBtn" class="inline-link-button" type="button">Gerenciar cupons salvos</button></label>
+            <label class="meta-cell"><span>🚚 Frete</span><select id="freight"><option value="Frete grátis">Grátis</option><option value="Entrega FULL">Entrega FULL</option><option value="Consulte o frete">Consultar</option><option value="">Não informar</option></select></label>
+            <label class="meta-cell seller-meta-cell"><span>🏬 Vendido por <b>(automático)</b></span><input id="seller" list="sellerSuggestions" placeholder="Preenchido automaticamente quando disponível" autocomplete="off"><small>Se o vendedor não for encontrado, esta informação não aparecerá no anúncio. Você ainda pode corrigir manualmente.</small></label>
+          </div>
+          <datalist id="sellerSuggestions"></datalist>
+
+          <div class="installment-box">
+            <div class="installment-heading">
+              <div><b>💳 Parcelamento</b><small>Deixe vazio quando o anúncio não mostrar parcelas.</small></div>
+              <label class="check-option"><input id="installmentNoInterest" type="checkbox" checked><span id="interestLabel">Sem juros</span></label>
+            </div>
+            <div class="installment-fields">
+              <label>Nº de parcelas<input id="installmentQty" type="number" inputmode="numeric" min="2" max="48" placeholder="10"></label>
+              <label>Valor da parcela<input id="installmentValue" inputmode="decimal" placeholder="35,19"></label>
+            </div>
+            <p id="installmentPreview" class="calculated-total"></p>
+          </div>
+
+          <div class="product-actions">
+            <button id="saveItemBtn" class="btn primary" type="button">♡ Salvar no histórico</button>
+            <button id="favoriteCurrentBtn" class="btn favorite-action" type="button">☆ Favoritar</button>
+            <button id="clearBtn" class="btn outline-danger" type="button">🧹 Limpar</button>
+            <button id="clearCouponBtn" class="btn outline" type="button">🗑️ Limpar cupons desta oferta</button>
+          </div>
+        </section>
+
+        <section class="step-card generator-step">
+          <div class="step-heading generator-heading">
+            <span class="step-number">3</span>
+            <div><h2>Gerador de Mensagens</h2><p>Escolha o estilo e gere frases únicas</p></div>
+            <button id="phraseBtn" class="btn phrase-button" type="button">✨ Gerar Nova Frase</button>
+          </div>
+
+          <div class="styles" aria-label="Estilo da mensagem">
+            <button class="style-chip active" data-style="divertido" type="button">🙂 Humor</button>
+            <button class="style-chip" data-style="premium" type="button">♛ Premium</button>
+            <button class="style-chip" data-style="grupo" type="button">👥 Grupo WhatsApp</button>
+            <button class="style-chip" data-style="familia" type="button">⌂ Família</button>
+            <button class="style-chip" data-style="ofertas" type="button">🔥 Ofertas</button>
+          </div>
+
+          <label class="phrase-field">Frase antes do título<input id="smartPhrase" placeholder="Gerada automaticamente conforme o produto"></label>
+          <div id="preview" class="whatsapp-preview hidden"></div>
+          <div class="message-editor">
+            <textarea id="finalText" rows="9" maxlength="1200" aria-label="Texto da mensagem exibida"></textarea>
+            <div class="message-side-actions">
+              <button id="regenerateSideBtn" type="button" title="Gerar outra frase">⟳</button>
+              <button id="copySideBtn" type="button" title="Copiar mensagem">▣</button>
+            </div>
+          </div>
+          <div class="message-counter"><span>Mensagem pronta para compartilhar</span><strong id="charCounter">0/1200</strong></div>
+        </section>
+
+        <section class="step-card share-step">
+          <div class="step-heading">
+            <span class="step-number">4</span>
+            <div><h2>Compartilhar sua oferta</h2><p>Escolha como deseja publicar</p></div>
+          </div>
+          <div class="share-actions">
+            <button id="copyBtn" class="btn share-copy" type="button">▣ Copiar Texto</button>
+            <button id="whatsappBtn" class="btn whatsapp" type="button">◉ WhatsApp</button>
+            <button id="shareBtn" class="btn share-other" type="button">↗ Outros Apps</button>
+            <button id="quickSaveBtn" class="heart-button" type="button" title="Salvar no histórico">♡</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+
+    <section id="radarPage" class="page-view hidden">
+      <section class="page-intro radar-intro"><span>⚡</span><div><h1>Radar automático de ofertas</h1><p>Encontre promoções prontas, filtre as melhores e aprove somente o que deseja compartilhar.</p></div><button id="refreshRadarBtn" class="btn primary compact" type="button">↻ Atualizar</button></section>
+
+      <section class="card radar-control-card">
+        <div class="section-title"><span>🎯</span><div><h2>O que você quer encontrar?</h2><p>O radar consulta as ofertas do Mercado Livre e ordena as oportunidades mais fortes.</p></div></div>
+        <div class="radar-filter-grid">
+          <label class="radar-search-label">Produto ou palavra-chave<input id="radarQuery" placeholder="Ex.: air fryer, celular, tênis"></label>
+          <label>Categoria<select id="radarCategory">
+            <option value="">Todas</option>
+            <option value="tecnologia">Tecnologia</option>
+            <option value="casa">Casa e cozinha</option>
+            <option value="moda">Moda e calçados</option>
+            <option value="beleza">Beleza e saúde</option>
+            <option value="fitness">Esporte e fitness</option>
+            <option value="infantil">Infantil</option>
+            <option value="pet">Pet</option>
+            <option value="automotivo">Automotivo</option>
+          </select></label>
+          <label>Desconto mínimo<input id="radarMinDiscount" type="number" min="0" max="95" inputmode="numeric" value="15" placeholder="15"></label>
+          <label>Preço máximo<input id="radarMaxPrice" inputmode="decimal" placeholder="Sem limite"></label>
+        </div>
+        <div class="radar-options-row">
+          <label class="check-option"><input id="radarOnlyFull" type="checkbox"><span>Somente FULL</span></label>
+          <label class="check-option"><input id="radarHideUsed" type="checkbox" checked><span>Ocultar já usadas</span></label>
+          <label class="check-option"><input id="radarAutoOpen" type="checkbox" checked><span>Atualizar ao abrir</span></label>
+          <button id="searchRadarBtn" class="btn primary" type="button">🔎 Buscar ofertas</button>
+        </div>
+        <p id="radarStatus" class="status" aria-live="polite"></p>
+      </section>
+
+      <section class="radar-summary" aria-label="Resumo do radar">
+        <article><small>Encontradas</small><strong id="radarFoundCount">0</strong></article>
+        <article><small>Novas</small><strong id="radarNewCount">0</strong></article>
+        <article><small>Melhor desconto</small><strong id="radarBestDiscount">0%</strong></article>
+        <article><small>Última atualização</small><strong id="radarLastUpdate">—</strong></article>
+      </section>
+
+      <section id="radarResults" class="radar-results"></section>
+      <section id="radarEmpty" class="card empty radar-empty"><b>Nenhuma oferta carregada ainda.</b><p>Toque em “Buscar ofertas” para o servidor procurar promoções automaticamente.</p></section>
+      <div class="radar-footer-actions"><button id="restoreHiddenRadarBtn" class="btn outline" type="button">Restaurar ofertas ocultadas</button></div>
+    </section>
+
+    <section id="historyPage" class="page-view hidden">
+      <section class="page-intro"><span>◷</span><div><h1>Histórico de ofertas</h1><p>Edite, agende ou envie cada publicação separadamente.</p></div></section>
+      <section class="card publication-card">
+        <div class="section-title publication-title">
+          <span>📚</span><div><h2>Itens salvos</h2><p>Cada produto pode ter sua própria data e horário.</p></div><strong id="publicationCount" class="publication-count">0</strong>
+        </div>
+        <div id="publicationQueue" class="publication-queue"></div>
+        <div class="publication-footer">
+          <button id="scheduleSavedBtn" class="btn schedule full" type="button">📅 Agendar itens com data e hora</button>
+          <button id="sendSavedBtn" class="btn whatsapp full" type="button">📨 Enviar todas no WhatsApp Business</button>
+          <button id="clearSavedBtn" class="btn outline-danger full" type="button">🗑️ Apagar lista salva</button>
+          <p id="publicationStatus" class="status" aria-live="polite"></p>
+        </div>
+      </section>
+      <section class="notice"><b>Envio separado e com confirmação</b><p>Cada produto abre uma mensagem separada. O WhatsApp Business exige que você escolha o grupo e confirme cada envio.</p></section>
+    </section>
+
+
+    <section id="favoritesPage" class="page-view hidden">
+      <section class="page-intro favorites-intro"><span>★</span><div><h1>Favoritos</h1><p>Guarde produtos interessantes sem misturar com a fila de publicações.</p></div></section>
+      <section class="card favorites-toolbar">
+        <label>Pesquisar favoritos<input id="favoritesSearch" placeholder="Digite o nome do produto"></label>
+        <div class="favorites-summary"><small>Total salvo</small><strong id="favoritesCount">0</strong></div>
+        <button id="clearFavoritesBtn" class="btn outline-danger" type="button">🗑️ Limpar favoritos</button>
+      </section>
+      <section id="favoritesList" class="favorites-list"></section>
+      <section id="favoritesEmpty" class="card empty"><b>Nenhum favorito salvo.</b><p>Use o botão ☆ no formulário, no Radar ou no histórico para guardar um produto.</p></section>
+      <p id="favoritesStatus" class="status" aria-live="polite"></p>
+    </section>
+
+    <section id="couponsPage" class="page-view hidden">
+      <section class="page-intro"><span>🎟️</span><div><h1>Cupons</h1><p>Cadastre vários cupons, altere quando precisar e escolha quais usar nas ofertas.</p></div></section>
+
+      <section id="couponManagerCard" class="card coupon-manager-card">
+        <div class="section-title coupon-library-title">
+          <span>🏷️</span><div><h2>Meus cupons inteligentes</h2><p>Cadastre a categoria de cada cupom para o programa reconhecer automaticamente quais combinam com o produto.</p></div><strong id="couponLibraryCount" class="publication-count">0</strong>
+        </div>
+        <div class="coupon-add-row">
+          <label>Cupom ou código<input id="couponCodeInput" placeholder="Ex.: MELIOFFHJ" autocomplete="off"></label>
+          <label>Categoria do cupom<select id="couponCategoryInput">
+            <option value="todo_site">Todo o site</option>
+            <option value="moda">Moda</option>
+            <option value="casa">Casa</option>
+            <option value="saude_diversos">Saúde e diversos</option>
+            <option value="diversos">Diversos</option>
+            <option value="especifico">Produto específico</option>
+          </select></label>
+          <label id="couponTargetLabel" class="coupon-target-label">Produto específico / palavras-chave<input id="couponTargetInput" placeholder="Ex.: Air Fryer, tênis Adidas ou link do produto" autocomplete="off"><small>Obrigatório apenas para cupom específico. Separe várias opções por vírgula.</small></label>
+          <label>Valor mínimo da oferta<input id="couponMinPriceInput" inputmode="decimal" placeholder="Ex.: 199,90"></label>
+          <label>Desconto mínimo (%)<input id="couponMinDiscountInput" type="number" min="0" max="95" inputmode="numeric" placeholder="Ex.: 20"></label>
+          <label>Validade<input id="couponExpiresInput" type="date"></label>
+          <label>Prioridade<select id="couponPriorityInput"><option value="1">Normal</option><option value="2">Alta</option><option value="3">Máxima</option></select></label>
+          <button id="saveCouponCodeBtn" class="btn primary" type="button">＋ Adicionar cupom</button>
+          <button id="cancelCouponEditBtn" class="btn outline hidden" type="button">Cancelar alteração</button>
+        </div>
+        <div class="coupon-smart-note">🤖 O programa cruza categoria, palavras-chave, preço mínimo, desconto, validade e prioridade. Cupons vencidos deixam de ser aplicados automaticamente.</div>
+        <div class="active-coupon-box">
+          <div><small>Cupons habilitados para reconhecimento</small><strong id="activeCouponPreview">Nenhum cupom habilitado</strong></div>
+          <button id="applyCouponsToOfferBtn" class="btn secondary" type="button">Aplicar todos manualmente</button>
+        </div>
+        <div id="couponSavedList" class="coupon-saved-list"></div>
+        <p id="couponLibraryStatus" class="status" aria-live="polite"></p>
+      </section>
+
+      <section id="couponBlastCard" class="card coupon-blast-card">
+        <div class="coupon-blast-grid">
+          <div class="coupon-blast-image-box">
+            <div id="couponImagePlaceholder" class="coupon-image-placeholder">🖼️<b>Nenhuma foto escolhida</b><small>Toque abaixo para abrir sua galeria</small></div>
+            <img id="couponBlastImage" alt="Foto salva para divulgação de cupons">
+            <label class="coupon-blast-picker">📷 Abrir galeria<input id="couponBlastImageFile" type="file" accept="image/*" hidden></label>
+            <button id="removeCouponBlastImageBtn" class="mini-btn danger-mini" type="button">Remover foto</button>
+          </div>
+          <div>
+            <label>Grupo preferido<input id="couponGroupName" placeholder="GRUPO DE OFERTAS CB #1"><small>Você ainda escolhe o grupo dentro do WhatsApp Business.</small></label>
+            <label>Link oficial dos cupons<input id="couponPageLink" type="url" value="https://www.mercadolivre.com.br/cupons?source_page=mperfil#nav-header"></label>
+          </div>
+        </div>
+        <label>Texto do aviso de cupons<textarea id="couponBlastText" rows="7" placeholder="Use {cupons} para inserir automaticamente os cupons ativos e {link} para inserir o link"></textarea><small>Marcadores disponíveis: <b>{cupons}</b> e <b>{link}</b>.</small></label>
+        <div class="coupon-blast-actions">
+          <button id="saveCouponBlastBtn" class="btn secondary" type="button">💾 Salvar modelo</button>
+          <button id="sendCouponBlastBtn" class="btn whatsapp" type="button">🚀 Enviar no WhatsApp Business</button>
+        </div>
+        <p id="couponBlastStatus" class="status" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <section id="settingsPage" class="page-view hidden">
+      <section class="page-intro"><span>⚙️</span><div><h1>Configurações</h1><p>O servidor oficial já vem preenchido e pronto para uso.</p></div></section>
+      <section class="card server-card">
+        <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar os anúncios do Mercado Livre.</p></div></div>
+        <label>Endereço do servidor<input id="apiServer" type="url" value="https://mercado-yvqn.onrender.com"></label>
+        <div class="actions two-buttons">
+          <button id="saveServerBtn" class="btn secondary" type="button">Salvar servidor</button>
+          <button id="testServerBtn" class="btn outline" type="button">Testar conexão</button>
+        </div>
+        <p id="serverStatus" class="status"></p>
+      </section>
+      <section class="card setting-card">
+        <div class="setting-title"><span>🧹</span><div><h2>Formulário</h2><p>Limpe os campos sem apagar as ofertas já salvas.</p></div></div>
+        <button id="settingsNewItemBtn" class="btn primary full" type="button">＋ Abrir nova oferta</button>
+      </section>
+
+      <section class="card setting-card radar-settings-card">
+        <div class="setting-title"><span>⚡</span><div><h2>Automação do Radar</h2><p>Quando ativado, o aplicativo procura novas ofertas ao abrir a tela do Radar.</p></div></div>
+        <label class="check-option radar-setting-toggle"><input id="settingsRadarAuto" type="checkbox" checked><span>Atualizar automaticamente ao abrir</span></label>
+        <small class="setting-help">As ofertas repetidas são reconhecidas pelo link e podem ficar ocultas depois de usadas.</small>
+      </section>
+      <section class="card about-card"><b>CbOfertas V4.0</b><p>Backend modular, Radar com pontuação, cupons inteligentes, histórico, favoritos e automação de build no GitHub.</p></section>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <button id="showOffersPageBtn" class="bottom-tab active" data-page="offers" type="button"><span>⌂</span><b>Início</b></button>
+    <button id="showRadarPageBtn" class="bottom-tab" data-page="radar" type="button"><span>⚡</span><b>Radar</b></button>
+    <button id="showHistoryPageBtn" class="bottom-tab" data-page="history" type="button"><span>◷</span><b>Histórico</b></button>
+    <button id="showFavoritesPageBtn" class="bottom-tab" data-page="favorites" type="button"><span>★</span><b>Favoritos</b></button>
+    <button id="showCouponsPageBtn" class="bottom-tab" data-page="coupons" type="button"><span>🎟</span><b>Cupons</b></button>
+    <button id="showSettingsPageBtn" class="bottom-tab" data-page="settings" type="button"><span>⚙</span><b>Configurações</b></button>
+  </nav>
+
+  <script src="app.js?v=400"></script>
 </body>
 </html>

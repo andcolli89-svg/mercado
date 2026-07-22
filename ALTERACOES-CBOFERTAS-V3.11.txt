@@ -1,0 +1,17 @@
+CBOFERTAS V3.11 — CUPONS INTELIGENTES E VENDEDOR AUTOMÁTICO
+
+1. CUPONS INTELIGENTES
+- Cada cupom pode ser classificado como Todo o site, Moda, Casa, Saúde e diversos, Diversos ou Produto específico.
+- Cupons específicos aceitam palavras-chave, nome ou link do produto.
+- Ao buscar um anúncio, o aplicativo identifica a categoria pelo título e seleciona automaticamente os cupons compatíveis.
+- A seleção continua editável manualmente antes de salvar ou compartilhar.
+- Cupons antigos são preservados e passam a funcionar como Todo o site.
+
+2. VENDIDO POR
+- O vendedor é preenchido automaticamente quando o servidor encontra essa informação.
+- Não existe mais preenchimento artificial com “Mercado Livre”.
+- Quando nenhum vendedor é encontrado, a linha “Vendido por” não aparece no anúncio.
+- O campo continua editável para correção manual.
+
+3. SERVIDOR PADRÃO
+https://mercado-yvqn.onrender.com

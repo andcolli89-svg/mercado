@@ -1,0 +1,23 @@
+CBOFERTAS V3.5 — LISTA DE PUBLICAÇÃO
+
+NOVO FLUXO
+1. Toque em “Novo item”.
+2. Cole o link e toque em “Buscar”.
+3. Confira os dados e toque em “Salvar item”.
+4. O formulário fecha e o item entra na lista de publicação.
+5. Toque em “Novo item” para cadastrar o próximo produto.
+
+ALTERAÇÕES
+- Botões Novo item, Buscar, Salvar item e Limpar fixados no topo.
+- Botão Limpar apaga todos os campos do item atual.
+- Vários produtos podem ser salvos na mesma lista.
+- Cada item salvo possui Alterar, Agendar, Enviar agora e Excluir.
+- Cada item possui seus próprios campos de data e horário.
+- Botão final envia todas as mensagens salvas, uma por vez.
+- Cada produto mantém sua própria imagem no envio em sequência.
+- Links adicionais continuam gerando mensagens separadas.
+- Agendamentos antigos são cancelados quando um item é alterado.
+- Versão Android atualizada para 3.5.
+
+IMPORTANTE
+O WhatsApp exige confirmação manual em cada mensagem. O CbOfertas abre os envios separadamente, mas não envia silenciosamente para grupos.

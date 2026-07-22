@@ -1,0 +1,12 @@
+CbOfertas V3.6
+
+- Novo botão fixo “Disparar cupons” no topo.
+- Área para salvar uma foto promocional específica.
+- Campo para salvar o link da página de ofertas do Mercado Livre.
+- Texto do aviso de cupons editável e salvo no aparelho.
+- Campo de nome do grupo preferido, com padrão “GRUPO DE OFERTAS CB #1”.
+- Compartilhamento direto para o pacote do WhatsApp Business.
+- WhatsApp Business passa a ter prioridade nas demais mensagens.
+- Agendamentos também abrem o WhatsApp Business.
+
+Observação: por limitação de segurança do WhatsApp, o grupo deve ser selecionado e o envio confirmado pelo usuário.

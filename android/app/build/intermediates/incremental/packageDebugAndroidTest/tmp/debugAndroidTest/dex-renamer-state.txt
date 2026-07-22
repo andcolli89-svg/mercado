@@ -1,4 +1,0 @@
-#Sun Jul 19 11:04:49 BRT 2026
-base.0=C\:\\Users\\Fabio\\Desktop\\joao\\Programa do Mercado Livre\\promozap_v16\\android\\app\\build\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\0\\classes.dex
-path.0=0/classes.dex
-renamed.0=classes.dex

@@ -1,0 +1,17 @@
+CbOfertas V3.10
+================
+
+ALTERAÇÕES
+- Interface refeita no padrão moderno solicitado, baseada em quatro etapas numeradas.
+- Cabeçalho com menu lateral, marca centralizada e botão de modo escuro.
+- Barra inferior com Início, Histórico, Cupons e Configurações.
+- Servidor https://mercado-yvqn.onrender.com preenchido e salvo automaticamente na primeira abertura.
+- Configuração do servidor movida para a página Configurações.
+- Tela de produto com imagem, título, desconto, preço original, preço final e economia calculada.
+- Adicionado campo “Vendido por”, preenchido pelos dados retornados pelo servidor.
+- Cupom, frete e loja reorganizados no resumo do produto.
+- Gerador de mensagens com estilos Humor, Premium, Grupo WhatsApp, Família e Ofertas.
+- Botões rápidos para gerar outra frase e copiar a mensagem.
+- Histórico e agendamentos separados da tela principal.
+- Mantidos cupom global, itens salvos, edição, agendamento, página de cupons e prioridade para WhatsApp Business.
+- Versão Android atualizada para 3.9.

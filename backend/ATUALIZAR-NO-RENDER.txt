@@ -1,0 +1,20 @@
+ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS V4.0
+
+1. Envie todo o conteúdo da pasta backend para o serviço no Render.
+2. Ambiente: Node.js 20 ou superior.
+3. Build Command: deixe vazio ou use npm install.
+4. Start Command: npm start
+5. Opcional: configure MELI_ACCESS_TOKEN para ampliar o acesso à API do Mercado Livre.
+6. Abra /health no endereço publicado.
+7. A resposta correta informa version 4.0.0 e os recursos produto, radar, cupons-inteligentes, historico e favoritos.
+
+VALIDAÇÃO LOCAL
+- npm run check
+- npm test
+
+ESTRUTURA
+- server.js: inicialização do processo
+- src/app.js: rotas HTTP
+- src/config.js: configuração e variáveis de ambiente
+- src/lib: utilitários
+- src/services: produto, Radar e imagens

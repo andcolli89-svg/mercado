@@ -1,0 +1,22 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V4.0
+
+VALIDAÇÕES EXECUTADAS COM SUCESSO
+- Sintaxe JavaScript do aplicativo.
+- Estrutura e arquivos essenciais do projeto.
+- 126 IDs HTML únicos e referências principais conferidas.
+- Inicialização simulada do aplicativo WebView com 127 elementos.
+- Sintaxe de todos os módulos do backend.
+- Teste da rota /health.
+- Teste de resposta 404 para rota inexistente.
+- Inicialização real do servidor local e resposta version 4.0.0.
+- Manifest PWA, versionCode 400 e versionName 4.0 conferidos.
+- Workflow do GitHub Actions inclui validação, testes e build do APK.
+
+COMANDOS DISPONÍVEIS
+- node scripts/validate-project.js
+- node scripts/smoke-webapp.js
+- cd backend && npm run check
+- cd backend && npm test
+
+OBSERVAÇÃO SOBRE O APK
+O APK não foi compilado neste ambiente porque o Android SDK/Gradle não estão instalados localmente. O workflow .github/workflows/build-apk.yml foi configurado para instalar as ferramentas, executar as validações e gerar CbOfertas-V4.0.apk no GitHub Actions.

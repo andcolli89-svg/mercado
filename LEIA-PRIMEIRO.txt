@@ -1,10 +1,39 @@
-PROMOZAP MELI V17
+CBOFERTAS V4.0
 
-1. Copie todo o conteúdo desta pasta para a raiz do repositório mercado.
-2. Execute: git add .
-3. Execute: git commit -m "Projeto limpo V17"
-4. Execute: git push origin main
-5. Aguarde o Render ficar Live.
-6. Em GitHub > Actions, baixe PromoZap-MELI-V17-APK.
+ANTES DE USAR O RADAR
+- Publique a pasta backend desta versão no Render.
+- O comando de inicialização é npm start.
+- Abra /health e confirme version 4.0.0.
 
-Observação: o preço exibido pelo Mercado Livre pode variar por conta, CEP, forma de pagamento e variante. O backend prioriza a oferta visível na página e usa a API oficial como fallback.
+TELA INICIAL
+1. Cole o link do produto e toque em Buscar.
+2. Confira título, imagem, preços, vendedor, frete e parcelamento.
+3. Os cupons compatíveis podem ser selecionados automaticamente.
+4. Gere a mensagem, compartilhe, favorite ou salve no histórico.
+
+RADAR
+- Pesquisa promoções e classifica por desconto, frete, FULL e qualidade dos dados.
+- Permite filtrar por palavra-chave, categoria, desconto e preço.
+- Registra o menor preço observado localmente.
+- Permite usar, abrir, favoritar ou ocultar uma oferta.
+
+CUPONS INTELIGENTES
+- Cada cupom pode ter categoria, palavras-chave, preço mínimo, desconto mínimo, validade e prioridade.
+- Cupons vencidos não são aplicados automaticamente.
+- Cupons de prioridade maior aparecem primeiro.
+- A seleção automática pode ser alterada manualmente na oferta.
+
+HISTÓRICO
+- Cada produto é salvo como uma publicação separada.
+- É possível editar, favoritar, excluir, agendar ou enviar cada item.
+- Os agendamentos são restaurados após reiniciar o aparelho.
+
+FAVORITOS
+- Favoritos não entram automaticamente na fila de publicações.
+- É possível pesquisar, abrir o anúncio e carregar o produto no editor.
+- Um favorito pode ser salvo no histórico depois da conferência.
+
+APK NO GITHUB
+- Envie todo o projeto para a raiz do repositório.
+- Execute o workflow Validar e Gerar APK CbOfertas V4.0.
+- O artefato gerado contém CbOfertas-V4.0.apk e o arquivo SHA-256.

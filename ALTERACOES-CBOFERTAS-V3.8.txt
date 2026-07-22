@@ -1,0 +1,17 @@
+CbOfertas V3.8
+================
+
+ALTERAÇÕES
+- Cupom transformado em configuração global e persistente.
+- O botão Limpar apaga somente os dados do item atual e mantém o cupom.
+- Botão exclusivo “Apagar cupom” com confirmação manual.
+- O cupom global atual é aplicado a todas as publicações salvas, inclusive ao editar, enviar ou agendar.
+- Frases engraçadas agora são escolhidas sem repetição dentro de cada categoria até que todas sejam usadas.
+- Mantidos os itens salvos, a edição individual, o agendamento individual e coletivo e os envios separados.
+- Mantida a página separada de cupons e a prioridade do WhatsApp Business.
+- Identidade interna atualizada integralmente para CbOfertas; pacote Android alterado para com.cbofertas.app.
+- Interface refinada com predominância verde e branca.
+- Versão Android atualizada para 3.8.
+
+ATENÇÃO
+Como o identificador interno do aplicativo mudou para com.cbofertas.app, esta versão pode ser instalada como um aplicativo separado da versão antiga. Isso elimina totalmente o nome interno anterior.

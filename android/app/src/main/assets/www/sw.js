@@ -1,5 +1,5 @@
-const CACHE = 'promozap-v13';
-const ASSETS = ['./','index.html','style.css','app.js?v=11','manifest.webmanifest','logo.jpg','icons/icon-192.png','icons/icon-512.png'];
+const CACHE = 'cbofertas-v400';
+const ASSETS = ['./','index.html','style.css?v=400','app.js?v=400','manifest.webmanifest','logo.jpg','icons/icon-192.png','icons/icon-512.png'];
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));

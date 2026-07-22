@@ -1,0 +1,35 @@
+CBOFERTAS V4.0 — ATUALIZAÇÃO PRINCIPAL
+
+BACKEND
+- server.js reduzido à inicialização do servidor.
+- Rotas movidas para src/app.js.
+- Configurações e cabeçalhos movidos para src/config.js.
+- Utilitários de resposta HTTP e formatação separados em src/lib.
+- Serviços de produto, Radar e imagens separados em src/services.
+- Testes smoke adicionados para /health e rota inexistente.
+
+RADAR
+- Mantidos cache, atualização periódica, filtros e classificação.
+- Adicionada integração direta com Favoritos.
+- Mantidos histórico local de preços, ocultação e controle de ofertas usadas.
+
+CUPONS INTELIGENTES
+- Regras por categoria e palavras-chave preservadas.
+- Adicionados preço mínimo, desconto mínimo, data de validade e prioridade.
+- Cupons vencidos são ignorados automaticamente.
+- Ordenação por prioridade e especificidade.
+
+HISTÓRICO
+- Edição, agendamento, envio individual e envio em sequência preservados.
+- Adicionado botão de favoritar em cada publicação.
+
+FAVORITOS
+- Nova página com armazenamento local independente.
+- Pesquisa por nome.
+- Ações para carregar no editor, abrir anúncio e remover.
+- Botões de favorito no formulário, Radar e histórico.
+
+AUTOMAÇÃO
+- Workflow atualizado para Node.js 20, testes do backend e build Android.
+- Validador scripts/validate-project.js incluído.
+- APK e SHA-256 publicados como artefatos do GitHub Actions.

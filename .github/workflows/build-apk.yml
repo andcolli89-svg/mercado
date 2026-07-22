@@ -1,41 +1,85 @@
-name: Gerar APK V16
+name: Validar e Gerar APK CbOfertas V4.0
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['android/**', '.github/workflows/build-apk.yml']
+    paths:
+      - 'android/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - '.github/workflows/build-apk.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - '.github/workflows/build-apk.yml'
+
 permissions:
   contents: read
+
 jobs:
-  build:
+  validate-and-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar estrutura da V4.0
+        run: |
+          node scripts/validate-project.js
+          node scripts/smoke-webapp.js
+
+      - name: Verificar backend
+        working-directory: backend
+        run: |
+          npm run check
+          npm test
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma Android
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+
       - name: Compilar APK
         working-directory: android
         run: gradle clean :app:assembleDebug --no-daemon
-      - name: Validar APK
+
+      - name: Validar e nomear APK
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
           unzip -l "$APK" | grep -q 'assets/www/index.html'
           unzip -l "$APK" | grep -q 'assets/www/app.js'
-          cp "$APK" PromoZap-MELI-V16.apk
-          sha256sum PromoZap-MELI-V16.apk > PromoZap-MELI-V16.apk.sha256
-      - uses: actions/upload-artifact@v4
+          unzip -l "$APK" | grep -q 'assets/www/style.css'
+          cp "$APK" CbOfertas-V4.0.apk
+          sha256sum CbOfertas-V4.0.apk > CbOfertas-V4.0.apk.sha256
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
         with:
-          name: PromoZap-MELI-V16-APK
+          name: CbOfertas-V4.0-APK
           path: |
-            PromoZap-MELI-V16.apk
-            PromoZap-MELI-V16.apk.sha256
+            CbOfertas-V4.0.apk
+            CbOfertas-V4.0.apk.sha256
           retention-days: 30
