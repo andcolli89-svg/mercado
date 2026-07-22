@@ -1,7 +1,7 @@
 'use strict';
 
 const { URL } = require('node:url');
-const { BROWSER_HEADERS: HEADERS, apiHeaders } = require('../config');
+const { ALLOWED_PRODUCT_HOST, BROWSER_HEADERS: HEADERS, apiHeaders } = require('../config');
 const { fetchWithTimeout } = require('../lib/http');
 const { clean, decodeHtml, money, numeric, itemIdFrom, attr, meta } = require('../lib/format');
 
@@ -271,8 +271,15 @@ function extractInstallments(html, text, selectedPrice) {
 }
 
 async function productFromUrl(source) {
-  const input = new URL(clean(source));
-  if (!['http:', 'https:'].includes(input.protocol) || !ALLOWED_HOST.test(input.hostname)) throw new Error('Use um link do Mercado Livre ou meli.la.');
+  let input;
+  try {
+    input = new URL(clean(source));
+  } catch {
+    throw new Error('Cole um link completo do Mercado Livre ou meli.la.');
+  }
+  if (!['http:', 'https:'].includes(input.protocol) || !ALLOWED_PRODUCT_HOST.test(input.hostname)) {
+    throw new Error('Use um link do Mercado Livre ou meli.la.');
+  }
 
   const landing = await fetchWithTimeout(input.href, { headers: HEADERS });
   if (!landing.ok) throw new Error(`O Mercado Livre respondeu com código ${landing.status}.`);

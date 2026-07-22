@@ -8,5 +8,5 @@ const server = createServer();
 startRadarScheduler();
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`CbOfertas V4.0 disponível na porta ${PORT}`);
+  console.log(`CbOfertas Backend 4.0.1 disponível na porta ${PORT}`);
 });

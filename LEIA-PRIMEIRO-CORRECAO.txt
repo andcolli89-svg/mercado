@@ -1,0 +1,19 @@
+CBOFERTAS — CORREÇÃO DE BACKEND 4.0.1
+
+Problema corrigido:
+- A busca de produto retornava "ALLOWED_HOST is not defined" porque o serviço usava uma constante que não havia sido importada.
+
+Correções:
+- Criada lista ALLOWED_PRODUCT_HOST específica para links de produto.
+- Mantida ALLOWED_IMAGE_HOST separada para o proxy de imagens.
+- Tratamento melhor para link incompleto ou inválido.
+- Teste de regressão que impede o retorno do ReferenceError.
+- Teste do cálculo de desconto e pontuação do Radar.
+
+Como publicar:
+1. Substitua a pasta backend do repositório pela pasta backend deste pacote.
+2. Faça commit e push na branch principal.
+3. No Render, use Manual Deploy > Deploy latest commit, caso o deploy automático não comece.
+4. Abra /health e confirme version 4.0.1.
+
+Não é necessário reinstalar o APK: esta correção é executada no servidor.

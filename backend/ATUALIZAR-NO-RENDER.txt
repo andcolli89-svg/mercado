@@ -1,4 +1,4 @@
-ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS V4.0
+ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 4.0.1
 
 1. Envie todo o conteúdo da pasta backend para o serviço no Render.
 2. Ambiente: Node.js 20 ou superior.
@@ -6,7 +6,7 @@ ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS V4.0
 4. Start Command: npm start
 5. Opcional: configure MELI_ACCESS_TOKEN para ampliar o acesso à API do Mercado Livre.
 6. Abra /health no endereço publicado.
-7. A resposta correta informa version 4.0.0 e os recursos produto, radar, cupons-inteligentes, historico e favoritos.
+7. A resposta correta informa version 4.0.1 e os recursos produto, radar, cupons-inteligentes, historico e favoritos.
 
 VALIDAÇÃO LOCAL
 - npm run check
