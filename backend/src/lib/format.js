@@ -86,9 +86,15 @@ function safeDecode(value = '') {
 
 function itemIdFrom(text = '') {
   const raw = safeDecode(text);
+  // wid identifica o anúncio/oferta selecionado e deve vencer o código de catálogo /p/.
+  const widMatch = raw.match(/[?&#]wid=MLB-?(\d{6,})/i) || raw.match(/\bwid(?:=|:)(MLB-?\d{6,})/i);
+  if (widMatch) {
+    const wid = String(widMatch[1]).replace('-', '').toUpperCase();
+    return wid.startsWith('MLB') ? wid : `MLB${wid}`;
+  }
   const patterns = [
-    /(?:item_id|wid)(?:=|:)(MLB-?\d{6,})/i,
-    /[?&#](?:item_id|wid)=MLB-?(\d{6,})/i,
+    /(?:item_id)(?:=|:)(MLB-?\d{6,})/i,
+    /[?&#](?:item_id)=MLB-?(\d{6,})/i,
     /"item_id"\s*:\s*"?(MLB-?\d{6,})/i,
     /"id"\s*:\s*"(MLB\d{6,})"/i,
     /\b(MLB-?\d{6,})\b/i

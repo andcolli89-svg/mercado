@@ -1,9 +1,9 @@
-CBOFERTAS V4.1
+CBOFERTAS V5.0
 
 CORREÇÕES IMPORTANTES
 - Valores como 2.500 e 1.500 agora são tratados como R$ 2.500,00 e R$ 1.500,00.
 - O Radar não transforma mais milhares em centavos.
-- O backend deve mostrar version 4.1.0 em /health.
+- O backend deve mostrar version 5.0.0 em /health.
 
 LINK DE AFILIADO
 1. Busque ou escolha o produto no CbOfertas.
@@ -25,5 +25,5 @@ ATUALIZAR O RENDER
 
 GERAR O APK
 - Envie o projeto completo para o GitHub.
-- Execute Validar e Gerar APK CbOfertas V4.1.
-- Baixe CbOfertas-V4.1-APK.
+- Execute Validar e Gerar APK CbOfertas V5.0.
+- Baixe CbOfertas-V5.0-APK.

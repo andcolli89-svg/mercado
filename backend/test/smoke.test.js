@@ -17,12 +17,12 @@ async function withServer(callback) {
   }
 }
 
-test('health informa versão e recursos da V4.1', async () => {
+test('health informa versão e recursos da V5.0', async () => {
   await withServer(async port => {
     const response = await fetch(`http://127.0.0.1:${port}/health`);
     assert.equal(response.status, 200);
     const data = await response.json();
-    assert.equal(data.version, '4.1.0');
+    assert.equal(data.version, '5.0.0');
     assert.ok(data.features.includes('favoritos'));
   });
 });
@@ -90,3 +90,19 @@ test('Radar não transforma milhares em centavos', () => {
   assert.equal(item.discount, 17);
 });
 
+
+
+test('wid do anúncio vence o código de catálogo', () => {
+  const { itemIdFrom } = require('../src/lib/format');
+  const link = 'https://www.mercadolivre.com.br/produto/p/MLB25929487?pdp_filters=x#position=3&wid=MLB4812130742&sid=offers';
+  assert.equal(itemIdFrom(link), 'MLB4812130742');
+});
+
+test('web app contém biblioteca automática de afiliados', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const app = fs.readFileSync(path.join(__dirname, '../../android/app/src/main/assets/www/app.js'), 'utf8');
+  assert.match(app, /AFFILIATE_LIBRARY_STORAGE_KEY/);
+  assert.match(app, /saveAffiliateAssociation/);
+  assert.match(app, /affiliateFor/);
+});

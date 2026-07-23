@@ -1,8 +1,18 @@
-# CbOfertas V4.1
+# CbOfertas V5.0
+
+
+## Correções principais da V5.0
+
+- O parâmetro `wid=MLB...` agora identifica o anúncio específico antes do catálogo `/p/`.
+- O preço é confirmado pelo item selecionado; cashback, parcelas e outras variações não são aceitos como preço final.
+- Campos antigos são limpos antes de cada busca. Se o preço não for confirmado, a oferta não é aprovada.
+- Links oficiais `meli.la` compartilhados para a CbOfertas são salvos em uma biblioteca local por anúncio e catálogo.
+- Radar, favoritos, histórico e mensagens reutilizam automaticamente o link afiliado já cadastrado.
+- Caso real incluído na validação: catálogo `MLB25929487`, anúncio `MLB4812130742` e afiliado `https://meli.la/2ZY9J9V`.
 
 Aplicativo Android para consultar produtos, localizar ofertas no Radar, montar mensagens promocionais e trabalhar com links oficiais de afiliado do Mercado Livre.
 
-## Novidades da V4.1
+## Novidades da V5.0
 
 - Corrige a leitura de preços brasileiros com separador de milhares: `2.500` passa a ser `R$ 2.500,00`, e não `R$ 2,50`.
 - O aplicativo agora aparece na lista de compartilhamento do Android.
@@ -27,7 +37,7 @@ O aplicativo usa por padrão:
 
 `https://mercado-yvqn.onrender.com`
 
-Publique a pasta `backend` desta versão no Render e abra `/health`. A versão esperada é `4.1.0`.
+Publique a pasta `backend` desta versão no Render e abra `/health`. A versão esperada é `5.0.0`.
 
 ## Backend
 
@@ -69,14 +79,14 @@ node scripts/smoke-webapp.js
 
 1. Envie todo o conteúdo desta pasta para a raiz do repositório.
 2. Abra **Actions**.
-3. Execute **Validar e Gerar APK CbOfertas V4.1**.
-4. Baixe o artefato `CbOfertas-V4.1-APK`.
+3. Execute **Validar e Gerar APK CbOfertas V5.0**.
+4. Baixe o artefato `CbOfertas-V5.0-APK`.
 
 O workflow gera:
 
-- `CbOfertas-V4.1.apk`
-- `CbOfertas-V4.1.apk.sha256`
+- `CbOfertas-V5.0.apk`
+- `CbOfertas-V5.0.apk.sha256`
 
 ## Observação sobre atualização do APK
 
-Se o Android informar que o aplicativo não pode ser atualizado, a assinatura do APK anterior é diferente. Nesse caso, salve o que for necessário, desinstale a versão anterior e instale a V4.1. Para futuras atualizações sem desinstalar, use uma chave de assinatura permanente no GitHub Actions.
+Se o Android informar que o aplicativo não pode ser atualizado, a assinatura do APK anterior é diferente. Nesse caso, salve o que for necessário, desinstale a versão anterior e instale a V5.0. Para futuras atualizações sem desinstalar, use uma chave de assinatura permanente no GitHub Actions.

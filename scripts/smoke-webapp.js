@@ -104,4 +104,4 @@ if (typeof windowObject.CbOfertasReceiveSharedLink !== 'function') {
   throw new Error('Fluxo de recebimento do link compartilhado não foi inicializado.');
 }
 
-console.log(`Web app V4.1 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);
+console.log(`Web app V5.0 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);

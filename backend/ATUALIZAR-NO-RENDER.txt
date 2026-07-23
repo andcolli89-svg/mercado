@@ -1,4 +1,4 @@
-ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 4.1.0
+ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 5.0.0
 
 1. Substitua a pasta backend do repositório por esta versão.
 2. No Render, mantenha Root Directory como backend.
@@ -6,7 +6,7 @@ ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 4.1.0
 4. Start Command: npm start
 5. Health Check Path: /health
 6. Opcional: configure MELI_ACCESS_TOKEN.
-7. Abra /health e confirme version 4.1.0.
+7. Abra /health e confirme version 5.0.0.
 
 CORREÇÃO PRINCIPAL
 - Valores brasileiros com ponto de milhares são preservados.

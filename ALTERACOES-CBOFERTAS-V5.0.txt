@@ -1,0 +1,9 @@
+CbOfertas V5.0
+
+- Corrige seleção do anúncio específico pelo parâmetro wid.
+- Prioriza preço oficial do item e remove reaproveitamento de valores antigos.
+- Interrompe a busca quando o preço não pode ser confirmado.
+- Cria biblioteca local de links afiliados por item e catálogo.
+- Recebe links meli.la compartilhados e os reutiliza no Radar, histórico, favoritos e mensagens.
+- Mantém o link original somente para consulta técnica.
+- Atualiza Android para versionCode 500 e versionName 5.0.

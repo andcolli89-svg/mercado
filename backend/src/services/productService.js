@@ -281,28 +281,33 @@ async function productFromUrl(source) {
     throw new Error('Use um link do Mercado Livre ou meli.la.');
   }
 
+  const affiliateLink = /(^|\.)meli\.la$/i.test(input.hostname) ? input.href : '';
+  const requestedItemId = itemIdFrom(input.href);
+
   const landing = await fetchWithTimeout(input.href, { headers: HEADERS });
   if (!landing.ok) throw new Error(`O Mercado Livre respondeu com código ${landing.status}.`);
   const finalUrl = landing.url;
   const html = await landing.text();
-  const id = itemIdFrom(finalUrl) || itemIdFrom(html);
+  const id = requestedItemId || itemIdFrom(finalUrl) || itemIdFrom(html);
   const [api, apiPrices] = await Promise.all([fetchApiItem(id), fetchApiPrices(id)]);
   const structured = jsonLd(html);
   const text = pageText(html);
   const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
   const seller = extractSeller(html, text) || structured.seller || api?.seller || '';
-  const title = structured.title || api?.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
+  const title = api?.title || structured.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
   const image = api?.image || structured.image || meta(html, 'og:image');
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
-  // O valor exibido na página deve vencer o valor genérico da API, pois pode
-  // haver promoção, preço por contexto ou variação selecionada.
-  const chosenPrice = prices.price || structured.price || apiPrices?.price || api?.price || '';
-  const chosenOldPrice = prices.oldPrice || structured.oldPrice || apiPrices?.oldPrice || api?.oldPrice || '';
+  // O anúncio específico identificado por wid vence a página de catálogo.
+  // Isso evita capturar cashback, parcelas, outras variações ou valores de demonstração.
+  const chosenPrice = apiPrices?.price || api?.price || prices.price || structured.price || '';
+  const chosenOldPrice = apiPrices?.oldPrice || api?.oldPrice || prices.oldPrice || structured.oldPrice || '';
+  if (!chosenPrice) throw new Error('O produto foi identificado, mas o preço atual não pôde ser confirmado. Use o link de Compartilhar do anúncio.');
   const installment = extractInstallments(html, text, chosenPrice);
 
   return {
     id: api?.id || id,
+    catalogProductId: api?.catalogProductId || '',
     title,
     price: chosenPrice,
     pixPrice: chosenPrice,
@@ -316,10 +321,13 @@ async function productFromUrl(source) {
     installmentInterest: installment.interest,
     image,
     imageProxy: image ? `/api/image?url=${encodeURIComponent(image)}` : '',
-    permalink: finalUrl || api?.permalink || input.href,
+    permalink: affiliateLink || finalUrl || api?.permalink || input.href,
+    originalPermalink: finalUrl || api?.permalink || '',
+    affiliateLink,
+    affiliateConfirmed: Boolean(affiliateLink),
     full: Boolean(api?.full),
     freeShipping: Boolean(api?.freeShipping),
-    source: { itemId: id || null, priceSource: prices.pageDetected ? 'page' : (apiPrices?.source || 'items'), pagePriceDetected: Boolean(prices.pageDetected) }
+    source: { itemId: id || null, requestedItemId: requestedItemId || null, affiliate: Boolean(affiliateLink), priceSource: prices.pageDetected ? 'page' : (apiPrices?.source || 'items'), pagePriceDetected: Boolean(prices.pageDetected) }
   };
 }
 

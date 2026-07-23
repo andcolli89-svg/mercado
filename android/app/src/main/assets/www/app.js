@@ -241,6 +241,7 @@ const RADAR_HIDDEN_STORAGE_KEY = 'cbofertas-radar-hidden-v312';
 const RADAR_PRICE_HISTORY_STORAGE_KEY = 'cbofertas-radar-price-history-v312';
 const RADAR_LAST_LOAD_STORAGE_KEY = 'cbofertas-radar-last-load-v312';
 const FAVORITES_STORAGE_KEY = 'cbofertas-favorites-v400';
+const AFFILIATE_LIBRARY_STORAGE_KEY = 'cbofertas-affiliate-library-v500';
 
 const COUPON_BLAST_STORAGE_KEY = 'cbofertas-coupon-blast';
 const COUPON_CATEGORY_LABELS = {
@@ -422,6 +423,54 @@ function isMercadoLivreProductLink(value = '') {
   }
 }
 
+function isAffiliateLink(value = '') {
+  try { return /(^|\.)meli\.la$/i.test(new URL(String(value).trim()).hostname); } catch { return false; }
+}
+
+function extractItemId(value = '') {
+  const raw = String(value || '');
+  const wid = raw.match(/[?&#]wid=MLB-?(\d{6,})/i);
+  if (wid) return `MLB${wid[1]}`;
+  const item = raw.match(/\bMLB-?(\d{6,})\b/i);
+  return item ? `MLB${item[1]}` : '';
+}
+
+function getAffiliateLibrary() {
+  const saved = safeJson(localStorage.getItem(AFFILIATE_LIBRARY_STORAGE_KEY) || '{}', {});
+  return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+}
+
+function saveAffiliateAssociation(itemId, affiliateLink, catalogProductId = '') {
+  const id = String(itemId || '').replace('-', '').toUpperCase();
+  if (!id || !isAffiliateLink(affiliateLink)) return false;
+  const library = getAffiliateLibrary();
+  const record = { itemId: id, affiliateLink: String(affiliateLink).trim(), catalogProductId: String(catalogProductId || ''), updatedAt: Date.now() };
+  library[id] = record;
+  if (record.catalogProductId) library[record.catalogProductId] = record;
+  localStorage.setItem(AFFILIATE_LIBRARY_STORAGE_KEY, JSON.stringify(library));
+  return true;
+}
+
+function affiliateFor(item = {}) {
+  const library = getAffiliateLibrary();
+  const keys = [item.id, item.itemId, item.catalogProductId, extractItemId(item.link)].filter(Boolean);
+  for (const key of keys) {
+    const record = library[String(key).replace('-', '').toUpperCase()];
+    if (record?.affiliateLink) return record.affiliateLink;
+  }
+  return '';
+}
+
+function applySavedAffiliate(item = {}) {
+  const saved = affiliateFor(item);
+  if (saved) {
+    item.link = saved;
+    state.affiliateLinkReceived = true;
+    state.receivedAffiliateLink = saved;
+  }
+  return item;
+}
+
 function updateAffiliateUi() {
   if (!el.affiliateLinkBtn) return;
   const link = String(el.link?.value || '').trim();
@@ -448,15 +497,15 @@ window.CbOfertasReceiveSharedLink = async (sharedLink) => {
     setStatus(el.affiliateStatus, 'O compartilhamento recebido não contém um link válido do Mercado Livre.', 'error');
     return;
   }
-  state.affiliateLinkReceived = true;
-  state.receivedAffiliateLink = link;
+  state.affiliateLinkReceived = isAffiliateLink(link);
+  state.receivedAffiliateLink = state.affiliateLinkReceived ? link : '';
   el.link.value = link;
   state.previewIndex = 0;
   setEditorCollapsed(false);
   showPage('offers');
   renderCurrent();
-  setStatus(el.affiliateStatus, 'Link oficial recebido e aplicado. As mensagens, o histórico e os favoritos usarão este link.', 'success');
-  setStatus(el.topActionStatus, 'Link de afiliado recebido do compartilhamento do Mercado Livre.', 'success');
+  setStatus(el.affiliateStatus, state.affiliateLinkReceived ? 'Link oficial recebido. Identificando o anúncio e salvando na biblioteca...' : 'Link do produto recebido.', 'success');
+  setStatus(el.topActionStatus, 'Link recebido do compartilhamento do Mercado Livre.', 'success');
   await fetchProduct();
 };
 
@@ -1083,7 +1132,8 @@ async function approveRadarOffer(item) {
   clearForm({ expand: true, status: false });
   state.affiliateLinkReceived = false;
   state.receivedAffiliateLink = '';
-  el.link.value = item.link || '';
+  const linkedItem = applySavedAffiliate({ ...item });
+  el.link.value = linkedItem.link || item.link || '';
   el.title.value = item.title || '';
   el.old.value = item.oldPrice || '';
   el.offer.value = item.price || '';
@@ -1201,6 +1251,9 @@ function captureForm() {
   return {
     id: state.editingId || '',
     link: el.link.value.trim(),
+    itemId: String(el.link.dataset.itemId || ''),
+    catalogProductId: String(el.link.dataset.catalogProductId || ''),
+    affiliateConfirmed: isAffiliateLink(el.link.value.trim()),
     title: el.title.value.trim(),
     image: state.image || '',
     full: state.full,
@@ -1345,6 +1398,8 @@ function clearForm({ expand = true, status = true } = {}) {
   state.receivedAffiliateLink = '';
   setSelectedStyle('divertido');
   el.link.value = '';
+  el.link.dataset.itemId = '';
+  el.link.dataset.catalogProductId = '';
   el.title.value = '';
   el.old.value = '';
   el.offer.value = '';
@@ -1885,15 +1940,33 @@ async function fetchProduct() {
 
   el.fetchBtn.disabled = true;
   el.fetchBtn.textContent = '⏳ Buscando';
+  el.title.value = '';
+  el.old.value = '';
+  el.offer.value = '';
+  el.installmentQty.value = '';
+  el.installmentValue.value = '';
+  if (el.seller) el.seller.value = '';
+  setImage('');
   setStatus(el.fetchStatus, 'Consultando o anúncio...');
 
   try {
     const response = await fetch(`${base}/api/product?url=${encodeURIComponent(link)}`, { cache: 'no-store' });
     const product = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(product.error || 'Falha ao consultar o produto.');
+    const affiliateLink = product.affiliateLink || (isAffiliateLink(link) ? link : affiliateFor(product));
+    if (affiliateLink) {
+      saveAffiliateAssociation(product.id || product.source?.itemId, affiliateLink, product.catalogProductId);
+      el.link.value = affiliateLink;
+      state.affiliateLinkReceived = true;
+      state.receivedAffiliateLink = affiliateLink;
+      setStatus(el.affiliateStatus, '✅ Link afiliado confirmado e salvo para reutilização automática.', 'success');
+    }
+    el.link.dataset.itemId = product.id || product.source?.itemId || '';
+    el.link.dataset.catalogProductId = product.catalogProductId || '';
     el.title.value = product.title || '';
     el.old.value = product.oldPrice || product.previousPrice || '';
     el.offer.value = product.price || product.currentPrice || product.pixPrice || '';
+    if (!Number.isFinite(parseMoney(el.offer.value))) throw new Error('O produto foi encontrado, mas o preço atual não foi confirmado.');
     el.installmentQty.value = product.installments || '';
     el.installmentValue.value = product.installmentAmount || '';
     if (el.seller) {
@@ -2018,7 +2091,7 @@ el.radarResults?.addEventListener('click', async event => {
   const item = state.radarItems.find(candidate => radarItemKey(candidate) === card?.dataset.key);
   if (!item) return;
   if (button.dataset.radarAction === 'approve') await approveRadarOffer(item);
-  if (button.dataset.radarAction === 'open' && item.link) window.open(item.link, '_blank');
+  if (button.dataset.radarAction === 'open' && item.link) window.open(affiliateFor(item) || item.link, '_blank');
   if (button.dataset.radarAction === 'favorite') toggleFavorite(favoriteFromRadar(item), el.radarStatus);
   if (button.dataset.radarAction === 'hide') hideRadarOffer(item);
 });

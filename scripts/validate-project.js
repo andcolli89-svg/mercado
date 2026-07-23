@@ -43,11 +43,11 @@ for (const id of ['radarPage', 'historyPage', 'favoritesPage', 'couponsPage', 'f
 for (const marker of ['FAVORITES_STORAGE_KEY', 'getAutomaticCouponCodes', 'renderRadarOffers', 'renderPublications', 'renderFavorites', 'CbOfertasReceiveSharedLink', 'openAffiliateGenerator']) {
   if (!app.includes(marker)) errors.push(`app.js sem o recurso ${marker}`);
 }
-if (!gradle.includes("versionName '4.1'") || !gradle.includes('versionCode 410')) {
-  errors.push('Versão Android não está configurada como 4.1/410');
+if (!gradle.includes("versionName '5.0'") || !gradle.includes('versionCode 500')) {
+  errors.push('Versão Android não está configurada como 5.0/500');
 }
-if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V4.1.apk')) {
-  errors.push('Workflow não valida backend e APK da V4.1');
+if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V5.0.apk')) {
+  errors.push('Workflow não valida backend e APK da V5.0');
 }
 if (!manifest.includes('android.intent.action.SEND') || !manifest.includes('text/plain')) {
   errors.push('Android não está registrado para receber o link compartilhado pelo Mercado Livre');
@@ -68,4 +68,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`CbOfertas V4.1 validado: ${requiredFiles.length} arquivos essenciais e ${ids.size} IDs de interface.`);
+console.log(`CbOfertas V5.0 validado: ${requiredFiles.length} arquivos essenciais e ${ids.size} IDs de interface.`);
