@@ -1,0 +1,15 @@
+COMO GERAR O APK CBOFERTAS V5.2.1
+
+1. Extraia o ZIP.
+2. Abra Git Bash Here dentro da pasta do projeto.
+3. Envie os arquivos para a branch main do GitHub.
+4. Abra a guia Actions.
+5. Abra "Validar e Gerar CbOfertas V5.2.1".
+6. Aguarde o símbolo verde.
+7. Baixe o artefato "CbOfertas-V5.2.1-Completa".
+
+O artefato contém:
+- CbOfertas-V5.2.1.apk
+- CbOfertas-V5.2.1.apk.sha256
+- CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip
+- CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip.sha256

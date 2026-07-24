@@ -1,4 +1,4 @@
-name: Validar e Gerar CbOfertas V5.2
+name: Validar e Gerar CbOfertas V5.2.1
 
 on:
   workflow_dispatch:
@@ -74,23 +74,23 @@ jobs:
           unzip -l "$APK" | grep -q 'assets/www/index.html'
           unzip -l "$APK" | grep -q 'assets/www/app.js'
           unzip -l "$APK" | grep -q 'assets/www/style.css'
-          cp "$APK" CbOfertas-V5.2.apk
-          sha256sum CbOfertas-V5.2.apk > CbOfertas-V5.2.apk.sha256
+          cp "$APK" CbOfertas-V5.2.1.apk
+          sha256sum CbOfertas-V5.2.1.apk > CbOfertas-V5.2.1.apk.sha256
 
       - name: Gerar ZIP completo para GitHub
         run: |
           set -euo pipefail
-          zip -qr CbOfertas-V5.2-PROGRAMA-COMPLETO.zip . \
-            -x '.git/*' 'android/.gradle/*' 'android/app/build/*' '*.apk' '*.sha256' 'CbOfertas-V5.2-PROGRAMA-COMPLETO.zip'
-          sha256sum CbOfertas-V5.2-PROGRAMA-COMPLETO.zip > CbOfertas-V5.2-PROGRAMA-COMPLETO.zip.sha256
+          zip -qr CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip . \
+            -x '.git/*' 'android/.gradle/*' 'android/app/build/*' '*.apk' '*.sha256' 'CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip'
+          sha256sum CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip > CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip.sha256
 
       - name: Publicar APK e ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: CbOfertas-V5.2-Completa
+          name: CbOfertas-V5.2.1-Completa
           path: |
-            CbOfertas-V5.2.apk
-            CbOfertas-V5.2.apk.sha256
-            CbOfertas-V5.2-PROGRAMA-COMPLETO.zip
-            CbOfertas-V5.2-PROGRAMA-COMPLETO.zip.sha256
+            CbOfertas-V5.2.1.apk
+            CbOfertas-V5.2.1.apk.sha256
+            CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip
+            CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip.sha256
           retention-days: 30

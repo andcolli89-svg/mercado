@@ -75,3 +75,30 @@ test('identifica produto da Shopee em URL direta', () => {
   const { shopeeItemIdFrom } = require('../src/lib/format');
   assert.equal(shopeeItemIdFrom('https://shopee.com.br/Cadeira-i.123456.987654321'), 'SHP123456_987654321');
 });
+
+test('Radar não confunde preço antigo, parcela ou cashback no Galaxy A17', () => {
+  const card = `<article class="poly-card">
+    <a href="https://www.mercadolivre.com.br/celular-samsung-galaxy-a17/p/MLB55027309#position=1&wid=MLB1234567890" title="Celular Samsung Galaxy A17 5G"></a>
+    <s class="andes-money-amount andes-money-amount--previous" aria-label="1.855 reais com 71 centavos"></s>
+    <span class="andes-money-amount poly-price__current" aria-label="806 reais com 65 centavos"></span>
+    <span>56% OFF no Pix</span>
+    <span>ou R$ 949 em 15x</span>
+    <span class="andes-money-amount installment" aria-label="63 reais com 27 centavos"></span>
+    <span>R$ 975 de cashback em Meli Dólar</span>
+  </article>`;
+  const item = radarItemFromBlock(card);
+  assert.equal(item.price, '806,65');
+  assert.equal(item.oldPrice, '1855,71');
+  assert.equal(item.discount, 56);
+  assert.equal(item.id, 'MLB1234567890');
+  assert.equal(item.catalogProductId, 'MLB55027309');
+});
+
+test('distingue página de catálogo do item vendedor', () => {
+  const { listingItemIdFrom, catalogProductIdFrom } = require('../src/lib/format');
+  const catalog = 'https://www.mercadolivre.com.br/produto/p/MLB55027309';
+  assert.equal(listingItemIdFrom(catalog), '');
+  assert.equal(catalogProductIdFrom(catalog), 'MLB55027309');
+  const selected = `${catalog}#position=1&wid=MLB4812130742`;
+  assert.equal(listingItemIdFrom(selected), 'MLB4812130742');
+});

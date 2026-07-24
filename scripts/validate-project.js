@@ -51,8 +51,8 @@ for (const marker of ['FAVORITES_STORAGE_KEY','PRODUCT_STATS_STORAGE_KEY','AFFIL
 }
 if (/Gerador de Mensagens|Gerar Nova Frase|class="style-chip"/.test(html)) errors.push('A interface antiga do Gerador de Mensagens ainda está visível');
 if (/setSelectedStyle|headingForStyle|style-chip|generator-heading|phrase-button|message-editor/.test(app + css)) errors.push('Ainda existem resíduos técnicos do antigo Gerador de Mensagens');
-if (!gradle.includes("versionName '5.2'") || !gradle.includes('versionCode 520')) errors.push('Versão Android não está configurada como 5.2/520');
-if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V5.2.apk') || !workflow.includes('CbOfertas-V5.2-PROGRAMA-COMPLETO.zip')) errors.push('Workflow não gera APK e ZIP da V5.2');
+if (!gradle.includes("versionName '5.2.1'") || !gradle.includes('versionCode 521')) errors.push('Versão Android não está configurada como 5.2.1/521');
+if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V5.2.1.apk') || !workflow.includes('CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip')) errors.push('Workflow não gera APK e ZIP da V5.2.1');
 if (!app.includes('shopee.com.br') || !manifest.includes('android.intent.action.SEND') || !manifest.includes('text/plain')) errors.push('Android não está registrado para receber links compartilhados do Mercado Livre e Shopee');
 if (!shopeeParser.includes('parseShopeePrices') || !shopeeParser.includes('100000')) errors.push('Parser de preço da Shopee incompleto');
 if (!parser.includes('parseAriaMoney') || !parser.includes('priceToPay') || !parser.includes('cashback')) errors.push('Parser de preço promocional incompleto');
@@ -82,4 +82,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`CbOfertas V5.2 validado: ${requiredFiles.length} arquivos essenciais, ${ids.size} IDs de interface e banco com mais de 300 frases.`);
+console.log(`CbOfertas V5.2.1 validado: ${requiredFiles.length} arquivos essenciais, ${ids.size} IDs de interface e banco com mais de 300 frases.`);

@@ -133,4 +133,4 @@ if (!shopeeSupport.accepted || shopeeSupport.id !== 'SHP123456_987654321' || !sh
   throw new Error('O fluxo web da Shopee não foi inicializado corretamente.');
 }
 
-console.log(`Web app V5.2 inicializado em ambiente de teste com ${elements.size} elementos simulados, frase automática e afiliados validados.`);
+console.log(`Web app V5.2.1 inicializado em ambiente de teste com ${elements.size} elementos simulados, frase automática e afiliados validados.`);

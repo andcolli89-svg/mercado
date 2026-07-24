@@ -1,6 +1,6 @@
 {
   "name": "cbofertas-backend-v52",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "private": true,
   "scripts": {
     "start": "node server.js",
@@ -10,5 +10,5 @@
   "engines": {
     "node": ">=20"
   },
-  "description": "Backend modular CbOfertas V5.2 com parser de preço promocional e links meli.la e Shopee"
+  "description": "Backend modular CbOfertas V5.2.1 com parser de preço promocional e links meli.la e Shopee"
 }

@@ -1,4 +1,4 @@
-CBOFERTAS V5.2 — LEIA PRIMEIRO
+CBOFERTAS V5.2.1 — LEIA PRIMEIRO
 
 1. Este pacote deve substituir o conteúdo da raiz do repositório GitHub.
 2. Publique novamente a pasta backend no Render.
@@ -7,15 +7,15 @@ CBOFERTAS V5.2 — LEIA PRIMEIRO
    - Build Command: npm install
    - Start Command: npm start
    - Health Check Path: /health
-4. Confirme que /health responde com version 5.2.0.
-5. No GitHub, abra Actions e execute "Validar e Gerar CbOfertas V5.2".
-6. Baixe o artefato "CbOfertas-V5.2-Completa".
+4. Confirme que /health responde com version 5.2.1.
+5. No GitHub, abra Actions e execute "Validar e Gerar CbOfertas V5.2.1".
+6. Baixe o artefato "CbOfertas-V5.2.1-Completa".
 
-O workflow valida o projeto, executa 17 testes, compila o APK e gera o ZIP completo com checksums SHA-256.
+O workflow valida o projeto, executa 24 testes, compila o APK e gera o ZIP completo com checksums SHA-256.
 
 VERSÃO ANDROID
-- versionName: 5.2
-- versionCode: 520
+- versionName: 5.2.1
+- versionCode: 521
 
 CORREÇÕES IMPORTANTES
 - preço promocional priorizado;

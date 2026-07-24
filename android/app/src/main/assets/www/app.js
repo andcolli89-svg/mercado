@@ -1540,6 +1540,8 @@ async function approveRadarOffer(item) {
   state.receivedAffiliateLink = '';
   const linkedItem = applySavedAffiliate({ ...item });
   el.link.value = linkedItem.link || item.link || '';
+  el.link.dataset.itemId = item.id || item.itemId || '';
+  el.link.dataset.catalogProductId = item.catalogProductId || '';
   el.title.value = item.title || '';
   el.old.value = item.oldPrice || '';
   el.offer.value = item.price || '';
@@ -2332,19 +2334,21 @@ async function fetchProduct() {
 
   el.fetchBtn.disabled = true;
   el.fetchBtn.textContent = '⏳ Buscando';
-  el.title.value = '';
-  el.old.value = '';
-  el.offer.value = '';
-  el.installmentQty.value = '';
-  el.installmentValue.value = '';
-  if (el.seller) el.seller.value = '';
-  setImage('');
+  // Mantém os dados que vieram do Radar enquanto a validação ao vivo acontece.
+  // Se a loja estiver redirecionando ou indisponível, a oferta não fica em branco.
   setStatus(el.fetchStatus, 'Consultando o anúncio...');
 
   try {
     const response = await fetch(`${base}/api/product?url=${encodeURIComponent(link)}`, { cache: 'no-store' });
     const product = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(product.error || 'Falha ao consultar o produto.');
+    el.title.value = '';
+    el.old.value = '';
+    el.offer.value = '';
+    el.installmentQty.value = '';
+    el.installmentValue.value = '';
+    if (el.seller) el.seller.value = '';
+    setImage('');
     const affiliateLink = product.affiliateLink || (isAffiliateLink(link) ? link : affiliateFor(product));
     if (affiliateLink) {
       saveAffiliateAssociation(product.id || product.source?.itemId, affiliateLink, product.catalogProductId, product.title);

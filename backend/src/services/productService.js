@@ -2,8 +2,8 @@
 
 const { URL } = require('node:url');
 const { ALLOWED_PRODUCT_HOST } = require('../config');
-const { clean, decodeHtml, money, numeric, itemIdFrom, shopeeItemIdFrom, meta } = require('../lib/format');
-const { fetchApiItem, fetchApiPrices } = require('../api/mercadoLivreApi');
+const { clean, decodeHtml, money, numeric, listingItemIdFrom, catalogProductIdFrom, shopeeItemIdFrom, meta } = require('../lib/format');
+const { fetchApiItem, fetchApiPrices, fetchCatalogProduct } = require('../api/mercadoLivreApi');
 const { parseMercadoLivrePrices } = require('../parsers/mercadoLivrePriceParser');
 const { parseShopeePrices } = require('../parsers/shopeePriceParser');
 const { resolveProductLink } = require('./linkResolver');
@@ -171,7 +171,7 @@ function extractShopeeSeller(html, text) {
   return clean(candidates.find(Boolean) || '').replace(/\\u[0-9a-f]{4}/gi, '').replace(/\s+/g, ' ');
 }
 
-async function productFromUrl(source) {
+async function productFromUrl(source, dependencies = {}) {
   let input;
   try {
     input = new URL(clean(source));
@@ -182,52 +182,95 @@ async function productFromUrl(source) {
     throw new Error('Use um link do Mercado Livre, meli.la ou Shopee.');
   }
 
+  const resolveLink = dependencies.resolveProductLink || resolveProductLink;
+  const loadItem = dependencies.fetchApiItem || fetchApiItem;
+  const loadPrices = dependencies.fetchApiPrices || fetchApiPrices;
+  const loadCatalog = dependencies.fetchCatalogProduct || fetchCatalogProduct;
   const requestedPlatform = marketplaceFromHost(input.hostname);
   const affiliateLink = shortAffiliateLink(input.href) ? input.href : '';
-  const requestedItemId = requestedPlatform === 'shopee' ? shopeeItemIdFrom(input.href) : itemIdFrom(input.href);
-  const resolved = await resolveProductLink(input.href);
-  if (!resolved.response) throw new Error('Não foi possível abrir o link do produto.');
-  if (!resolved.response.ok) throw new Error(`A loja respondeu com código ${resolved.response.status}.`);
+  const requestedItemId = requestedPlatform === 'shopee' ? shopeeItemIdFrom(input.href) : listingItemIdFrom(input.href);
+  const requestedCatalogId = requestedPlatform === 'mercado-livre' ? catalogProductIdFrom(input.href) : '';
+
+  let resolutionError = null;
+  let resolved;
+  try {
+    resolved = await resolveLink(input.href);
+  } catch (error) {
+    resolutionError = error;
+    resolved = { response: null, finalUrl: input.href, html: '', hops: [], unresolvedRedirect: true };
+  }
 
   const finalUrl = resolved.finalUrl || input.href;
   let finalHost = input.hostname;
   try { finalHost = new URL(finalUrl).hostname; } catch { /* usa o host inicial */ }
   const platform = marketplaceFromHost(finalHost || input.hostname);
   const html = resolved.html || '';
-  const id = platform === 'shopee'
+  const pageStatus = Number(resolved.response?.status || 0);
+
+  let catalogProductId = platform === 'mercado-livre'
+    ? (requestedCatalogId || catalogProductIdFrom(finalUrl) || catalogProductIdFrom(html))
+    : '';
+  let id = platform === 'shopee'
     ? (requestedItemId || shopeeItemIdFrom(finalUrl) || shopeeItemIdFrom(html))
-    : (requestedItemId || itemIdFrom(finalUrl) || itemIdFrom(html));
-  const [api, apiPrices] = platform === 'mercado-livre'
-    ? await Promise.all([fetchApiItem(id), fetchApiPrices(id)])
+    : (requestedItemId || listingItemIdFrom(finalUrl) || listingItemIdFrom(html));
+
+  const catalog = platform === 'mercado-livre' && catalogProductId
+    ? await loadCatalog(catalogProductId)
+    : null;
+  if (!id && catalog?.itemId) id = catalog.itemId;
+
+  const [api, apiPrices] = platform === 'mercado-livre' && id
+    ? await Promise.all([loadItem(id), loadPrices(id)])
     : [null, null];
+  catalogProductId = api?.catalogProductId || catalog?.catalogProductId || catalogProductId;
+
   const structured = jsonLd(html);
   const text = pageText(html);
+  const fallbackApi = api || catalog || {};
   const prices = platform === 'shopee'
     ? parseShopeePrices(html, {
       apiPrice: structured.price || meta(html, 'product:price:amount') || meta(html, 'og:price:amount'),
       apiOldPrice: structured.oldPrice || meta(html, 'product:original_price:amount')
     })
-    : choosePriceSources(html, api, apiPrices, structured);
+    : choosePriceSources(html, fallbackApi, apiPrices, {
+      ...structured,
+      price: structured.price || catalog?.price || '',
+      oldPrice: structured.oldPrice || catalog?.oldPrice || ''
+    });
+
   const seller = platform === 'shopee'
     ? (extractShopeeSeller(html, text) || structured.seller || '')
     : (extractSeller(html, text) || structured.seller || api?.seller || '');
-  const title = (api?.title || structured.title || meta(html, 'og:title'))
+  const title = (structured.title || api?.title || catalog?.title || meta(html, 'og:title') || '')
     .replace(/\s*[|\-]\s*(?:Mercado Livre|Shopee Brasil).*$/i, '')
     .trim();
-  const image = api?.image || structured.image || meta(html, 'og:image');
+  const image = structured.image || api?.image || catalog?.image || meta(html, 'og:image');
 
-  if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
-  if (!prices.price) throw new Error('O produto foi identificado, mas o preço atual não pôde ser confirmado. Use o link de Compartilhar do anúncio.');
+  if (!title) {
+    if (resolutionError) throw new Error(`Não foi possível abrir o link do produto: ${resolutionError.message}`);
+    if (pageStatus >= 300 && pageStatus < 400) {
+      throw new Error('O link redirecionou, mas o anúncio final não pôde ser identificado. Copie novamente pelo botão Compartilhar.');
+    }
+    if (pageStatus >= 400) throw new Error(`A loja respondeu com código ${pageStatus} e o produto não pôde ser identificado.`);
+    throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
+  }
+  if (!prices.price) {
+    if (pageStatus >= 300 && pageStatus < 400) {
+      throw new Error('O produto foi identificado, mas o redirecionamento não entregou o preço atual. Tente novamente em alguns segundos.');
+    }
+    throw new Error('O produto foi identificado, mas o preço atual não pôde ser confirmado. Use o link de Compartilhar do anúncio.');
+  }
 
   const installment = extractInstallments(html, text, prices.price);
   const otherPrice = extractOtherPaymentPrice(text);
-  const canonicalLink = finalUrl || api?.permalink || input.href;
-  const freeShipping = Boolean(api?.freeShipping) || /frete gr[aá]tis/i.test(text);
+  const canonicalLink = api?.permalink || catalog?.permalink || finalUrl || input.href;
+  const freeShipping = Boolean(api?.freeShipping || catalog?.freeShipping) || /frete gr[aá]tis/i.test(text);
+  const full = Boolean(api?.full || catalog?.full);
 
   return {
     id: api?.id || id,
     platform,
-    catalogProductId: api?.catalogProductId || '',
+    catalogProductId,
     title,
     price: prices.price,
     currentPrice: prices.price,
@@ -248,19 +291,22 @@ async function productFromUrl(source) {
     originalPermalink: canonicalLink,
     affiliateLink,
     affiliateConfirmed: Boolean(affiliateLink),
-    full: Boolean(api?.full),
+    full,
     freeShipping,
     freight: freeShipping ? 'Frete grátis' : '',
     source: {
       platform,
       itemId: id || null,
       requestedItemId: requestedItemId || null,
+      catalogProductId: catalogProductId || null,
       affiliate: Boolean(affiliateLink),
-      priceSource: prices.priceSource || apiPrices?.source || (platform === 'shopee' ? 'shopee-page' : 'items'),
+      priceSource: prices.priceSource || apiPrices?.source || (platform === 'shopee' ? 'shopee-page' : (catalog?.price ? 'catalog-buy-box' : 'items')),
       oldPriceSource: prices.oldPriceSource || '',
       pagePriceDetected: Boolean(prices.pageDetected),
       priceConfidence: Number(prices.confidence || 0),
+      pageStatus: pageStatus || null,
       resolvedUrl: canonicalLink,
+      redirectResolved: !resolved.unresolvedRedirect,
       redirectHops: resolved.hops?.length || 1
     }
   };

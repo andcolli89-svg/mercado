@@ -1,0 +1,50 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V5.2.1
+Data: 24/07/2026
+
+CORREÇÕES IMPLEMENTADAS
+
+1. RADAR — PREÇO PROMOCIONAL
+- Corrigido o caso real do Samsung Galaxy A17.
+- Preço atual esperado e validado: R$ 806,65.
+- Preço original esperado e validado: R$ 1.855,71.
+- Desconto esperado e validado: 56%.
+- O parser não confunde R$ 975 de cashback nem 15x de R$ 63,27 com o preço final.
+- Resultados com preço atual igual ao antigo não exibem desconto falso.
+- Páginas de catálogo e anúncios de vendedor são identificados separadamente.
+- O Radar consulta o anúncio vencedor do catálogo quando necessário.
+
+2. LINKS HTTP 302 E AFILIADOS
+- Redirecionamentos 301, 302, 303, 307 e 308 são seguidos automaticamente.
+- Cookies recebidos durante o redirecionamento são preservados.
+- Redirecionamentos por meta refresh ou JavaScript dentro do HTML também são tratados.
+- Um HTTP 302 não é mais exibido ao usuário como erro da loja.
+- O link curto/afiliado original é preservado na Biblioteca de Afiliados.
+- Quando a página não pode ser confirmada, o backend ainda tenta as APIs do item e do catálogo.
+
+3. INTERFACE
+- Ao escolher “Usar oferta”, os dados corretos vindos do Radar permanecem preenchidos se a validação ao vivo falhar.
+- Título, imagem e preço não são mais apagados antes de existir uma resposta válida do backend.
+
+VERSÕES
+- Backend: 5.2.1
+- Android versionName: 5.2.1
+- Android versionCode: 521
+- Workflow: Validar e Gerar CbOfertas V5.2.1
+- Artefato do GitHub Actions: CbOfertas-V5.2.1-Completa
+
+VALIDAÇÕES EXECUTADAS
+- Validação estrutural do projeto: APROVADA.
+- Smoke test da aplicação web: APROVADO.
+- Verificação de sintaxe do backend: APROVADA.
+- Testes automatizados: 24 aprovados, 0 falhas.
+- YAML do GitHub Actions: VÁLIDO.
+- XML do Android: VÁLIDO.
+- Integridade do ZIP: APROVADA.
+
+COMPILAÇÃO DO APK
+O APK não foi compilado neste ambiente porque Gradle, Android SDK e sdkmanager não estão instalados.
+O workflow incluído configura Java, Android SDK, Build Tools e Gradle no GitHub Actions, executa todos os testes e gera:
+- CbOfertas-V5.2.1.apk
+- CbOfertas-V5.2.1.apk.sha256
+- CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip
+- CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip.sha256

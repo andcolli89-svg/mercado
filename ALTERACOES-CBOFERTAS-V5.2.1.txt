@@ -1,0 +1,12 @@
+CBOFERTAS V5.2.1 — CORREÇÃO DO RADAR E LINKS 302
+
+- Corrigido o Radar que mostrava preço antigo como preço atual.
+- Novo pareamento de preço original e promocional usando o percentual OFF.
+- Parcelas, cashback e Meli Dólar não são mais confundidos com preço final.
+- Páginas de catálogo /p/MLB agora são separadas do MLB real do anúncio vendedor.
+- Consulta ao produto de catálogo identifica automaticamente o buy box winner.
+- Redirecionamentos HTTP 301, 302, 303, 307 e 308 são seguidos com cookies.
+- Link meli.la continua sendo preservado como link afiliado após a consulta.
+- Se a validação ao vivo falhar, os dados vindos do Radar não são apagados da tela.
+- Backend usa preço de venda e regular_amount como fontes oficiais de fallback.
+- versionCode atualizado para 521 e versionName para 5.2.1.

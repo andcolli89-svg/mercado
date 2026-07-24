@@ -84,28 +84,47 @@ function safeDecode(value = '') {
   return result;
 }
 
-function itemIdFrom(text = '') {
+function normalizeMlbId(value = '') {
+  const normalized = String(value || '').replace('-', '').toUpperCase();
+  return /^MLB\d{6,}$/.test(normalized) ? normalized : '';
+}
+
+function catalogProductIdFrom(text = '') {
   const raw = safeDecode(text);
-  // wid identifica o anúncio/oferta selecionado e deve vencer o código de catálogo /p/.
-  const widMatch = raw.match(/[?&#]wid=MLB-?(\d{6,})/i) || raw.match(/\bwid(?:=|:)(MLB-?\d{6,})/i);
-  if (widMatch) {
-    const wid = String(widMatch[1]).replace('-', '').toUpperCase();
-    return wid.startsWith('MLB') ? wid : `MLB${wid}`;
-  }
   const patterns = [
-    /(?:item_id)(?:=|:)(MLB-?\d{6,})/i,
-    /[?&#](?:item_id)=MLB-?(\d{6,})/i,
-    /"item_id"\s*:\s*"?(MLB-?\d{6,})/i,
-    /"id"\s*:\s*"(MLB\d{6,})"/i,
-    /\b(MLB-?\d{6,})\b/i
+    /\/p\/(MLB-?\d{6,})(?:[/?#]|$)/i,
+    /"catalog_product_id"\s*:\s*"?(MLB-?\d{6,})/i,
+    /"catalogProductId"\s*:\s*"?(MLB-?\d{6,})/i,
+    /"product_id"\s*:\s*"?(MLB-?\d{6,})/i
   ];
   for (const pattern of patterns) {
     const match = raw.match(pattern);
-    if (!match) continue;
-    const value = String(match[1]).replace('-', '').toUpperCase();
-    return value.startsWith('MLB') ? value : `MLB${value}`;
+    const value = normalizeMlbId(match?.[1]);
+    if (value) return value;
   }
   return '';
+}
+
+function listingItemIdFrom(text = '') {
+  const raw = safeDecode(text);
+  const patterns = [
+    /[?&#]wid=MLB-?(\d{6,})/i,
+    /\bwid(?:=|:|"\s*:\s*")?(MLB-?\d{6,})/i,
+    /(?:item_id|itemId)(?:=|:|"\s*:\s*")\s*"?(MLB-?\d{6,})/i,
+    /"buy_box_winner"\s*:\s*\{[\s\S]{0,1800}?"item_id"\s*:\s*"?(MLB-?\d{6,})/i,
+    /https?:\\?\/\\?\/(?:produto\.)?mercadolivre\.com(?:\.br)?\/MLB-?(\d{6,})/i,
+    /\/MLB-?(\d{6,})-[^\s"'<>]*_JM(?:[?#]|$)/i
+  ];
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    const value = normalizeMlbId(match?.[1]);
+    if (value) return value;
+  }
+  return '';
+}
+
+function itemIdFrom(text = '') {
+  return listingItemIdFrom(text) || catalogProductIdFrom(text);
 }
 
 function shopeeItemIdFrom(text = '') {
@@ -148,4 +167,4 @@ function absoluteUrl(value = '', base = RADAR_SOURCE_URL) {
   try { return new URL(decodeHtml(value), base).href; } catch { return ''; }
 }
 
-module.exports = { clean, decodeHtml, localizedNumber, money, numeric, safeDecode, itemIdFrom, shopeeItemIdFrom, attr, meta, stripTags, absoluteUrl };
+module.exports = { clean, decodeHtml, localizedNumber, money, numeric, safeDecode, normalizeMlbId, listingItemIdFrom, catalogProductIdFrom, itemIdFrom, shopeeItemIdFrom, attr, meta, stripTags, absoluteUrl };

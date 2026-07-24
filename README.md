@@ -1,8 +1,8 @@
-# CbOfertas V5.2
+# CbOfertas V5.2.1
 
 Aplicativo Android com backend Node.js para consultar produtos do Mercado Livre e da Shopee, localizar ofertas no Radar do Mercado Livre, organizar links de afiliado e preparar textos para compartilhamento.
 
-## Principais mudanças da V5.2
+## Principais mudanças da V5.2.1
 
 - Corrige a prioridade de preços: o preço promocional confirmado na página passa a prevalecer sobre preço regular ou desatualizado da API.
 - Interpreta valores brasileiros apresentados por acessibilidade, por exemplo `475 reais com 96 centavos` como `R$ 475,96`.
@@ -52,7 +52,7 @@ Servidor padrão configurado no aplicativo:
 https://mercado-yvqn.onrender.com
 ```
 
-Ao publicar a pasta `backend` no Render, abra `/health` e confirme a versão `5.2.0`.
+Ao publicar a pasta `backend` no Render, abra `/health` e confirme a versão `5.2.1`.
 
 ## Validação local
 
@@ -71,15 +71,15 @@ npm test
 1. Substitua o conteúdo da raiz do seu repositório pelos arquivos deste pacote.
 2. Faça commit e push para a branch `main`.
 3. Abra a aba **Actions** do GitHub.
-4. Execute **Validar e Gerar CbOfertas V5.2**, ou aguarde a execução automática do push.
-5. Baixe o artefato **CbOfertas-V5.2-Completa**.
+4. Execute **Validar e Gerar CbOfertas V5.2.1**, ou aguarde a execução automática do push.
+5. Baixe o artefato **CbOfertas-V5.2.1-Completa**.
 
 O artefato contém:
 
-- `CbOfertas-V5.2.apk`
-- `CbOfertas-V5.2.apk.sha256`
-- `CbOfertas-V5.2-PROGRAMA-COMPLETO.zip`
-- `CbOfertas-V5.2-PROGRAMA-COMPLETO.zip.sha256`
+- `CbOfertas-V5.2.1.apk`
+- `CbOfertas-V5.2.1.apk.sha256`
+- `CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip`
+- `CbOfertas-V5.2.1-PROGRAMA-COMPLETO.zip.sha256`
 
 ## Link afiliado
 
@@ -89,4 +89,4 @@ A Biblioteca de Afiliados fica em **Configurações** e permite pesquisar, copia
 
 ## Atualização do aplicativo
 
-A V5.2 usa `versionCode 520` e `versionName 5.2`. Se um APK anterior foi assinado com outra chave, o Android pode exigir a desinstalação da versão anterior. Para atualizações futuras sem reinstalação, configure uma chave de assinatura permanente no workflow.
+A V5.2.1 usa `versionCode 521` e `versionName 5.2.1`. Se um APK anterior foi assinado com outra chave, o Android pode exigir a desinstalação da versão anterior. Para atualizações futuras sem reinstalação, configure uma chave de assinatura permanente no workflow.
