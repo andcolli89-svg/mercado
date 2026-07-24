@@ -38,13 +38,13 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - name: Instalar SDK Android 37
+      - name: Instalar SDK Android 36
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v6
         with:
-          gradle-version: '9.6.1'
+          gradle-version: '9.4.1'
       - name: Testes Android
         working-directory: android
         run: gradle testDebugUnitTest --stacktrace --no-daemon

@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.cbofertas.v6"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cbofertas.v6"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 600001
         versionName = "6.0.0-alpha.1"
 
