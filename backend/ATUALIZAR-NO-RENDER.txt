@@ -1,4 +1,4 @@
-ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 5.0.0
+ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 5.2.0
 
 1. Substitua a pasta backend do repositório por esta versão.
 2. No Render, mantenha Root Directory como backend.
@@ -6,12 +6,15 @@ ATUALIZAÇÃO DO SERVIDOR — CBOFERTAS BACKEND 5.0.0
 4. Start Command: npm start
 5. Health Check Path: /health
 6. Opcional: configure MELI_ACCESS_TOKEN.
-7. Abra /health e confirme version 5.0.0.
+7. Abra /health e confirme version 5.2.0.
 
-CORREÇÃO PRINCIPAL
-- Valores brasileiros com ponto de milhares são preservados.
-- Exemplo: 2.500 = R$ 2.500,00; 1.499,90 = R$ 1.499,90.
-- O Radar deixa de exibir R$ 2,50 para produtos de R$ 2.500,00.
+CORREÇÕES PRINCIPAIS
+- Prioriza preço promocional confirmado na página.
+- Separa preço atual, original, desconto e parcelamento.
+- Não usa cashback, ganhos ou valor de parcela como preço final.
+- Resolve redirecionamentos meli.la/Shopee e identifica o produto quando disponível.
+- Aceita consulta de produtos da Shopee com parser monetário dedicado.
+- Radar exibe preço promocional.
 
 VALIDAÇÃO LOCAL
 - npm run check

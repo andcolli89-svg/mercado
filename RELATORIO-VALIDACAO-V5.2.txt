@@ -1,0 +1,53 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V5.2
+Data: 23/07/2026
+
+VERSÕES
+- Backend: 5.2.0
+- Android versionName: 5.2
+- Android versionCode: 520
+- Node.js mínimo: 20
+- Android compileSdk/targetSdk: 35
+
+VALIDAÇÕES EXECUTADAS
+- node scripts/validate-project.js: APROVADO
+- node scripts/smoke-webapp.js: APROVADO
+- npm run check (backend): APROVADO
+- npm test (backend): 17 aprovados, 0 falhas
+- YAML do GitHub Actions: APROVADO
+- AndroidManifest.xml, styles.xml e file_paths.xml: XML VÁLIDO
+- Banco de frases: 352 frases em 22 categorias
+- Interface antiga do Gerador de Mensagens: removida, sem resíduos de botões/configurações
+- Biblioteca de Afiliados: associação e reutilização por produto validadas no smoke test
+- Suporte web a links Shopee: validado no smoke test
+
+CASOS AUTOMATIZADOS IMPORTANTES
+- Cadeira Presidente Python: preço atual R$ 475,96 e original R$ 1.248,75
+- Creatina com preço visível e API sem preço
+- Rejeição de cashback e parcela como preço final
+- Redirecionamento HTML de link meli.la
+- Radar escolhendo preço promocional
+- Valores com ponto de milhares
+- wid do anúncio vencendo código de catálogo
+- Preços internos da Shopee em escala de 1/100000
+- Identificação de produto Shopee por loja/item
+
+GITHUB ACTIONS
+O workflow .github/workflows/build-apk.yml foi configurado para:
+1. validar o projeto e a aplicação web;
+2. verificar sintaxe e executar os testes do backend;
+3. instalar Java, Android SDK 35 e Gradle 8.9;
+4. compilar o APK debug instalável;
+5. validar os assets dentro do APK;
+6. gerar CbOfertas-V5.2.apk e checksum SHA-256;
+7. gerar o ZIP completo e checksum SHA-256;
+8. publicar tudo no artefato CbOfertas-V5.2-Completa.
+
+LIMITAÇÕES DESTA EXECUÇÃO LOCAL
+- O ambiente local fornecido não contém Gradle, sdkmanager nem Android SDK.
+- Downloads externos do toolchain estão bloqueados neste ambiente.
+- Por isso, o APK não pôde ser compilado localmente e não foi criado um arquivo APK falso.
+- A compilação real está preparada para ocorrer automaticamente no GitHub Actions após o push.
+- O link real https://meli.la/2ZY9J9V respondeu com bloqueio HTTP 403 neste ambiente; o fluxo de redirecionamento foi validado por testes automatizados com respostas simuladas.
+
+RESULTADO
+Código-fonte, testes, backend, Android e automação V5.2 estão validados e prontos para substituir o conteúdo do repositório GitHub.

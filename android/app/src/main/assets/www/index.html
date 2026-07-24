@@ -7,7 +7,7 @@
   <title>CbOfertas</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=410">
+  <link rel="stylesheet" href="style.css?v=520">
 </head>
 <body>
   <div id="menuOverlay" class="menu-overlay hidden"></div>
@@ -68,7 +68,7 @@
           <p id="fetchStatus" class="status" aria-live="polite"></p>
           <div class="affiliate-link-box">
             <button id="affiliateLinkBtn" class="btn affiliate-button" type="button" disabled>💰 Gerar link de afiliado</button>
-            <small>O Mercado Livre gera o rastreamento da sua conta. Abra o produto, toque em <b>Compartilhar</b> na faixa <b>Ganhos</b> e escolha <b>CbOfertas</b>.</small>
+            <small>Use o link oficial de afiliado do Mercado Livre ou da Shopee e compartilhe-o com a <b>CbOfertas</b>. A associação será reutilizada automaticamente.</small>
           </div>
           <p id="affiliateStatus" class="status affiliate-status" aria-live="polite"></p>
         </section>
@@ -125,36 +125,16 @@
           </div>
         </section>
 
-        <section class="step-card generator-step">
-          <div class="step-heading generator-heading">
-            <span class="step-number">3</span>
-            <div><h2>Gerador de Mensagens</h2><p>Escolha o estilo e gere frases únicas</p></div>
-            <button id="phraseBtn" class="btn phrase-button" type="button">✨ Gerar Nova Frase</button>
-          </div>
-
-          <div class="styles" aria-label="Estilo da mensagem">
-            <button class="style-chip active" data-style="divertido" type="button">🙂 Humor</button>
-            <button class="style-chip" data-style="premium" type="button">♛ Premium</button>
-            <button class="style-chip" data-style="grupo" type="button">👥 Grupo WhatsApp</button>
-            <button class="style-chip" data-style="familia" type="button">⌂ Família</button>
-            <button class="style-chip" data-style="ofertas" type="button">🔥 Ofertas</button>
-          </div>
-
-          <label class="phrase-field">Frase antes do título<input id="smartPhrase" placeholder="Gerada automaticamente conforme o produto"></label>
-          <div id="preview" class="whatsapp-preview hidden"></div>
-          <div class="message-editor">
-            <textarea id="finalText" rows="9" maxlength="1200" aria-label="Texto da mensagem exibida"></textarea>
-            <div class="message-side-actions">
-              <button id="regenerateSideBtn" type="button" title="Gerar outra frase">⟳</button>
-              <button id="copySideBtn" type="button" title="Copiar mensagem">▣</button>
-            </div>
-          </div>
-          <div class="message-counter"><span>Mensagem pronta para compartilhar</span><strong id="charCounter">0/1200</strong></div>
-        </section>
+        <div class="hidden" aria-hidden="true">
+          <input id="smartPhrase" tabindex="-1">
+          <div id="preview"></div>
+          <textarea id="finalText" tabindex="-1"></textarea>
+          <span id="charCounter"></span>
+        </div>
 
         <section class="step-card share-step">
           <div class="step-heading">
-            <span class="step-number">4</span>
+            <span class="step-number">3</span>
             <div><h2>Compartilhar sua oferta</h2><p>Escolha como deseja publicar</p></div>
           </div>
           <div class="share-actions">
@@ -211,7 +191,13 @@
     </section>
 
     <section id="historyPage" class="page-view hidden">
-      <section class="page-intro"><span>◷</span><div><h1>Histórico de ofertas</h1><p>Edite, agende ou envie cada publicação separadamente.</p></div></section>
+      <section class="page-intro"><span>◷</span><div><h1>Histórico inteligente</h1><p>Acompanhe preços, descontos, consultas e publicações.</p></div></section>
+      <section class="history-insights">
+        <article><small>Menor preço</small><strong id="historyLowestPrice">—</strong></article>
+        <article><small>Maior desconto</small><strong id="historyBestDiscount">—</strong></article>
+        <article><small>Consultas</small><strong id="historyConsultations">0</strong></article>
+        <article><small>Última consulta</small><strong id="historyLastConsultation">—</strong></article>
+      </section>
       <section class="card publication-card">
         <div class="section-title publication-title">
           <span>📚</span><div><h2>Itens salvos</h2><p>Cada produto pode ter sua própria data e horário.</p></div><strong id="publicationCount" class="publication-count">0</strong>
@@ -299,7 +285,7 @@
     <section id="settingsPage" class="page-view hidden">
       <section class="page-intro"><span>⚙️</span><div><h1>Configurações</h1><p>O servidor oficial já vem preenchido e pronto para uso.</p></div></section>
       <section class="card server-card">
-        <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar os anúncios do Mercado Livre.</p></div></div>
+        <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar anúncios do Mercado Livre e da Shopee.</p></div></div>
         <label>Endereço do servidor<input id="apiServer" type="url" value="https://mercado-yvqn.onrender.com"></label>
         <div class="actions two-buttons">
           <button id="saveServerBtn" class="btn secondary" type="button">Salvar servidor</button>
@@ -308,8 +294,8 @@
         <p id="serverStatus" class="status"></p>
       </section>
       <section class="card setting-card affiliate-setting-card">
-        <div class="setting-title"><span>💰</span><div><h2>Links de afiliado</h2><p>O CbOfertas recebe o link oficial criado pelo Mercado Livre e o aplica automaticamente à oferta.</p></div></div>
-        <ol class="affiliate-steps"><li>Abra ou busque o produto no CbOfertas.</li><li>Toque em <b>Gerar link de afiliado</b>.</li><li>No Mercado Livre, toque em <b>Compartilhar</b> na faixa Ganhos.</li><li>Escolha <b>CbOfertas</b> na lista de aplicativos.</li></ol>
+        <div class="setting-title"><span>💰</span><div><h2>Links de afiliado</h2><p>A CbOfertas recebe links oficiais de afiliado do Mercado Livre e da Shopee e os aplica automaticamente à oferta.</p></div></div>
+        <ol class="affiliate-steps"><li>Abra ou busque o produto na CbOfertas.</li><li>Toque em <b>Gerar link de afiliado</b>.</li><li>Na loja, gere ou compartilhe o link oficial da sua conta.</li><li>Escolha <b>CbOfertas</b> na lista de aplicativos.</li></ol>
         <small class="setting-help">Não é necessário informar senha, token ou código de afiliado ao CbOfertas.</small>
       </section>
       <section class="card setting-card">
@@ -322,7 +308,17 @@
         <label class="check-option radar-setting-toggle"><input id="settingsRadarAuto" type="checkbox" checked><span>Atualizar automaticamente ao abrir</span></label>
         <small class="setting-help">As ofertas repetidas são reconhecidas pelo link e podem ficar ocultas depois de usadas.</small>
       </section>
-      <section class="card about-card"><b>CbOfertas V4.1</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
+      <section class="card affiliate-library-card">
+        <div class="section-title"><span>🔗</span><div><h2>Biblioteca de Afiliados</h2><p>Links meli.la recebidos pelo compartilhamento são vinculados ao MLB e reutilizados no Radar, Histórico, Favoritos e WhatsApp.</p></div><strong id="affiliateLibraryCount" class="publication-count">0</strong></div>
+        <div class="affiliate-library-toolbar">
+          <input id="affiliateLibrarySearch" placeholder="Pesquisar MLB ou link meli.la">
+          <button id="exportAffiliateLibraryBtn" class="btn outline compact" type="button">Copiar JSON</button>
+          <button id="clearAffiliateLibraryBtn" class="btn outline-danger compact" type="button">Limpar</button>
+        </div>
+        <div id="affiliateLibraryList" class="affiliate-library-list"></div>
+      </section>
+
+      <section class="card about-card"><b>CbOfertas V5.2</b><p>Preço promocional validado, links meli.la, Biblioteca de Afiliados, Radar inteligente, histórico de preços, cupons e favoritos.</p></section>
     </section>
   </main>
 
@@ -335,6 +331,6 @@
     <button id="showSettingsPageBtn" class="bottom-tab" data-page="settings" type="button"><span>⚙</span><b>Configurações</b></button>
   </nav>
 
-  <script src="app.js?v=410"></script>
+  <script src="app.js?v=520"></script>
 </body>
 </html>

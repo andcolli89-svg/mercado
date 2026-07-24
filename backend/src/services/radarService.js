@@ -8,6 +8,8 @@ const {
   apiHeaders
 } = require('../config');
 const { fetchWithTimeout } = require('../lib/http');
+const { fetchApiPrices } = require('../api/mercadoLivreApi');
+const { parseAriaMoney } = require('../parsers/mercadoLivrePriceParser');
 const {
   clean,
   decodeHtml,
@@ -116,30 +118,57 @@ function valueFromTag(block, attributeNames = []) {
 function radarItemFromBlock(block) {
   const hrefMatch = block.match(/<a\b[^>]*href=["']([^"']*(?:mercadolivre\.com\.br|meli\.la)[^"']*)["']/i);
   const link = absoluteUrl(hrefMatch?.[1] || '');
-  if (!link || !itemIdFrom(link) && !/\/p\/MLB|produto\.mercadolivre/i.test(link)) return null;
-  let title = valueFromTag(block, ['title','aria-label','alt']);
+  if (!link || (!itemIdFrom(link) && !/\/p\/MLB|produto\.mercadolivre/i.test(link))) return null;
+  let title = valueFromTag(block, ['title', 'aria-label', 'alt']);
   if (!title) title = stripTags(block.match(/<(?:h2|h3)\b[^>]*>[\s\S]*?<\/(?:h2|h3)>/i)?.[0] || '');
   title = title.replace(/\s*[-|]\s*Mercado Livre.*$/i, '').trim();
   if (!title || title.length < 4) return null;
+
   const imageTag = block.match(/<img\b[^>]*>/i)?.[0] || '';
   const image = absoluteUrl(attr(imageTag, 'data-src') || attr(imageTag, 'src') || attr(imageTag, 'srcset').split(/\s+/)[0], link);
+  const visible = stripTags(block);
   const moneyValues = [];
-  for (const tag of block.match(/<(?:span|div)\b[^>]*(?:aria-label=["'][^"']*(?:real|R\$)|andes-money-amount)[^>]*>/gi) || []) {
-    const label = attr(tag, 'aria-label');
-    const found = label.match(/([\d.]+(?:,\d{1,2})?)/);
-    if (found) moneyValues.push({ value: money(found[1]), old: /previous|original|antes|tachado/i.test(tag) });
+  const tagRegex = /<(?:span|div|s)\b[^>]*(?:aria-label=["'][^"']*(?:reais?|centavos?|R\$)|andes-money-amount)[^>]*>/gi;
+  let tagMatch;
+  while ((tagMatch = tagRegex.exec(block))) {
+    const tag = tagMatch[0];
+    const value = parseAriaMoney(attr(tag, 'aria-label'));
+    if (!Number.isFinite(value)) continue;
+    const around = stripTags(block.slice(Math.max(0, tagMatch.index - 120), tagMatch.index + 240)).toLowerCase();
+    if (/parcela|\d{1,2}x|cashback|de volta|ganhe/.test(around)) continue;
+    moneyValues.push({
+      value,
+      old: /previous|original|antes|tachado|line-through|ui-pdp-price__original-value/i.test(`${tag} ${around}`)
+    });
   }
-  let price = moneyValues.find(x => !x.old)?.value || '';
-  let oldPrice = moneyValues.find(x => x.old)?.value || '';
-  if (!price) {
-    const values = [...stripTags(block).matchAll(/R\$\s*([\d.]+(?:,\d{2})?)/gi)].map(m => money(m[1])).filter(Boolean);
-    if (values.length) price = values[values.length - 1];
-    if (values.length > 1 && numeric(values[0]) > numeric(price)) oldPrice = values[0];
-  }
-  const discountMatch = stripTags(block).match(/(\d{1,2})%\s*OFF/i);
-  return normalizeRadarItem({ title, price, oldPrice, link, image, discount: discountMatch?.[1] || 0, full: /\bFULL\b/i.test(stripTags(block)), freeShipping: /frete gr[aá]tis/i.test(stripTags(block)), source: 'ofertas-card' });
-}
 
+  const explicitCurrent = moneyValues.filter(entry => !entry.old).map(entry => entry.value);
+  const explicitOld = moneyValues.filter(entry => entry.old).map(entry => entry.value);
+  const discountMatch = visible.match(/(\d{1,2})%\s*OFF/i);
+  let price = explicitCurrent.length ? Math.min(...explicitCurrent) : NaN;
+  let oldPrice = explicitOld.filter(value => !Number.isFinite(price) || value > price).sort((a, b) => a - b)[0] || NaN;
+
+  if (!Number.isFinite(price)) {
+    const values = [...visible.matchAll(/R\$\s*([\d.]+(?:,\d{1,2})?)/gi)].map(match => numeric(match[1])).filter(Number.isFinite);
+    if (values.length) {
+      price = discountMatch && values.length > 1 ? Math.min(...values) : values[0];
+      const larger = values.filter(value => value > price * 1.01).sort((a, b) => a - b);
+      if (larger.length) oldPrice = larger[0];
+    }
+  }
+
+  return normalizeRadarItem({
+    title,
+    price: money(price),
+    oldPrice: money(oldPrice),
+    link,
+    image,
+    discount: discountMatch?.[1] || 0,
+    full: /\bFULL\b/i.test(visible),
+    freeShipping: /frete gr[aá]tis/i.test(visible),
+    source: 'ofertas-card'
+  });
+}
 function radarItemsFromCards(html) {
   const result = [];
   const blocks = html.match(/<(?:li|article|div)\b[^>]*class=["'][^"']*(?:poly-card|promotion-item|ui-search-result|andes-card)[^"']*["'][^>]*>[\s\S]{200,30000}?<\/(?:li|article|div)>/gi) || [];
@@ -201,6 +230,32 @@ async function radarFromOffersPage() {
   return dedupeRadarItems([...radarItemsFromJsonLd(html), ...radarItemsFromCards(html)]);
 }
 
+async function enrichPromotionalPrices(items, maxItems = 12) {
+  const candidates = items.filter(item => item.id && (!item.discount || !item.oldPrice)).slice(0, maxItems);
+  if (!candidates.length) return items;
+  const queue = [...candidates];
+  const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      const prices = await fetchApiPrices(item.id);
+      if (!prices?.price) continue;
+      const current = numeric(prices.price);
+      const existing = numeric(item.price);
+      const promotional = !Number.isFinite(existing) || current < existing || numeric(prices.oldPrice) > current;
+      if (promotional) {
+        item.price = prices.price;
+        item.oldPrice = prices.oldPrice || (Number.isFinite(existing) && existing > current ? money(existing) : item.oldPrice);
+        item.discount = radarDiscount(item.oldPrice, item.price);
+        item.savings = numeric(item.oldPrice) > current ? money(numeric(item.oldPrice) - current) : '';
+        item.score = radarScore(item);
+        item.source = `${item.source}+sale-price`;
+      }
+    }
+  });
+  await Promise.all(workers);
+  return items;
+}
+
 async function getRadarOffers(options = {}) {
   const query = clean(options.query || '');
   const category = clean(options.category || '');
@@ -216,6 +271,7 @@ async function getRadarOffers(options = {}) {
   let source = items.length ? 'Pesquisa do Mercado Livre' : 'Ofertas do Mercado Livre';
   if (query && !items.length) { items = await radarFromSearchPage(query); if (items.length) source = 'Pesquisa pública do Mercado Livre'; }
   if (!items.length) items = await radarFromOffersPage();
+  items = await enrichPromotionalPrices(dedupeRadarItems(items), Math.min(16, limit));
   const normalizedQuery = query.toLowerCase();
   items = dedupeRadarItems(items)
     .filter(item => !normalizedQuery || item.title.toLowerCase().includes(normalizedQuery))
@@ -256,5 +312,7 @@ function startRadarScheduler() {
 module.exports = {
   getRadarOffers,
   normalizeRadarItem,
-  startRadarScheduler
+  startRadarScheduler,
+  radarItemFromBlock,
+  enrichPromotionalPrices
 };

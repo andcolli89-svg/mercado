@@ -123,7 +123,7 @@ public class MainActivity extends Activity {
                 String scheme = uri.getScheme();
                 if ("http".equals(scheme) || "https".equals(scheme)) {
                     String host = uri.getHost();
-                    if (host != null && (host.contains("mercadolivre") || host.contains("meli.la") || host.contains("whatsapp") || host.contains("wa.me"))) {
+                    if (host != null && (host.contains("mercadolivre") || host.contains("meli.la") || host.contains("shopee") || host.contains("shope.ee") || host.contains("whatsapp") || host.contains("wa.me"))) {
                         startActivity(new Intent(Intent.ACTION_VIEW, uri));
                         return true;
                     }
@@ -204,19 +204,19 @@ public class MainActivity extends Activity {
             if ((shared == null || shared.toString().trim().isEmpty()) && intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
                 shared = intent.getClipData().getItemAt(0).coerceToText(this);
             }
-            String link = firstMercadoLivreLink(shared == null ? "" : shared.toString());
+            String link = firstSupportedProductLink(shared == null ? "" : shared.toString());
             intent.removeExtra(Intent.EXTRA_TEXT);
             intent.setAction(Intent.ACTION_MAIN);
             if (link != null) {
                 if (!pageReady) pendingSharedProductLink = link;
                 else deliverSharedProductLink(link);
             } else {
-                Toast.makeText(this, "O compartilhamento não contém um link de produto do Mercado Livre.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "O compartilhamento não contém um link de produto do Mercado Livre ou Shopee.", Toast.LENGTH_LONG).show();
             }
         }
     }
 
-    private String firstMercadoLivreLink(String text) {
+    private String firstSupportedProductLink(String text) {
         Matcher matcher = Pattern.compile("https?://[^\\s<>\"']+", Pattern.CASE_INSENSITIVE).matcher(text == null ? "" : text);
         while (matcher.find()) {
             String candidate = matcher.group().replaceAll("[),.;!?]+$", "");
@@ -226,7 +226,7 @@ public class MainActivity extends Activity {
                 if (host == null) continue;
                 String normalized = host.toLowerCase();
                 if (normalized.equals("meli.la") || normalized.endsWith(".meli.la") ||
-                        normalized.contains("mercadolivre.com") || normalized.contains("mercadolibre.com")) {
+                        normalized.contains("mercadolivre.com") || normalized.contains("mercadolibre.com") || normalized.contains("shopee.com.br") || normalized.equals("shope.ee") || normalized.endsWith(".shope.ee")) {
                     return candidate;
                 }
             } catch (Exception ignored) { }
@@ -255,8 +255,8 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void openExternalLink(String value) {
             final String link = value == null ? "" : value.trim();
-            if (firstMercadoLivreLink(link) == null) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Link do Mercado Livre inválido.", Toast.LENGTH_LONG).show());
+            if (firstSupportedProductLink(link) == null) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Link do Mercado Livre ou Shopee inválido.", Toast.LENGTH_LONG).show());
                 return;
             }
             runOnUiThread(() -> {

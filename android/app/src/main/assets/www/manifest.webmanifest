@@ -1,5 +1,5 @@
 {
-  "name": "CbOfertas V4.1",
+  "name": "CbOfertas V5.2",
   "short_name": "CbOfertas",
   "start_url": "./index.html",
   "display": "standalone",
@@ -17,5 +17,5 @@
       "type": "image/png"
     }
   ],
-  "description": "Criador de ofertas com Radar, cupons inteligentes, histórico e favoritos."
+  "description": "Criador profissional de ofertas com preço promocional validado, Radar, Biblioteca de Afiliados, histórico, cupons e favoritos."
 }

@@ -1,0 +1,28 @@
+CBOFERTAS V5.2 — ALTERAÇÕES
+
+BACKEND
+- Nova separação entre API, parsers e serviços.
+- Parser de dinheiro brasileiro para texto e atributos de acessibilidade.
+- Hierarquia de preço corrigida para não substituir promoção visível por preço regular da API.
+- Detecção de preço atual, preço original, desconto e parcelamento.
+- Rejeição de valores de cashback, ganhos e parcelas como preço final.
+- Serviço próprio para resolver links curtos e redirecionamentos meli.la/Shopee.
+- Parser dedicado para valores internos da Shopee, incluindo escala monetária de 1/100000.
+- Identificação de produtos Shopee por loja e item.
+- Radar com preço promocional e enriquecimento seletivo.
+- Testes automatizados para cadeira R$ 475,96, creatina, cashback, parcelas, redirecionamentos, Radar e Shopee.
+
+APLICATIVO
+- Remoção integral da tela, botões e configurações do antigo Gerador de Mensagens.
+- Uma frase engraçada automática antes do título.
+- Banco com 352 frases em 22 categorias e rotação sem repetição imediata.
+- Biblioteca de Afiliados com pesquisa, remoção, exportação JSON e limpeza.
+- Associação automática por MLB e catálogo.
+- Reuso do link afiliado no Radar, Histórico, Favoritos, WhatsApp e texto.
+- Histórico com menor preço, maior desconto, quantidade e data da última consulta.
+- Cards e interface modernizados, animações leves e temas claro/escuro preservados.
+
+ANDROID E AUTOMAÇÃO
+- versionName 5.2.
+- versionCode 520.
+- GitHub Actions com validação, testes, compilação do APK, geração do ZIP e checksums SHA-256.

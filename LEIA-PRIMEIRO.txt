@@ -1,29 +1,29 @@
-CBOFERTAS V5.0
+CBOFERTAS V5.2 — LEIA PRIMEIRO
+
+1. Este pacote deve substituir o conteúdo da raiz do repositório GitHub.
+2. Publique novamente a pasta backend no Render.
+3. No Render, use:
+   - Root Directory: backend
+   - Build Command: npm install
+   - Start Command: npm start
+   - Health Check Path: /health
+4. Confirme que /health responde com version 5.2.0.
+5. No GitHub, abra Actions e execute "Validar e Gerar CbOfertas V5.2".
+6. Baixe o artefato "CbOfertas-V5.2-Completa".
+
+O workflow valida o projeto, executa 17 testes, compila o APK e gera o ZIP completo com checksums SHA-256.
+
+VERSÃO ANDROID
+- versionName: 5.2
+- versionCode: 520
 
 CORREÇÕES IMPORTANTES
-- Valores como 2.500 e 1.500 agora são tratados como R$ 2.500,00 e R$ 1.500,00.
-- O Radar não transforma mais milhares em centavos.
-- O backend deve mostrar version 5.0.0 em /health.
-
-LINK DE AFILIADO
-1. Busque ou escolha o produto no CbOfertas.
-2. Toque em Gerar link de afiliado.
-3. No Mercado Livre, toque em Compartilhar na faixa Ganhos.
-4. Escolha CbOfertas na lista de aplicativos.
-5. O link recebido será aplicado automaticamente à oferta.
-
-IMPORTANTE
-- O CbOfertas não inventa parâmetros de afiliado.
-- O link é criado pelo próprio Mercado Livre na conta conectada ao aplicativo oficial.
-- Mensagens, favoritos e histórico usarão o link recebido.
-
-ATUALIZAR O RENDER
-- Root Directory: backend
-- Build Command: npm install
-- Start Command: npm start
-- Health Check Path: /health
-
-GERAR O APK
-- Envie o projeto completo para o GitHub.
-- Execute Validar e Gerar APK CbOfertas V5.0.
-- Baixe CbOfertas-V5.0-APK.
+- preço promocional priorizado;
+- preço original separado do preço atual;
+- cashback e parcelas não são tratados como preço final;
+- links meli.la e links da Shopee resolvidos automaticamente;
+- Radar usa preço promocional;
+- antiga tela do Gerador de Mensagens removida;
+- uma frase engraçada automática antes do título;
+- Biblioteca de Afiliados integrada a Radar, Histórico, Favoritos e compartilhamentos;
+- Histórico com menor preço, maior desconto, consultas e última consulta.

@@ -17,12 +17,12 @@ async function withServer(callback) {
   }
 }
 
-test('health informa versão e recursos da V5.0', async () => {
+test('health informa versão e recursos da V5.2', async () => {
   await withServer(async port => {
     const response = await fetch(`http://127.0.0.1:${port}/health`);
     assert.equal(response.status, 200);
     const data = await response.json();
-    assert.equal(data.version, '5.0.0');
+    assert.equal(data.version, '5.2.0');
     assert.ok(data.features.includes('favoritos'));
   });
 });

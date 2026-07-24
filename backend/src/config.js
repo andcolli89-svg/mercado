@@ -4,8 +4,8 @@ const PORT = Number(process.env.PORT || 10000);
 const RADAR_SOURCE_URL = process.env.RADAR_SOURCE_URL || 'https://www.mercadolivre.com.br/ofertas';
 const RADAR_CACHE_TTL = Number(process.env.RADAR_CACHE_TTL || 10 * 60 * 1000);
 const RADAR_REFRESH_INTERVAL = Number(process.env.RADAR_REFRESH_INTERVAL || 15 * 60 * 1000);
-const ALLOWED_PRODUCT_HOST = /(^|\.)(meli\.la|mercadolivre\.com(?:\.br)?|mercadolibre\.com(?:\.br)?)$/i;
-const ALLOWED_IMAGE_HOST = /(^|\.)(meli\.la|mercadolivre\.com(?:\.br)?|mercadolibre\.com(?:\.br)?|mlstatic\.com)$/i;
+const ALLOWED_PRODUCT_HOST = /(^|\.)(meli\.la|mercadolivre\.com(?:\.br)?|mercadolibre\.com(?:\.br)?|shopee\.com\.br|shope\.ee)$/i;
+const ALLOWED_IMAGE_HOST = /(^|\.)(meli\.la|mercadolivre\.com(?:\.br)?|mercadolibre\.com(?:\.br)?|mlstatic\.com|shopee\.com\.br|shopeeusercontent\.com|susercontent\.com)$/i;
 
 const BROWSER_HEADERS = Object.freeze({
   'user-agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36',

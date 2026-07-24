@@ -108,6 +108,25 @@ function itemIdFrom(text = '') {
   return '';
 }
 
+function shopeeItemIdFrom(text = '') {
+  const raw = safeDecode(text);
+  const patterns = [
+    /\/product\/(\d{3,})\/(\d{3,})/i,
+    /(?:^|[-/])i\.(\d{3,})\.(\d{3,})(?:[/?#]|$)/i,
+    /"shopid"\s*:\s*"?(\d{3,})"?[\s\S]{0,180}?"itemid"\s*:\s*"?(\d{3,})/i,
+    /"itemid"\s*:\s*"?(\d{3,})"?[\s\S]{0,180}?"shopid"\s*:\s*"?(\d{3,})/i
+  ];
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (!match) continue;
+    const a = match[1];
+    const b = match[2];
+    if (/itemid/.test(pattern.source) && pattern.source.indexOf('itemid') < pattern.source.indexOf('shopid')) return `SHP${b}_${a}`;
+    return `SHP${a}_${b}`;
+  }
+  return '';
+}
+
 function attr(tag, name) {
   const match = String(tag).match(new RegExp(`${name}\\s*=\\s*["']([^"']*)["']`, 'i'));
   return match ? decodeHtml(match[1]) : '';
@@ -129,4 +148,4 @@ function absoluteUrl(value = '', base = RADAR_SOURCE_URL) {
   try { return new URL(decodeHtml(value), base).href; } catch { return ''; }
 }
 
-module.exports = { clean, decodeHtml, localizedNumber, money, numeric, safeDecode, itemIdFrom, attr, meta, stripTags, absoluteUrl };
+module.exports = { clean, decodeHtml, localizedNumber, money, numeric, safeDecode, itemIdFrom, shopeeItemIdFrom, attr, meta, stripTags, absoluteUrl };

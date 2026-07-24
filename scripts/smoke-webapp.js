@@ -104,4 +104,33 @@ if (typeof windowObject.CbOfertasReceiveSharedLink !== 'function') {
   throw new Error('Fluxo de recebimento do link compartilhado não foi inicializado.');
 }
 
-console.log(`Web app V5.0 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);
+const generatedText = vm.runInContext(`buildTextForData({
+  title: 'Creatina Monohidratada',
+  phrase: 'O shape não vem sozinho não.',
+  offerPrice: '79,90',
+  freight: 'Frete grátis'
+}, { url: 'https://meli.la/exemplo' }, 1)`, context);
+const generatedLines = generatedText.split('\n').filter(Boolean);
+if (generatedLines[0] !== 'O shape não vem sozinho não.' || !generatedLines[1].includes('Creatina Monohidratada')) {
+  throw new Error('A frase automática não está aparecendo uma única vez antes do título.');
+}
+
+const phrasePair = vm.runInContext(`[randomPhraseForTitle('creatina'), randomPhraseForTitle('creatina')]`, context);
+if (phrasePair[0] === phrasePair[1]) throw new Error('A rotação de frases repetiu imediatamente a mesma frase.');
+
+const affiliateResult = vm.runInContext(`(() => {
+  saveAffiliateAssociation('MLB4812130742', 'https://meli.la/2ZY9J9V', '', 'Cadeira Presidente Python');
+  return affiliateFor({ itemId: 'MLB4812130742', link: 'https://produto.mercadolivre.com.br/MLB-4812130742' });
+})()`, context);
+if (affiliateResult !== 'https://meli.la/2ZY9J9V') throw new Error('Biblioteca de Afiliados não reutilizou o link salvo por MLB.');
+
+const shopeeSupport = vm.runInContext(`({
+  accepted: isSupportedProductLink('https://shopee.com.br/Cadeira-i.123456.987654321'),
+  id: extractItemId('https://shopee.com.br/Cadeira-i.123456.987654321'),
+  affiliate: isAffiliateLink('https://s.shopee.com.br/exemplo')
+})`, context);
+if (!shopeeSupport.accepted || shopeeSupport.id !== 'SHP123456_987654321' || !shopeeSupport.affiliate) {
+  throw new Error('O fluxo web da Shopee não foi inicializado corretamente.');
+}
+
+console.log(`Web app V5.2 inicializado em ambiente de teste com ${elements.size} elementos simulados, frase automática e afiliados validados.`);
