@@ -1,0 +1,12 @@
+CBOFERTAS V6.0.0 ALPHA 1
+
+Esta é uma reconstrução nova e separada.
+Não copie por cima da V5 ainda.
+
+Recomendado:
+1. Criar a branch v6-rebuild.
+2. Colocar o conteúdo deste ZIP nessa branch.
+3. Criar outro serviço no Render usando a pasta backend.
+4. Informar a URL desse novo serviço em Ajustes no aplicativo.
+5. Testar os quatro produtos reais descritos em docs/PLANO-DE-TESTES-REAIS.md.
+6. Somente depois promover para main/produção.

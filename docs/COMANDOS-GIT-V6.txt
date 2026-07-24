@@ -1,0 +1,16 @@
+CBOFERTAS V6 - BRANCH SEPARADA
+
+Abra o Git Bash na raiz atual do seu repositório e execute:
+
+git switch -c v6-rebuild
+
+Depois copie o conteúdo desta pasta V6 para a raiz do repositório e execute:
+
+git add -A
+git commit -m "Inicia reconstrução nativa da CbOfertas V6"
+git push -u origin v6-rebuild
+
+IMPORTANTE
+- Não use --force.
+- Não mescle em main enquanto a alpha não passar nos testes reais.
+- Configure um serviço Render separado usando render.yaml.

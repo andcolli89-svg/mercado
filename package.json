@@ -1,0 +1,10 @@
+{
+  "name": "cbofertas-v6-workspace",
+  "version": "6.0.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-project.mjs && npm --prefix backend run validate",
+    "test": "npm --prefix backend test"
+  }
+}

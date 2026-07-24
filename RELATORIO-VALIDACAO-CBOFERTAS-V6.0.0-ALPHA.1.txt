@@ -1,0 +1,54 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 1
+Data: 24/07/2026
+
+OBJETIVO DESTA ENTREGA
+Primeira base nova e separada da CbOfertas, construída sem reutilizar o WebView nem o parser genérico da V5.
+Esta alpha deve ser publicada na branch v6-rebuild e em um serviço Render separado.
+
+IMPLEMENTADO
+- Backend Node.js modular e sem dependências de runtime.
+- Android nativo em Kotlin + Jetpack Compose.
+- Estado de busca que remove o produto anterior antes de iniciar outra consulta.
+- Identificação separada de página de catálogo e MLB do anúncio vencedor.
+- Redirecionamentos HTTP 301, 302, 303, 307 e 308 com reaproveitamento de cookies.
+- Consulta separada de item, sale_price, prices, catálogo e vendedor.
+- Preço atual, original, parcela, cashback e preço por unidade em campos independentes.
+- Exclusão de preços de contextos especiais, como fidelidade, compra mínima e públicos restritos.
+- Radar com concorrência limitada, confirmação por MLB e ordenação por desconto real.
+- Histórico, favoritos, cupons e Biblioteca de Afiliados locais.
+- Link afiliado associado pelo MLB e reutilizado no compartilhamento.
+- 352 frases em 22 categorias, sem repetição imediata.
+- Tema claro e escuro.
+- render.yaml para serviço separado cbofertas-v6-api na branch v6-rebuild.
+- GitHub Actions para validar backend, executar testes Android, compilar APK e gerar ZIP/checksums.
+
+VALIDAÇÕES EXECUTADAS
+- npm run validate: APROVADO.
+- 18 testes automatizados do backend: 18 aprovados, 0 falhas.
+- Cobertura do backend: 89,35% linhas; 70,40% branches; 91,94% funções.
+- Teste local da rota /health: APROVADO.
+- Sintaxe de todos os arquivos JavaScript: APROVADA.
+- Estrutura JSON do banco de frases: APROVADA, 352 frases.
+- YAML do GitHub Actions e do Render: parseado sem erro.
+- XML do AndroidManifest e styles.xml: parseado sem erro.
+- Modelo de domínio Kotlin compilado isoladamente: APROVADO.
+- Busca por WebView no novo Android: nenhuma ocorrência.
+
+CASOS AUTOMATIZADOS IMPORTANTES
+- Galaxy A17: R$ 806,65 atual e R$ 1.855,71 original; cashback e parcela ignorados como preço.
+- Kit de toalhas: R$ 142,39 atual e R$ 185,29 original; R$ 15,74 de contexto especial rejeitado.
+- Cadeira Python: R$ 475,96 atual e R$ 1.248,75 original.
+- Catálogo: usa buy_box_winner.item_id e não confunde o ID do catálogo com o MLB do anúncio.
+- HTTP 302 e 307: redirecionamentos seguidos e cookies preservados.
+- Radar: anúncios confirmados e ordenados pelo desconto real.
+- Nova consulta/erro: dados anteriores não permanecem na tela.
+
+LIMITAÇÕES HONESTAS DESTA ALPHA
+- O APK não foi compilado neste ambiente porque Android SDK, Gradle e dependências Android não estão instalados e o acesso externo do container está bloqueado.
+- A interface Android completa será efetivamente compilada e testada pela primeira execução do GitHub Actions.
+- Os links reais do Mercado Livre ainda precisam dos testes de campo listados em docs/PLANO-DE-TESTES-REAIS.md.
+- Shopee ainda não está habilitada nesta primeira alpha; a arquitetura foi preparada para adicionar outro provider sem misturar a lógica do Mercado Livre.
+- Não substituir a V5 em produção antes de validar a branch v6-rebuild.
+
+RESULTADO
+Base V6 Alpha 1 pronta para ser enviada a uma branch separada e iniciar a fase de compilação Android e testes reais, sem afirmar que está pronta para produção.

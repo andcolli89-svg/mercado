@@ -1,0 +1,17 @@
+{
+  "name": "cbofertas-v6-backend",
+  "version": "6.0.0-alpha.1",
+  "private": true,
+  "description": "Backend novo da CbOfertas V6, sem dependências de runtime.",
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test --test-reporter=spec",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "validate": "node --check server.js && find src test -name '*.js' -print0 | xargs -0 -n1 node --check"
+  }
+}

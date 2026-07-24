@@ -1,0 +1,67 @@
+name: Validar e Gerar CbOfertas V6 Alpha
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, v6-rebuild]
+  pull_request:
+    branches: [main, v6-rebuild]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Testar backend V6
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validar JavaScript
+        working-directory: backend
+        run: npm run validate
+      - name: Executar testes
+        working-directory: backend
+        run: npm test
+
+  android:
+    name: Compilar Android nativo
+    needs: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Instalar SDK Android 37
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.6.1'
+      - name: Testes Android
+        working-directory: android
+        run: gradle testDebugUnitTest --stacktrace --no-daemon
+      - name: Gerar APK debug
+        working-directory: android
+        run: gradle assembleDebug --stacktrace --no-daemon
+      - name: Preparar artefatos
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/CbOfertas-V6.0.0-alpha.1.apk
+          sha256sum dist/CbOfertas-V6.0.0-alpha.1.apk > dist/CbOfertas-V6.0.0-alpha.1.apk.sha256
+          zip -qr dist/CbOfertas-V6.0.0-alpha.1-FONTES.zip . \
+            -x '.git/*' 'dist/*' 'android/.gradle/*' 'android/**/build/*'
+          sha256sum dist/CbOfertas-V6.0.0-alpha.1-FONTES.zip > dist/CbOfertas-V6.0.0-alpha.1-FONTES.zip.sha256
+      - uses: actions/upload-artifact@v7
+        with:
+          name: CbOfertas-V6.0.0-alpha.1
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
