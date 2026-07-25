@@ -4,9 +4,9 @@ RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 4
 DATA: 25/07/2026
 
 VERSÕES
-- Workspace: 6.0.0-alpha.4
-- Backend: 6.0.0-alpha.4
-- Android versionName: 6.0.0-alpha.4
+- Workspace: 6.0.0-alpha.4.1
+- Backend: 6.0.0-alpha.4.1
+- Android versionName: 6.0.0-alpha.4.1
 - Android versionCode: 600004
 - compileSdk/targetSdk: 35
 - AGP: 8.7.3

@@ -1,0 +1,20 @@
+CBOFERTAS V6 ALPHA 4.1 — CORREÇÃO DO PARCELAMENTO
+
+Problema corrigido:
+- O aplicativo exibia uma quantidade/valor de parcelas diferente do anúncio.
+- Não havia opção para indicar "sem juros" ou "com juros".
+
+Mudanças:
+- Parcelas e valor da parcela agora podem ser corrigidos manualmente na oferta.
+- Opções: Sem juros, Com juros ou Não informar.
+- A prévia do texto, WhatsApp Business, cópia e agendamento usam o parcelamento corrigido.
+- O preço à vista continua separado do parcelamento.
+- O aplicativo não recalcula automaticamente o valor das parcelas a partir do preço à vista.
+
+Exemplo do anúncio:
+15x R$ 126,03 sem juros
+
+Preenchimento:
+Parcelas: 15
+Valor da parcela: 126,03
+Opção: Sem juros

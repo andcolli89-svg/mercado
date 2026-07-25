@@ -8,7 +8,7 @@ BACKEND
 - Serviço de avaliação de cupons inteligentes.
 
 ANDROID
-- versionCode 600004 e versionName 6.0.0-alpha.4.
+- versionCode 600004 e versionName 6.0.0-alpha.4.1.
 - Backend padrão cbofertas-v6-api.onrender.com.
 - Cupons com valor fixo ou percentual, mínimo, teto, palavras-chave e validade.
 - Cupom confirmado separado de sugestão.

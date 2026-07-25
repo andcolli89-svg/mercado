@@ -444,7 +444,7 @@ private fun AppHeader(darkTheme: Boolean, onToggleTheme: () -> Unit) {
             ) {
                 Column {
                     Text("🏷️ CbOfertas", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("V6 Alpha 4 • Radar, cupons e agenda", style = MaterialTheme.typography.bodySmall)
+                    Text("V6 Alpha 4.1.1 • Parcelamento corrigível", style = MaterialTheme.typography.bodySmall)
                 }
                 TextButton(onClick = onToggleTheme) {
                     Text(if (darkTheme) "☀ Claro" else "☾ Escuro", fontWeight = FontWeight.Bold)
@@ -498,7 +498,32 @@ private fun HomeScreen(
                     val product = searchState.product
                     val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
                     val couponMatch = product.couponByCode(coupons, selectedCoupon) ?: product.bestCoupon(coupons)
-                    val offerText = product.offerText(phrase, couponMatch, affiliate)
+                    val detectedInstallment = product.installmentText().orEmpty()
+                    val detectedCount = Regex("(\\d{1,2})x", RegexOption.IGNORE_CASE).find(detectedInstallment)?.groupValues?.getOrNull(1).orEmpty()
+                    var installmentCount by remember(product.itemId) { mutableStateOf(detectedCount) }
+                    var installmentAmount by remember(product.itemId) {
+                        mutableStateOf(product.price.installment?.amount?.let { String.format(java.util.Locale("pt", "BR"), "%.2f", it) }.orEmpty())
+                    }
+                    var installmentInterest by remember(product.itemId) {
+                        mutableStateOf(
+                            when {
+                                detectedInstallment.contains("sem juros", ignoreCase = true) -> "sem_juros"
+                                detectedInstallment.contains("com juros", ignoreCase = true) -> "com_juros"
+                                else -> "nao_informar"
+                            },
+                        )
+                    }
+                    val installmentValue = installmentAmount.replace(".", "").replace(',', '.').toDoubleOrNull()
+                    val installmentDisplay = if (installmentCount.toIntOrNull() != null && installmentValue != null && installmentValue > 0) {
+                        buildString {
+                            append("${installmentCount.toInt()}x ${installmentValue.asBrl()}")
+                            when (installmentInterest) {
+                                "sem_juros" -> append(" sem juros")
+                                "com_juros" -> append(" com juros")
+                            }
+                        }
+                    } else detectedInstallment
+                    val offerText = product.offerText(phrase, couponMatch, affiliate, installmentDisplay)
                     ProductOfferCard(
                         product = product,
                         phrase = phrase,
@@ -508,6 +533,13 @@ private fun HomeScreen(
                         affiliate = affiliate,
                         favorite = favorites.any { it.itemId == product.itemId },
                         offerText = offerText,
+                        installmentDisplay = installmentDisplay,
+                        installmentCount = installmentCount,
+                        installmentAmount = installmentAmount,
+                        installmentInterest = installmentInterest,
+                        onInstallmentCountChange = { installmentCount = it.filter(Char::isDigit).take(2) },
+                        onInstallmentAmountChange = { installmentAmount = it.filter { ch -> ch.isDigit() || ch == ',' || ch == '.' }.take(12) },
+                        onInstallmentInterestChange = { installmentInterest = it },
                         onNewPhrase = onNewPhrase,
                         onFavorite = { onFavorite(product) },
                         onSaveAffiliate = { onSaveAffiliate(product) },
@@ -595,6 +627,13 @@ private fun ProductOfferCard(
     affiliate: AffiliateRecord?,
     favorite: Boolean,
     offerText: String,
+    installmentDisplay: String,
+    installmentCount: String,
+    installmentAmount: String,
+    installmentInterest: String,
+    onInstallmentCountChange: (String) -> Unit,
+    onInstallmentAmountChange: (String) -> Unit,
+    onInstallmentInterestChange: (String) -> Unit,
     onNewPhrase: () -> Unit,
     onFavorite: () -> Unit,
     onSaveAffiliate: () -> Unit,
@@ -627,7 +666,16 @@ private fun ProductOfferCard(
         Text(product.itemId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
 
-        PricePanel(product)
+        PricePanel(product, installmentDisplay)
+        Spacer(Modifier.height(10.dp))
+        InstallmentEditor(
+            count = installmentCount,
+            amount = installmentAmount,
+            interest = installmentInterest,
+            onCountChange = onInstallmentCountChange,
+            onAmountChange = onInstallmentAmountChange,
+            onInterestChange = onInstallmentInterestChange,
+        )
         Spacer(Modifier.height(12.dp))
 
         ProductFacts(product)
@@ -698,7 +746,7 @@ private fun PhraseBanner(phrase: String, onNewPhrase: () -> Unit) {
 }
 
 @Composable
-private fun PricePanel(product: Product) {
+private fun PricePanel(product: Product, installmentDisplay: String) {
     val price = product.price
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -719,7 +767,64 @@ private fun PricePanel(product: Product) {
                 color = MaterialTheme.colorScheme.primary,
             )
             if (price.savings > 0) Text("Você economiza ${price.savings.asBrl()}", fontWeight = FontWeight.Bold)
-            product.installmentText()?.let { Text("💳 $it", textAlign = TextAlign.Center) }
+            installmentDisplay.takeIf(String::isNotBlank)?.let { Text("💳 $it", textAlign = TextAlign.Center) }
+        }
+    }
+}
+
+@Composable
+private fun InstallmentEditor(
+    count: String,
+    amount: String,
+    interest: String,
+    onCountChange: (String) -> Unit,
+    onAmountChange: (String) -> Unit,
+    onInterestChange: (String) -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Text("💳 Corrigir parcelamento", fontWeight = FontWeight.ExtraBold)
+            Text(
+                "Confira no anúncio. O Mercado Livre pode oferecer uma quantidade diferente conforme cartão e forma de pagamento.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = count,
+                    onValueChange = onCountChange,
+                    modifier = Modifier.weight(0.35f),
+                    label = { Text("Parcelas") },
+                    placeholder = { Text("15") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = onAmountChange,
+                    modifier = Modifier.weight(0.65f),
+                    label = { Text("Valor da parcela") },
+                    placeholder = { Text("126,03") },
+                    singleLine = true,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(
+                    "sem_juros" to "Sem juros",
+                    "com_juros" to "Com juros",
+                    "nao_informar" to "Não informar",
+                ).forEach { (value, label) ->
+                    AssistChip(
+                        onClick = { onInterestChange(value) },
+                        label = { Text(label) },
+                        leadingIcon = { Text(if (interest == value) "✓" else "○") },
+                    )
+                }
+            }
         }
     }
 }

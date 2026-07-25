@@ -40,7 +40,7 @@ O endereço pode ser alterado na tela **Ajustes**.
 
 A branch de testes é `v6-rebuild`. O workflow `.github/workflows/build-v6.yml` executa testes, compila o APK e publica:
 
-- `CbOfertas-V6.0.0-alpha.4.apk`
+- `CbOfertas-V6.0.0-alpha.4.1.apk`
 - checksum SHA-256 do APK;
 - ZIP completo das fontes;
 - checksum SHA-256 do ZIP.

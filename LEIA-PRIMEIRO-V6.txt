@@ -18,7 +18,7 @@ COMO ENVIAR AO GITHUB
 3. Abra Git Bash Here na raiz.
 4. Execute os comandos de COMANDOS-GIT-ALPHA-4.txt.
 5. Aguarde a execução verde do GitHub Actions.
-6. Baixe o APK no artefato CbOfertas-V6.0.0-alpha.4-COMPLETA.
+6. Baixe o APK no artefato CbOfertas-V6.0.0-alpha.4.1-COMPLETA.
 
 IMPORTANTE
 - Não coloque tokens ou chaves secretas no GitHub.

@@ -31,6 +31,7 @@ fun Product.offerText(
     phrase: String,
     coupon: CouponMatch?,
     affiliate: AffiliateRecord?,
+    installmentOverride: String? = null,
 ): String {
     val lines = mutableListOf<String>()
     lines += "😂 “${phrase.trim().trim('“', '”', '\"')}”"
@@ -45,7 +46,7 @@ fun Product.offerText(
     }
     if (current != null) lines += "💰 Por apenas ${current.asBrl()}"
     if (price.discountPercent > 0) lines += "📉 ${price.discountPercent}% OFF"
-    installmentText()?.let { lines += "💳 $it" }
+    (installmentOverride?.takeIf(String::isNotBlank) ?: installmentText())?.let { lines += "💳 $it" }
     if (freeShipping) lines += "🚚 Frete grátis"
     sellerName?.takeIf(String::isNotBlank)?.let { lines += "🏪 Vendido por $it" }
 

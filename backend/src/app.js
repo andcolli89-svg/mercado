@@ -163,7 +163,7 @@ export function createApp() {
         sendJson(response, 200, {
           items: products.map(legacyRadarItem),
           total: products.length,
-          source: 'CbOfertas V6 Alpha 4',
+          source: 'CbOfertas V6 Alpha 4.1',
           updatedAt: Date.now(),
           cached: false,
         }, origin);
