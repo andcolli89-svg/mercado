@@ -1,66 +1,52 @@
-# CbOfertas V6 — reconstrução limpa
+# CbOfertas V6.0.0 Alpha 2 — reconstrução Android limpa
 
-Esta pasta contém a primeira base funcional da nova CbOfertas. Ela não reutiliza o WebView nem o parser genérico da V5.
+Esta entrega substitui integralmente o módulo Android da Alpha 1. O backend V6 foi preservado porque os testes de produto, preço, redirecionamento e Radar já passam.
 
-## O que já existe nesta alpha
+## O que mudou
 
-- Aplicativo Android nativo em Kotlin + Jetpack Compose.
-- Estado de busca que apaga o produto anterior antes da nova consulta.
-- Backend Node.js 24 sem dependências de runtime.
-- Resolução manual de HTTP 301, 302, 303, 307 e 308, com cookies.
-- Identificação de links `meli.la`, MLB e páginas de catálogo.
-- Consulta separada de item, preço de venda, preços cadastrados, catálogo e vendedor.
-- Modelo separado para preço atual, original, parcela, cashback e preço por unidade.
-- Bloqueio de publicação automática quando a confiança do preço é baixa.
-- Radar com concorrência limitada, que só aceita produtos confirmados e ordena pelo desconto real.
-- Histórico, favoritos, cupons e Biblioteca de Afiliados locais.
-- 352 frases em 22 categorias, sem repetição imediata.
-- Tema claro e escuro.
-- GitHub Actions para testes, APK, ZIP e checksums.
+- Projeto Android recriado com uma combinação estável e fechada de versões.
+- Removidas todas as configurações do AGP 9, API 36/37 e Kotlin integrado que provocaram erros em sequência.
+- Interface Compose reescrita sem reutilizar o arquivo `App.kt` problemático.
+- Novo `applicationId` de teste, permitindo instalar a V6 ao lado da V5.
+- Estado de busca sempre limpo antes de uma consulta.
+- Preço atual, original, parcela, cashback e preço por unidade exibidos separadamente.
+- Biblioteca de afiliados, Radar, histórico, favoritos, tema e compartilhamento mantidos na nova base.
+- Backend configurável pela tela Ajustes.
 
-## Estado da versão
+## Toolchain Android congelada
 
-`6.0.0-alpha.1` é uma base de desenvolvimento. Não substitua a V5 em produção ainda. Use uma branch `v6-rebuild` e um serviço Render separado.
+- Android Gradle Plugin 8.7.3
+- Gradle 8.9
+- Kotlin e Compose Compiler 2.0.21
+- compileSdk e targetSdk 35
+- Core KTX 1.15.0
+- Activity Compose 1.10.0
+- Compose BOM 2024.12.01
+- JDK 17
 
-## Backend local
+## Branch e produção
+
+Use somente a branch `v6-rebuild`. Não faça merge na `main` e não substitua o backend V5.
+
+O APK Alpha usa o identificador `com.cbofertas.v6.alpha.debug` e pode coexistir com a CbOfertas V5.
+
+## Backend V6
 
 ```bash
 cd backend
+npm run validate
 npm test
 npm start
 ```
 
-O servidor inicia na porta `10000`. No emulador Android, use `http://10.0.2.2:10000`.
+Crie um serviço Render separado apontando para a branch `v6-rebuild` e para a pasta `backend`. Depois informe o endereço HTTPS desse serviço na tela **Ajustes** do aplicativo.
 
-## Render separado
+## GitHub Actions
 
-Crie um novo Web Service apontando para a pasta `backend`:
+O workflow `.github/workflows/build-v6.yml` valida o backend, instala Android API 35, executa os testes Android e gera:
 
-- Runtime: Node
-- Build command: `npm test`
-- Start command: `npm start`
-- Node: 24
-- Variável opcional: `MELI_ACCESS_TOKEN`
+- `CbOfertas-V6.0.0-alpha.2.apk`
+- checksum SHA-256
+- ZIP das fontes
 
-A API oficial de preços do Mercado Livre exige token em vários contextos. Sem a variável, a V6 tenta as fontes públicas e reduz a confiança quando não consegue confirmar o preço vencedor.
-
-## Android
-
-O projeto usa:
-
-- compileSdk 37
-- AGP 9.2.0
-- Gradle 9.6.1
-- Kotlin 2.3.21
-- Compose BOM 2026.06.00
-
-O workflow instala o SDK, executa os testes Android e gera `CbOfertas-V6.0.0-alpha.1.apk`. Nesta entrega local, o APK ainda não foi compilado porque o ambiente não possui Android SDK/Gradle; a compilação será confirmada pelo GitHub Actions da branch `v6-rebuild`.
-
-
-## Validação atual
-
-- 18 testes automatizados do backend aprovados.
-- Casos cobertos: Galaxy A17, toalhas, cadeira, cashback, parcelas, preço unitário, catálogo/buy box, contextos especiais, redirecionamentos 302/307 e Radar.
-- Sintaxe JavaScript, YAML e estrutura do projeto validadas.
-- Modelo de domínio Kotlin compilado isoladamente.
-- A interface Android completa aguarda a primeira compilação no GitHub Actions.
+Esta versão ainda é Alpha e não deve substituir a V5 em produção.

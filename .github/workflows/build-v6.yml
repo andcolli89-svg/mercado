@@ -1,11 +1,11 @@
-name: Validar e Gerar CbOfertas V6 Alpha
+name: Validar e Gerar CbOfertas V6 Alpha 2
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, v6-rebuild]
+    branches: [v6-rebuild]
   pull_request:
-    branches: [main, v6-rebuild]
+    branches: [v6-rebuild]
 
 permissions:
   contents: read
@@ -15,11 +15,10 @@ jobs:
     name: Testar backend V6
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          package-manager-cache: false
       - name: Validar JavaScript
         working-directory: backend
         run: npm run validate
@@ -28,23 +27,23 @@ jobs:
         run: npm test
 
   android:
-    name: Compilar Android nativo
+    name: Compilar Android limpo
     needs: backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - name: Instalar SDK Android 36
+      - name: Instalar SDK Android 35
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-      - uses: gradle/actions/setup-gradle@v6
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.4.1'
+          gradle-version: '8.9'
       - name: Testes Android
         working-directory: android
         run: gradle testDebugUnitTest --stacktrace --no-daemon
@@ -54,14 +53,14 @@ jobs:
       - name: Preparar artefatos
         run: |
           mkdir -p dist
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist/CbOfertas-V6.0.0-alpha.1.apk
-          sha256sum dist/CbOfertas-V6.0.0-alpha.1.apk > dist/CbOfertas-V6.0.0-alpha.1.apk.sha256
-          zip -qr dist/CbOfertas-V6.0.0-alpha.1-FONTES.zip . \
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/CbOfertas-V6.0.0-alpha.2.apk
+          sha256sum dist/CbOfertas-V6.0.0-alpha.2.apk > dist/CbOfertas-V6.0.0-alpha.2.apk.sha256
+          zip -qr dist/CbOfertas-V6.0.0-alpha.2-FONTES.zip . \
             -x '.git/*' 'dist/*' 'android/.gradle/*' 'android/**/build/*'
-          sha256sum dist/CbOfertas-V6.0.0-alpha.1-FONTES.zip > dist/CbOfertas-V6.0.0-alpha.1-FONTES.zip.sha256
-      - uses: actions/upload-artifact@v7
+          sha256sum dist/CbOfertas-V6.0.0-alpha.2-FONTES.zip > dist/CbOfertas-V6.0.0-alpha.2-FONTES.zip.sha256
+      - uses: actions/upload-artifact@v4
         with:
-          name: CbOfertas-V6.0.0-alpha.1
+          name: CbOfertas-V6.0.0-alpha.2
           path: dist/*
           if-no-files-found: error
           retention-days: 30

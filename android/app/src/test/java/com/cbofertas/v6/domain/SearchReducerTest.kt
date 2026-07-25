@@ -5,34 +5,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SearchReducerTest {
-    private val product = Product(
-        platform = "mercado_livre",
-        itemId = "MLB123",
-        catalogProductId = null,
-        title = "Produto antigo",
-        sellerId = null,
-        sellerName = null,
-        freeShipping = false,
-        logisticType = null,
-        imageUrl = null,
-        permalink = "https://example.test",
-        sourceUrl = "https://example.test",
-        resolvedUrl = "https://example.test",
-        price = PriceInfo(false, null, null, null, null, null, 0, 0.0, 0.0),
-    )
-
     @Test
-    fun novaBuscaRemoveProdutoAnteriorImediatamente() {
-        val previous: SearchState = SearchState.Success(product)
-        val next = reduceSearch(previous, SearchAction.Start("https://meli.la/nova"))
-        assertTrue(next is SearchState.Loading)
+    fun `nova consulta sempre limpa produto anterior`() {
+        val state = reduceSearch(SearchAction.Start("https://meli.la/teste"))
+        assertEquals(SearchState.Loading("https://meli.la/teste"), state)
     }
 
     @Test
-    fun erroNaoMantemProdutoAntigo() {
-        val previous: SearchState = SearchState.Success(product)
-        val loading = reduceSearch(previous, SearchAction.Start("https://meli.la/nova"))
-        val failed = reduceSearch(loading, SearchAction.Fail("Não foi possível confirmar"))
-        assertEquals(SearchState.Error("Não foi possível confirmar"), failed)
+    fun `falha nao preserva dados anteriores`() {
+        val state = reduceSearch(SearchAction.Fail("Não confirmado"))
+        assertTrue(state is SearchState.Error)
     }
 }

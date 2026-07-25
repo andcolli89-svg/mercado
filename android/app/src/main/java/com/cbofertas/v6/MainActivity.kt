@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        sharedUrl = extractSharedUrl(intent)
+        sharedUrl = extractUrl(intent)
         setContent {
             CbOfertasApp(
                 sharedUrl = sharedUrl,
@@ -26,12 +26,16 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        sharedUrl = extractSharedUrl(intent)
+        sharedUrl = extractUrl(intent)
     }
 
-    private fun extractSharedUrl(intent: Intent?): String {
+    private fun extractUrl(intent: Intent?): String {
         if (intent?.action != Intent.ACTION_SEND || intent.type != "text/plain") return ""
         val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
-        return Regex("https?://\\S+", RegexOption.IGNORE_CASE).find(text)?.value?.trimEnd('.', ',', ')', ']') ?: ""
+        return Regex("https?://\\S+", RegexOption.IGNORE_CASE)
+            .find(text)
+            ?.value
+            ?.trimEnd('.', ',', ';', ')', ']')
+            .orEmpty()
     }
 }

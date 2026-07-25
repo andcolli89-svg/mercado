@@ -1,2 +1,1 @@
--keepattributes *Annotation*
--keep class org.json.** { *; }
+# Alpha 2: minificação desativada para facilitar diagnóstico.

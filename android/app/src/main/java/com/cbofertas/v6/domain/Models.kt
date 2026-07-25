@@ -89,7 +89,7 @@ sealed interface SearchAction {
     data object Clear : SearchAction
 }
 
-fun reduceSearch(state: SearchState, action: SearchAction): SearchState = when (action) {
+fun reduceSearch(action: SearchAction): SearchState = when (action) {
     is SearchAction.Start -> SearchState.Loading(action.url)
     is SearchAction.Succeed -> SearchState.Success(action.product)
     is SearchAction.Fail -> SearchState.Error(action.message)
