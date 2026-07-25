@@ -2,6 +2,7 @@ import { config } from './config.js';
 import { AppError, ValidationError } from './core/errors.js';
 import { resolveProduct } from './services/productService.js';
 import { runRadar } from './services/radarService.js';
+import { evaluateCoupons } from './services/couponService.js';
 
 function corsHeaders(origin) {
   const allowed = config.allowedOrigins.includes('*') || config.allowedOrigins.includes(origin) ? origin || '*' : 'null';
@@ -113,6 +114,7 @@ export function createApp() {
           timestamp: new Date().toISOString(),
           mercadoLivreTokenConfigured: Boolean(config.mercadoLivreToken),
           compatibility: ['v6', 'v5.2.1'],
+          features: ['radar-fallback', 'smart-coupons'],
         }, origin);
         return;
       }
@@ -139,7 +141,14 @@ export function createApp() {
         return;
       }
 
-      // Compatibilidade direta com o backend V5.2.1 e com APKs que usam as rotas antigas.
+      if (request.method === 'POST' && requestUrl.pathname === '/v1/coupons/evaluate') {
+        const body = await readJson(request);
+        if (!body.product) throw new ValidationError('Informe o produto.');
+        const result = evaluateCoupons(body.product, Array.isArray(body.coupons) ? body.coupons : []);
+        sendJson(response, 200, { ok: true, ...result }, origin);
+        return;
+      }
+
       if (request.method === 'GET' && requestUrl.pathname === '/api/product') {
         const product = await resolveProduct(requestUrl.searchParams.get('url'));
         sendJson(response, 200, legacyProduct(product), origin);
@@ -154,7 +163,7 @@ export function createApp() {
         sendJson(response, 200, {
           items: products.map(legacyRadarItem),
           total: products.length,
-          source: 'CbOfertas V6',
+          source: 'CbOfertas V6 Alpha 4',
           updatedAt: Date.now(),
           cached: false,
         }, origin);
