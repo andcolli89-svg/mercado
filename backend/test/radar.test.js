@@ -49,3 +49,48 @@ test('Radar confirma os MLBs e ordena pelo desconto real', async (t) => {
   assert.equal(products[0].price.discountPercent, 50);
   assert.equal(products[1].price.discountPercent, 20);
 });
+
+test('Radar usa busca pública quando API de pesquisa retorna 403', async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/sites/MLB/search') {
+      return response({ code: 'PA_UNAUTHORIZED_RESULT_FROM_POLICIES' }, 403);
+    }
+    if (url.hostname === 'lista.mercadolivre.com.br') {
+      return new Response('<a href="https://produto.mercadolivre.com.br/MLB-3333333333-_JM">Oferta</a>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+    if (url.hostname === 'produto.mercadolivre.com.br') {
+      return new Response('', { status: 200, headers: { 'content-type': 'text/html' } });
+    }
+    if (url.pathname === '/items/MLB3333333333') {
+      return response({
+        id: 'MLB3333333333',
+        title: 'Creatina teste',
+        seller_id: 33,
+        price: 100,
+        currency_id: 'BRL',
+        permalink: 'https://produto.mercadolivre.com.br/MLB-3333333333-_JM',
+        pictures: [],
+        shipping: { free_shipping: true },
+        status: 'active',
+        available_quantity: 5,
+      });
+    }
+    if (url.pathname === '/items/MLB3333333333/sale_price') {
+      return response({ amount: 70, regular_amount: 100, currency_id: 'BRL' });
+    }
+    if (url.pathname === '/items/MLB3333333333/prices') return response({ prices: [] });
+    return response({}, 404);
+  };
+
+  const products = await runRadar('creatina', 4);
+  assert.equal(products.length, 1);
+  assert.equal(products[0].itemId, 'MLB3333333333');
+  assert.equal(products[0].price.current.amount, 70);
+});

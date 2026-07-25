@@ -1,0 +1,22 @@
+ALTERAÇÕES — CBOFERTAS V6.0.0 ALPHA 4
+
+BACKEND
+- Todas as chamadas protegidas do Mercado Livre são opcionais.
+- 401/403/404 de catálogo, item, preços e vendedor não derrubam mais a consulta inteira.
+- Radar usa busca oficial quando disponível e HTML público quando a pesquisa da API é bloqueada.
+- Radar elimina duplicados, limita concorrência e mostra somente preços confirmados.
+- Serviço de avaliação de cupons inteligentes.
+
+ANDROID
+- versionCode 600004 e versionName 6.0.0-alpha.4.
+- Backend padrão cbofertas-v6-api.onrender.com.
+- Cupons com valor fixo ou percentual, mínimo, teto, palavras-chave e validade.
+- Cupom confirmado separado de sugestão.
+- Preço estimado após cupom.
+- Compartilhamento prioritário no WhatsApp Business.
+- Agenda de ofertas com repetição única, diária ou semanal.
+- Notificações, restauração após reinício e abertura da mensagem pronta.
+- Histórico local de compartilhamentos.
+
+AUTOMAÇÃO
+- GitHub Actions testa backend e Android, gera APK, ZIP e checksums.

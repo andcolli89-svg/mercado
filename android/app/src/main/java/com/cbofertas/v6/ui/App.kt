@@ -69,17 +69,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cbofertas.v6.data.ApiClient
 import com.cbofertas.v6.data.LocalStore
+import com.cbofertas.v6.data.OfferScheduler
 import com.cbofertas.v6.data.PhraseLibrary
 import com.cbofertas.v6.domain.AffiliateRecord
 import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
 import com.cbofertas.v6.domain.Product
+import com.cbofertas.v6.domain.ScheduleDraft
+import com.cbofertas.v6.domain.ScheduledOffer
+import com.cbofertas.v6.domain.ShareHistoryRecord
 import com.cbofertas.v6.domain.SearchAction
 import com.cbofertas.v6.domain.SearchState
 import com.cbofertas.v6.domain.asBrl
 import com.cbofertas.v6.domain.asDateTime
 import com.cbofertas.v6.domain.bestLink
+import com.cbofertas.v6.domain.bestCoupon
+import com.cbofertas.v6.domain.couponByCode
+import com.cbofertas.v6.domain.couponMatches
 import com.cbofertas.v6.domain.installmentText
 import com.cbofertas.v6.domain.offerText
 import com.cbofertas.v6.domain.reduceSearch
@@ -99,6 +106,7 @@ enum class Page(val title: String, val symbol: String) {
     HISTORY("Histórico", "◷"),
     FAVORITES("Favoritos", "★"),
     AFFILIATES("Afiliados", "🔗"),
+    AGENDA("Agenda", "🗓"),
     SETTINGS("Ajustes", "⚙"),
 }
 
@@ -121,6 +129,10 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
     var favorites by remember { mutableStateOf(store.favorites()) }
     var affiliates by remember { mutableStateOf(store.affiliates()) }
     var coupons by remember { mutableStateOf(store.coupons()) }
+    var schedules by remember { mutableStateOf(store.schedules()) }
+    var scheduleDraft by remember { mutableStateOf<ScheduleDraft?>(null) }
+    var scheduleMessage by remember { mutableStateOf<String?>(null) }
+    var shareHistory by remember { mutableStateOf(store.shareHistory()) }
     var radarQuery by remember { mutableStateOf("") }
     var radarProducts by remember { mutableStateOf<List<Product>>(emptyList()) }
     var radarLoading by remember { mutableStateOf(false) }
@@ -129,6 +141,7 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
 
     fun finishProduct(product: Product, originalInput: String) {
         currentPhrase = phrases.next(product.title)
+        selectedCoupon = product.bestCoupon(coupons)?.coupon?.code.orEmpty()
         store.recordHistory(product)
         history = store.history()
         if (originalInput.contains("meli.la", ignoreCase = true)) {
@@ -168,16 +181,39 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
         Toast.makeText(context, "Texto da oferta copiado!", Toast.LENGTH_SHORT).show()
     }
 
-    fun shareText(text: String, whatsappOnly: Boolean) {
-        val intent = Intent(Intent.ACTION_SEND).apply {
+    fun shareText(text: String, whatsappOnly: Boolean, itemId: String = "", title: String = "") {
+        val baseIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, text)
-            if (whatsappOnly) setPackage("com.whatsapp")
         }
-        runCatching {
-            context.startActivity(if (whatsappOnly) intent else Intent.createChooser(intent, "Compartilhar oferta"))
-        }.onFailure {
-            Toast.makeText(context, "Não foi possível abrir o aplicativo de compartilhamento.", Toast.LENGTH_LONG).show()
+        if (!whatsappOnly) {
+            runCatching {
+                context.startActivity(Intent.createChooser(baseIntent, "Compartilhar oferta"))
+                if (itemId.isNotBlank()) {
+                    store.recordShare(itemId, title, "outros_aplicativos")
+                    shareHistory = store.shareHistory()
+                }
+            }.onFailure { Toast.makeText(context, "Não foi possível abrir o compartilhamento.", Toast.LENGTH_LONG).show() }
+            return
+        }
+
+        val packages = listOf("com.whatsapp.w4b", "com.whatsapp")
+        val opened = packages.any { packageName ->
+            runCatching {
+                val intent = Intent(baseIntent).setPackage(packageName)
+                if (intent.resolveActivity(context.packageManager) == null) return@runCatching false
+                context.startActivity(intent)
+                true
+            }.getOrDefault(false)
+        }
+        if (opened) {
+            if (itemId.isNotBlank()) {
+                store.recordShare(itemId, title, "whatsapp_business")
+                shareHistory = store.shareHistory()
+            }
+        } else {
+            Toast.makeText(context, "WhatsApp Business não encontrado. Abrindo outros aplicativos.", Toast.LENGTH_LONG).show()
+            runCatching { context.startActivity(Intent.createChooser(baseIntent, "Compartilhar oferta")) }
         }
     }
 
@@ -211,7 +247,13 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                     Page.entries.forEach { item ->
                         NavigationBarItem(
                             selected = page == item,
-                            onClick = { page = item },
+                            onClick = {
+                                page = item
+                                if (item == Page.AGENDA) {
+                                    schedules = store.schedules()
+                                    shareHistory = store.shareHistory()
+                                }
+                            },
                             icon = { Text(item.symbol, fontSize = 20.sp) },
                             label = { Text(item.title, fontSize = 9.sp, maxLines = 1) },
                         )
@@ -246,8 +288,13 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             Toast.makeText(context, "Link salvo na Biblioteca de Afiliados.", Toast.LENGTH_SHORT).show()
                         },
                         onCopy = ::copyText,
-                        onShare = { text -> shareText(text, false) },
-                        onWhatsApp = { text -> shareText(text, true) },
+                        onShare = { product, text -> shareText(text, false, product.itemId, product.title) },
+                        onWhatsApp = { product, text -> shareText(text, true, product.itemId, product.title) },
+                        onSchedule = { draft ->
+                            scheduleDraft = draft
+                            scheduleMessage = null
+                            page = Page.AGENDA
+                        },
                         onOpen = ::openUrl,
                     )
 
@@ -258,6 +305,7 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         message = radarMessage,
                         products = radarProducts,
                         affiliates = affiliates,
+                        coupons = coupons,
                         phraseFor = phrases::next,
                         onSearch = {
                             if (radarQuery.isBlank()) {
@@ -287,7 +335,8 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         },
                         onShare = { product, phrase ->
                             val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
-                            shareText(product.offerText(phrase, selectedCoupon, affiliate), true)
+                            val coupon = product.bestCoupon(coupons)
+                            shareText(product.offerText(phrase, coupon, affiliate), true, product.itemId, product.title)
                         },
                         onOpen = ::openUrl,
                     )
@@ -304,12 +353,35 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         },
                     )
 
+                    Page.AGENDA -> ScheduleScreen(
+                        draft = scheduleDraft,
+                        schedules = schedules,
+                        shareHistory = shareHistory,
+                        message = scheduleMessage,
+                        onDraftConsumed = { scheduleDraft = null },
+                        onSchedule = { offer ->
+                            store.saveSchedule(offer)
+                            OfferScheduler.schedule(context, offer)
+                            schedules = store.schedules()
+                            scheduleMessage = "Oferta agendada para ${offer.scheduledAt.asDateTime()}."
+                        },
+                        onCancel = { offer ->
+                            OfferScheduler.cancel(context, offer.id)
+                            store.removeSchedule(offer.id)
+                            schedules = store.schedules()
+                            scheduleMessage = "Agendamento removido."
+                        },
+                        onShareNow = { offer ->
+                            shareText(offer.offerText, true, offer.itemId, offer.title)
+                        },
+                    )
+
                     Page.SETTINGS -> SettingsScreen(
                         backendUrl = backendUrl,
                         onBackendChange = { backendUrl = it },
                         onSave = {
                             store.backendUrl = backendUrl
-                            backendMessage = "Endereço salvo. A Alpha 3 aceita backend V5.2.1 e V6."
+                            backendMessage = "Endereço salvo. A Alpha 4 aceita backend V5.2.1 e V6."
                         },
                         onTest = {
                             backendMessage = "Testando conexão..."
@@ -327,9 +399,11 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             store.darkTheme = it
                         },
                         coupons = coupons,
-                        onAddCoupon = { code, description ->
-                            store.saveCoupon(code, description)
+                        onAddCoupon = { coupon ->
+                            store.saveCoupon(coupon)
                             coupons = store.coupons()
+                            val product = (searchState as? SearchState.Success)?.product
+                            if (product != null) selectedCoupon = product.bestCoupon(coupons)?.coupon?.code.orEmpty()
                         },
                         onRemoveCoupon = { code ->
                             store.removeCoupon(code)
@@ -342,6 +416,10 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             favorites = emptyList()
                             affiliates = emptyList()
                             coupons = emptyList()
+                            schedules.forEach { OfferScheduler.cancel(context, it.id) }
+                            schedules = emptyList()
+                            scheduleDraft = null
+                            shareHistory = emptyList()
                             searchState = SearchState.Idle
                             backendMessage = "Dados locais apagados."
                         },
@@ -366,7 +444,7 @@ private fun AppHeader(darkTheme: Boolean, onToggleTheme: () -> Unit) {
             ) {
                 Column {
                     Text("🏷️ CbOfertas", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("V6 Alpha 3 • Ofertas com personalidade", style = MaterialTheme.typography.bodySmall)
+                    Text("V6 Alpha 4 • Radar, cupons e agenda", style = MaterialTheme.typography.bodySmall)
                 }
                 TextButton(onClick = onToggleTheme) {
                     Text(if (darkTheme) "☀ Claro" else "☾ Escuro", fontWeight = FontWeight.Bold)
@@ -392,8 +470,9 @@ private fun HomeScreen(
     onFavorite: (Product) -> Unit,
     onSaveAffiliate: (Product) -> Unit,
     onCopy: (String) -> Unit,
-    onShare: (String) -> Unit,
-    onWhatsApp: (String) -> Unit,
+    onShare: (Product, String) -> Unit,
+    onWhatsApp: (Product, String) -> Unit,
+    onSchedule: (ScheduleDraft) -> Unit,
     onOpen: (String) -> Unit,
 ) {
     LazyColumn(
@@ -418,7 +497,8 @@ private fun HomeScreen(
                 item {
                     val product = searchState.product
                     val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
-                    val offerText = product.offerText(phrase, selectedCoupon, affiliate)
+                    val couponMatch = product.couponByCode(coupons, selectedCoupon) ?: product.bestCoupon(coupons)
+                    val offerText = product.offerText(phrase, couponMatch, affiliate)
                     ProductOfferCard(
                         product = product,
                         phrase = phrase,
@@ -432,8 +512,19 @@ private fun HomeScreen(
                         onFavorite = { onFavorite(product) },
                         onSaveAffiliate = { onSaveAffiliate(product) },
                         onCopy = { onCopy(offerText) },
-                        onShare = { onShare(offerText) },
-                        onWhatsApp = { onWhatsApp(offerText) },
+                        onShare = { onShare(product, offerText) },
+                        onWhatsApp = { onWhatsApp(product, offerText) },
+                        onSchedule = {
+                            onSchedule(
+                                ScheduleDraft(
+                                    itemId = product.itemId,
+                                    title = product.title,
+                                    imageUrl = product.imageUrl,
+                                    offerText = offerText,
+                                    shareUrl = product.bestLink(affiliate),
+                                ),
+                            )
+                        },
                         onOpen = { onOpen(product.bestLink(affiliate)) },
                     )
                 }
@@ -510,6 +601,7 @@ private fun ProductOfferCard(
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onWhatsApp: () -> Unit,
+    onSchedule: () -> Unit,
     onOpen: () -> Unit,
 ) {
     SectionCard {
@@ -542,10 +634,13 @@ private fun ProductOfferCard(
         Spacer(Modifier.height(14.dp))
 
         CouponSelector(
+            product = product,
             selected = selectedCoupon,
             onSelectedChange = onCouponChange,
             coupons = coupons,
         )
+        Spacer(Modifier.height(8.dp))
+        SmartCouponSummary(product = product, selectedCode = selectedCoupon, coupons = coupons)
 
         Spacer(Modifier.height(14.dp))
         if (affiliate != null) {
@@ -571,7 +666,9 @@ private fun ProductOfferCard(
             onClick = onWhatsApp,
             modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen, contentColor = Color.White),
-        ) { Text("💬 Compartilhar no WhatsApp", fontWeight = FontWeight.Bold) }
+        ) { Text("💬 Compartilhar no WhatsApp Business", fontWeight = FontWeight.Bold) }
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = onSchedule, modifier = Modifier.fillMaxWidth()) { Text("🗓️ Agendar publicação") }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onCopy, modifier = Modifier.fillMaxWidth()) { Text("📋 Copiar texto completo") }
         Spacer(Modifier.height(8.dp))
@@ -650,6 +747,7 @@ private fun FactLine(icon: String, text: String) {
 
 @Composable
 private fun CouponSelector(
+    product: Product,
     selected: String,
     onSelectedChange: (String) -> Unit,
     coupons: List<CouponRecord>,
@@ -663,17 +761,19 @@ private fun CouponSelector(
         label = { Text("Digite ou escolha um cupom") },
         singleLine = true,
     )
-    if (coupons.isNotEmpty()) {
+    val compatible = product.couponMatches(coupons)
+    if (compatible.isNotEmpty()) {
         Spacer(Modifier.height(7.dp))
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            coupons.filter { it.active }.forEach { coupon ->
+            compatible.forEach { match ->
+                val coupon = match.coupon
                 AssistChip(
                     onClick = { onSelectedChange(coupon.code) },
-                    label = { Text(coupon.code) },
-                    leadingIcon = { Text(if (selected == coupon.code) "✓" else "🎫") },
+                    label = { Text("${coupon.code}${if (match.estimatedDiscount > 0) " • -${match.estimatedDiscount.asBrl()}" else ""}") },
+                    leadingIcon = { Text(if (selected.equals(coupon.code, ignoreCase = true)) "✓" else if (coupon.confirmed) "✅" else "💡") },
                 )
             }
         }
@@ -688,6 +788,7 @@ private fun RadarScreen(
     message: String?,
     products: List<Product>,
     affiliates: List<AffiliateRecord>,
+    coupons: List<CouponRecord>,
     phraseFor: (String) -> String,
     onSearch: () -> Unit,
     onUse: (Product) -> Unit,
@@ -755,6 +856,7 @@ private fun RadarScreen(
                 product = product,
                 phrase = phrase,
                 affiliate = affiliate,
+                coupons = coupons,
                 onUse = { onUse(product) },
                 onShare = { onShare(product, phrase) },
                 onOpen = { onOpen(product.bestLink(affiliate)) },
@@ -776,6 +878,7 @@ private fun RadarProductCard(
     product: Product,
     phrase: String,
     affiliate: AffiliateRecord?,
+    coupons: List<CouponRecord>,
     onUse: () -> Unit,
     onShare: () -> Unit,
     onOpen: () -> Unit,
@@ -804,6 +907,13 @@ private fun RadarProductCard(
             Text("😂 $phrase", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             if (product.freeShipping) Text("🚚 Frete grátis", fontWeight = FontWeight.SemiBold)
             if (affiliate != null) Text("🔗 Link afiliado aplicado", color = MaterialTheme.colorScheme.primary)
+            product.bestCoupon(coupons)?.let { match ->
+                Text(
+                    if (match.coupon.confirmed) "✅ Cupom ${match.coupon.code}: ${match.estimatedPrice.asBrl()}" else "💡 Cupom sugerido ${match.coupon.code}: ${match.estimatedPrice.asBrl()}",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             Spacer(Modifier.height(10.dp))
             Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) { Text("✓ Usar esta oferta") }
             Spacer(Modifier.height(7.dp))
@@ -892,13 +1002,10 @@ private fun SettingsScreen(
     darkTheme: Boolean,
     onDarkTheme: (Boolean) -> Unit,
     coupons: List<CouponRecord>,
-    onAddCoupon: (String, String) -> Unit,
+    onAddCoupon: (CouponRecord) -> Unit,
     onRemoveCoupon: (String) -> Unit,
     onClear: () -> Unit,
 ) {
-    var couponCode by remember { mutableStateOf("") }
-    var couponDescription by remember { mutableStateOf("") }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -907,7 +1014,7 @@ private fun SettingsScreen(
         item {
             SectionCard {
                 Text("🌐 Backend", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text("A Alpha 3 detecta automaticamente as rotas da V5.2.1 ou da V6.")
+                Text("A Alpha 4 detecta automaticamente as rotas da V5.2.1 ou da V6.")
                 Spacer(Modifier.height(9.dp))
                 OutlinedTextField(
                     value = backendUrl,
@@ -929,42 +1036,11 @@ private fun SettingsScreen(
 
         item {
             SectionCard {
-                Text("🎟️ Cupons salvos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                OutlinedTextField(
-                    value = couponCode,
-                    onValueChange = { couponCode = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Código do cupom") },
-                    singleLine = true,
+                SmartCouponEditor(
+                    coupons = coupons,
+                    onSave = onAddCoupon,
+                    onRemove = onRemoveCoupon,
                 )
-                Spacer(Modifier.height(7.dp))
-                OutlinedTextField(
-                    value = couponDescription,
-                    onValueChange = { couponDescription = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Descrição opcional") },
-                    singleLine = true,
-                )
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        onAddCoupon(couponCode, couponDescription)
-                        couponCode = ""
-                        couponDescription = ""
-                    },
-                    enabled = couponCode.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Salvar cupom") }
-                coupons.forEach { coupon ->
-                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(coupon.code, fontWeight = FontWeight.ExtraBold)
-                            if (coupon.description.isNotBlank()) Text(coupon.description, style = MaterialTheme.typography.bodySmall)
-                        }
-                        TextButton(onClick = { onRemoveCoupon(coupon.code) }) { Text("Remover") }
-                    }
-                }
             }
         }
 
@@ -986,8 +1062,15 @@ private fun SettingsScreen(
 
         item {
             SectionCard {
+                Text("💬 WhatsApp Business", fontWeight = FontWeight.ExtraBold)
+                Text("A Alpha 4 tenta abrir primeiro o WhatsApp Business. Se ele não estiver instalado, tenta o WhatsApp comum e depois outros aplicativos.")
+            }
+        }
+
+        item {
+            SectionCard {
                 Text("🧹 Dados locais", fontWeight = FontWeight.ExtraBold)
-                Text("Apaga histórico, favoritos, cupons e afiliados, mantendo o endereço do backend.")
+                Text("Apaga histórico, favoritos, cupons, agenda e afiliados, mantendo o endereço do backend.")
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text("Limpar dados locais") }
             }
@@ -1151,7 +1234,7 @@ private fun ErrorCard(message: String) {
             Spacer(Modifier.height(4.dp))
             Text(message, color = MaterialTheme.colorScheme.onErrorContainer)
             Spacer(Modifier.height(6.dp))
-            Text("A Alpha 3 não mantém dados antigos na tela após um erro.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+            Text("A Alpha 4 limpa o resultado anterior para não publicar dados incorretos.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
         }
     }
 }

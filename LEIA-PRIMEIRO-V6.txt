@@ -1,28 +1,26 @@
-CBOFERTAS V6.0.0 ALPHA 3
-=========================
+CBOFERTAS V6.0.0 ALPHA 4 — PROGRAMA COMPLETO
 
-Esta versão mantém o Android nativo da Alpha 2 e devolve os recursos visuais e de compartilhamento da CbOfertas.
+ESTA ENTREGA SUBSTITUI AS ETAPAS E CORREÇÕES ISOLADAS ANTERIORES.
 
-PRINCIPAIS NOVIDADES
-- Frase engraçada automática.
-- Texto completo pronto para WhatsApp.
-- Cards ricos no produto e no Radar.
-- Cupons salvos.
-- Biblioteca de Afiliados aplicada ao texto.
-- Compatibilidade automática com backend V5.2.1 e V6.
-- Endereço padrão: https://mercado-yvqn.onrender.com
+INCLUI
+- Backend corrigido contra 403 do Mercado Livre.
+- Radar com fallback para a busca pública.
+- Cupons inteligentes.
+- WhatsApp Business prioritário.
+- Agendamento local com notificações.
+- Repetição diária e semanal.
+- Histórico local de compartilhamentos.
+- Android, testes, Render e GitHub Actions.
 
-COMO ENVIAR PARA O GITHUB
-1. Copie o conteúdo desta pasta para a pasta clonada da branch v6-rebuild.
-2. Não apague a pasta oculta .git.
-3. Abra Git Bash Here na pasta do repositório.
-4. Execute:
+COMO ENVIAR AO GITHUB
+1. Extraia o ZIP na raiz da pasta clonada da branch v6-rebuild.
+2. Escolha substituir os arquivos existentes.
+3. Abra Git Bash Here na raiz.
+4. Execute os comandos de COMANDOS-GIT-ALPHA-4.txt.
+5. Aguarde a execução verde do GitHub Actions.
+6. Baixe o APK no artefato CbOfertas-V6.0.0-alpha.4-COMPLETA.
 
-   git add -A
-   git commit -m "Cria CbOfertas V6 Alpha 3 completa"
-   git push origin v6-rebuild
-
-5. Abra GitHub > Ações > Validar e Gerar CbOfertas V6 Alpha 3.
-6. Baixe o artefato CbOfertas-V6.0.0-alpha.3.
-
-A V5 da branch main não será alterada.
+IMPORTANTE
+- Não coloque tokens ou chaves secretas no GitHub.
+- O MELI_ACCESS_TOKEN permanece somente no Environment do Render.
+- O agendamento abre a mensagem pronta; o envio final é confirmado pelo usuário.

@@ -69,11 +69,60 @@ data class FavoriteRecord(
     val savedAt: Long,
 )
 
+/**
+ * type: "fixed" para desconto em reais ou "percent" para porcentagem.
+ * confirmed: true somente quando o usuário sabe que o cupom está confirmado na oferta.
+ */
 data class CouponRecord(
     val code: String,
-    val description: String,
+    val description: String = "",
     val active: Boolean = true,
+    val type: String = "fixed",
+    val value: Double = 0.0,
+    val minimumSpend: Double = 0.0,
+    val maxDiscount: Double = 0.0,
+    val keywords: String = "",
+    val platform: String = "mercado_livre",
+    val expiresAt: Long? = null,
+    val confirmed: Boolean = false,
     val savedAt: Long = System.currentTimeMillis(),
+)
+
+data class CouponMatch(
+    val coupon: CouponRecord,
+    val estimatedDiscount: Double,
+    val estimatedPrice: Double,
+    val confirmation: String,
+)
+
+data class ScheduleDraft(
+    val itemId: String,
+    val title: String,
+    val imageUrl: String?,
+    val offerText: String,
+    val shareUrl: String,
+)
+
+data class ScheduledOffer(
+    val id: String,
+    val itemId: String,
+    val title: String,
+    val imageUrl: String?,
+    val offerText: String,
+    val shareUrl: String,
+    val scheduledAt: Long,
+    val recurrence: String = "once",
+    val active: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastTriggeredAt: Long? = null,
+)
+
+data class ShareHistoryRecord(
+    val id: String,
+    val itemId: String,
+    val title: String,
+    val channel: String,
+    val sharedAt: Long,
 )
 
 sealed interface SearchState {

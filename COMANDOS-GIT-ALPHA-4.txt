@@ -1,0 +1,4 @@
+git status
+git add -A
+git commit -m "Instala CbOfertas V6 Alpha 4 completa com Radar cupons e agenda"
+git push origin v6-rebuild

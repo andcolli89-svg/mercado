@@ -29,7 +29,7 @@ fun Product.bestLink(affiliate: AffiliateRecord?): String =
 
 fun Product.offerText(
     phrase: String,
-    coupon: String,
+    coupon: CouponMatch?,
     affiliate: AffiliateRecord?,
 ): String {
     val lines = mutableListOf<String>()
@@ -48,9 +48,34 @@ fun Product.offerText(
     installmentText()?.let { lines += "💳 $it" }
     if (freeShipping) lines += "🚚 Frete grátis"
     sellerName?.takeIf(String::isNotBlank)?.let { lines += "🏪 Vendido por $it" }
-    coupon.trim().takeIf(String::isNotBlank)?.let { lines += "🎟️ Use o cupom: $it" }
+
+    coupon?.let { match ->
+        lines += "🎟️ ${if (match.coupon.confirmed) "Cupom confirmado" else "Cupom sugerido"}: ${match.coupon.code}"
+        if (match.estimatedDiscount > 0) {
+            lines += "💚 Economia estimada com cupom: ${match.estimatedDiscount.asBrl()}"
+            lines += "🏷️ Preço estimado com cupom: ${match.estimatedPrice.asBrl()}"
+        }
+    }
+
     lines += ""
     lines += "🛒 Link da oferta:"
     lines += bestLink(affiliate)
     return lines.joinToString("\n")
+}
+
+// Mantém compatibilidade com os testes e chamadas da Alpha 3.
+fun Product.offerText(
+    phrase: String,
+    coupon: String,
+    affiliate: AffiliateRecord?,
+): String {
+    val record = coupon.trim().takeIf(String::isNotBlank)?.let {
+        CouponMatch(
+            coupon = CouponRecord(code = it),
+            estimatedDiscount = 0.0,
+            estimatedPrice = price.current?.amount ?: 0.0,
+            confirmation = "suggested",
+        )
+    }
+    return offerText(phrase, record, affiliate)
 }

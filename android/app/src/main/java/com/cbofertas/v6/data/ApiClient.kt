@@ -66,7 +66,7 @@ class ApiClient {
             instanceFollowRedirects = true
             setRequestProperty("Accept", "application/json")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            setRequestProperty("User-Agent", "CbOfertas-Android/6.0-alpha.3")
+            setRequestProperty("User-Agent", "CbOfertas-Android/6.0-alpha.4")
             doInput = true
             doOutput = body != null
         }
@@ -96,7 +96,9 @@ class ApiClient {
         val firstImage = if (images.length() > 0) images.optString(0) else null
         return Product(
             platform = json.optString("platform", "mercado_livre"),
-            itemId = json.getString("itemId"),
+            itemId = json.nullableString("itemId")
+                ?: json.nullableString("catalogProductId")
+                ?: json.optString("permalink").hashCode().toString(),
             catalogProductId = json.nullableString("catalogProductId"),
             title = json.optString("title", "Produto sem título"),
             sellerId = seller.opt("id")?.toString()?.takeUnless { it == "null" },

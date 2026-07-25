@@ -1,0 +1,40 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 4
+=================================================
+
+DATA: 25/07/2026
+
+VERSÕES
+- Workspace: 6.0.0-alpha.4
+- Backend: 6.0.0-alpha.4
+- Android versionName: 6.0.0-alpha.4
+- Android versionCode: 600004
+- compileSdk/targetSdk: 35
+- AGP: 8.7.3
+- Gradle: 8.9
+- Kotlin: 2.0.21
+- JDK: 17
+- Node.js: 24
+
+VALIDAÇÕES EXECUTADAS NESTE AMBIENTE
+- Estrutura do projeto: aprovada.
+- Sintaxe de todos os arquivos JavaScript: aprovada.
+- Testes automatizados do backend: 23 aprovados, 0 falhas.
+- Casos reais de Galaxy A17, toalhas e cadeira Python preservados.
+- Radar oficial e fallback público testados.
+- Cupons inteligentes testados no backend.
+- Domínio Kotlin, Formatting e CouponEngine compilados com kotlinc.
+- Sintaxe Kotlin das novas telas, agenda e compartilhamento verificada.
+- AndroidManifest.xml e styles.xml: XML válido.
+- GitHub Actions e render.yaml: YAML válido.
+- Banco de frases: 352 frases em 22 categorias.
+- ZIP completo: integridade validada.
+
+AGENDAMENTO
+- AlarmManager local, sem automação de cliques.
+- Notificação abre primeiro o WhatsApp Business.
+- Fallback para WhatsApp comum e seletor de aplicativos.
+- Repetição única, diária e semanal.
+- Reagendamento após BOOT_COMPLETED e atualização do pacote.
+
+LIMITAÇÃO HONESTA
+O APK não foi compilado dentro deste ambiente porque o Android SDK, Gradle e as dependências Maven não estão disponíveis localmente e o acesso externo do container está bloqueado. O workflow incluído executa a compilação real no GitHub Actions. Não foi criado APK falso.

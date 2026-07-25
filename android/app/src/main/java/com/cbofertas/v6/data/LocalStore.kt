@@ -7,11 +7,19 @@ import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
 import com.cbofertas.v6.domain.Product
+import com.cbofertas.v6.domain.ScheduledOffer
+import com.cbofertas.v6.domain.ShareHistoryRecord
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 class LocalStore(context: Context) {
-    private val prefs = context.getSharedPreferences("cbofertas_v6_alpha2", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("cbofertas_v6_alpha4", Context.MODE_PRIVATE)
+    private val legacyPrefs = context.getSharedPreferences("cbofertas_v6_alpha2", Context.MODE_PRIVATE)
+
+    init {
+        migrateLegacyIfNeeded()
+    }
 
     var backendUrl: String
         get() = prefs.getString("backend_url", null)?.takeIf(String::isNotBlank) ?: BuildConfig.DEFAULT_API_URL
@@ -50,10 +58,7 @@ class LocalStore(context: Context) {
 
     fun markAffiliateUsed(itemId: String) {
         val now = System.currentTimeMillis()
-        val updated = affiliates().map { record ->
-            if (record.itemId == itemId) record.copy(lastUsedAt = now) else record
-        }
-        writeArray("affiliates", updated.map { it.toJson() })
+        writeArray("affiliates", affiliates().map { if (it.itemId == itemId) it.copy(lastUsedAt = now) else it }.map { it.toJson() })
     }
 
     fun removeAffiliate(itemId: String) {
@@ -130,33 +135,120 @@ class LocalStore(context: Context) {
             code = json.getString("code"),
             description = json.optString("description"),
             active = json.optBoolean("active", true),
+            type = json.optString("type", "fixed"),
+            value = json.optDouble("value", 0.0),
+            minimumSpend = json.optDouble("minimumSpend", 0.0),
+            maxDiscount = json.optDouble("maxDiscount", 0.0),
+            keywords = json.optString("keywords"),
+            platform = json.optString("platform", "mercado_livre"),
+            expiresAt = json.nullableLong("expiresAt"),
+            confirmed = json.optBoolean("confirmed", false),
             savedAt = json.optLong("savedAt", System.currentTimeMillis()),
         )
     }
 
-    fun saveCoupon(code: String, description: String = "") {
-        val clean = code.trim().uppercase()
+    fun saveCoupon(record: CouponRecord) {
+        val clean = record.code.trim().uppercase()
         if (clean.isBlank()) return
         val existing = coupons().firstOrNull { it.code.equals(clean, ignoreCase = true) }
-        val record = CouponRecord(
-            code = clean,
-            description = description.trim(),
-            active = true,
-            savedAt = existing?.savedAt ?: System.currentTimeMillis(),
-        )
-        writeArray("coupons", (listOf(record) + coupons().filterNot { it.code.equals(clean, ignoreCase = true) }).take(100).map { it.toJson() })
+        val normalized = record.copy(code = clean, savedAt = existing?.savedAt ?: record.savedAt)
+        writeArray("coupons", (listOf(normalized) + coupons().filterNot { it.code.equals(clean, ignoreCase = true) }).take(150).map { it.toJson() })
+    }
+
+    fun saveCoupon(code: String, description: String = "") {
+        saveCoupon(CouponRecord(code = code, description = description))
     }
 
     fun removeCoupon(code: String) {
         writeArray("coupons", coupons().filterNot { it.code.equals(code, ignoreCase = true) }.map { it.toJson() })
     }
 
+    fun schedules(): List<ScheduledOffer> = readArray("schedules") { json ->
+        ScheduledOffer(
+            id = json.getString("id"),
+            itemId = json.optString("itemId"),
+            title = json.optString("title"),
+            imageUrl = json.nullableString("imageUrl"),
+            offerText = json.optString("offerText"),
+            shareUrl = json.optString("shareUrl"),
+            scheduledAt = json.optLong("scheduledAt"),
+            recurrence = json.optString("recurrence", "once"),
+            active = json.optBoolean("active", true),
+            createdAt = json.optLong("createdAt", System.currentTimeMillis()),
+            lastTriggeredAt = json.nullableLong("lastTriggeredAt"),
+        )
+    }.sortedBy { it.scheduledAt }
+
+    fun saveSchedule(record: ScheduledOffer) {
+        val normalized = if (record.id.isBlank()) record.copy(id = UUID.randomUUID().toString()) else record
+        writeArray("schedules", (listOf(normalized) + schedules().filterNot { it.id == normalized.id }).take(250).map { it.toJson() })
+    }
+
+    fun removeSchedule(id: String) {
+        writeArray("schedules", schedules().filterNot { it.id == id }.map { it.toJson() })
+    }
+
+    fun scheduleById(id: String): ScheduledOffer? = schedules().firstOrNull { it.id == id }
+
+    fun markScheduleTriggered(id: String, now: Long = System.currentTimeMillis()): ScheduledOffer? {
+        val existing = scheduleById(id) ?: return null
+        val next = when (existing.recurrence) {
+            "daily" -> existing.copy(
+                scheduledAt = advanceToFuture(existing.scheduledAt, 24L * 60L * 60L * 1000L, now),
+                lastTriggeredAt = now,
+                active = true,
+            )
+            "weekly" -> existing.copy(
+                scheduledAt = advanceToFuture(existing.scheduledAt, 7L * 24L * 60L * 60L * 1000L, now),
+                lastTriggeredAt = now,
+                active = true,
+            )
+            else -> existing.copy(lastTriggeredAt = now, active = false)
+        }
+        saveSchedule(next)
+        return next.takeIf { it.active }
+    }
+
+    fun shareHistory(): List<ShareHistoryRecord> = readArray("share_history") { json ->
+        ShareHistoryRecord(
+            id = json.getString("id"),
+            itemId = json.optString("itemId"),
+            title = json.optString("title"),
+            channel = json.optString("channel"),
+            sharedAt = json.optLong("sharedAt"),
+        )
+    }
+
+    fun recordShare(itemId: String, title: String, channel: String) {
+        val record = ShareHistoryRecord(
+            id = UUID.randomUUID().toString(),
+            itemId = itemId,
+            title = title,
+            channel = channel,
+            sharedAt = System.currentTimeMillis(),
+        )
+        writeArray("share_history", (listOf(record) + shareHistory()).take(500).map { it.toJson() })
+    }
+
     fun clearLocalData() {
         val api = backendUrl
         val dark = darkTheme
-        prefs.edit().clear().apply()
+        prefs.edit().clear().putBoolean("legacy_migrated", true).apply()
         backendUrl = api
         darkTheme = dark
+    }
+
+    private fun migrateLegacyIfNeeded() {
+        if (prefs.getBoolean("legacy_migrated", false)) return
+        val editor = prefs.edit()
+        for (key in listOf("backend_url", "dark_theme", "affiliates", "history", "favorites", "coupons")) {
+            if (!legacyPrefs.contains(key)) continue
+            when (val value = legacyPrefs.all[key]) {
+                is String -> editor.putString(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+            }
+        }
+        editor.putBoolean("legacy_migrated", true).apply()
     }
 
     private fun <T> readArray(key: String, mapper: (JSONObject) -> T): List<T> {
@@ -175,6 +267,12 @@ class LocalStore(context: Context) {
     }
 }
 
+private fun advanceToFuture(start: Long, interval: Long, now: Long): Long {
+    var next = start + interval
+    while (next <= now) next += interval
+    return next
+}
+
 private fun AffiliateRecord.toJson() = JSONObject()
     .put("itemId", itemId).put("affiliateUrl", affiliateUrl).put("originalUrl", originalUrl)
     .put("title", title).put("savedAt", savedAt).put("lastUsedAt", lastUsedAt)
@@ -190,8 +288,22 @@ private fun FavoriteRecord.toJson() = JSONObject()
     .put("permalink", permalink).putNullable("currentPrice", currentPrice).put("savedAt", savedAt)
 
 private fun CouponRecord.toJson() = JSONObject()
-    .put("code", code).put("description", description).put("active", active).put("savedAt", savedAt)
+    .put("code", code).put("description", description).put("active", active)
+    .put("type", type).put("value", value).put("minimumSpend", minimumSpend)
+    .put("maxDiscount", maxDiscount).put("keywords", keywords).put("platform", platform)
+    .putNullable("expiresAt", expiresAt).put("confirmed", confirmed).put("savedAt", savedAt)
+
+private fun ScheduledOffer.toJson() = JSONObject()
+    .put("id", id).put("itemId", itemId).put("title", title).putNullable("imageUrl", imageUrl)
+    .put("offerText", offerText).put("shareUrl", shareUrl).put("scheduledAt", scheduledAt)
+    .put("recurrence", recurrence).put("active", active).put("createdAt", createdAt)
+    .putNullable("lastTriggeredAt", lastTriggeredAt)
+
+private fun ShareHistoryRecord.toJson() = JSONObject()
+    .put("id", id).put("itemId", itemId).put("title", title)
+    .put("channel", channel).put("sharedAt", sharedAt)
 
 private fun JSONObject.putNullable(key: String, value: Any?): JSONObject = put(key, value ?: JSONObject.NULL)
 private fun JSONObject.nullableString(key: String): String? = if (!has(key) || isNull(key)) null else optString(key).takeIf(String::isNotBlank)
 private fun JSONObject.nullableDouble(key: String): Double? = if (!has(key) || isNull(key)) null else optDouble(key)
+private fun JSONObject.nullableLong(key: String): Long? = if (!has(key) || isNull(key)) null else optLong(key)
