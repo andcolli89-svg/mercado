@@ -27,6 +27,18 @@ if (workspacePackage.version !== backendPackage.version) throw new Error('Versõ
 const buildGradle = await readFile(path.join(root, 'android/app/build.gradle.kts'), 'utf8');
 if (!buildGradle.includes(`versionName = "${workspacePackage.version}"`)) throw new Error('versionName Android não coincide com o workspace.');
 
+if (!buildGradle.includes('compileSdk = 35') || !buildGradle.includes('targetSdk = 35')) {
+  throw new Error('Alpha 3 deve usar Android API 35 estável.');
+}
+const rootGradle = await readFile(path.join(root, 'android/build.gradle.kts'), 'utf8');
+if (!rootGradle.includes('com.android.application") version "8.7.3') || !rootGradle.includes('org.jetbrains.kotlin.android") version "2.0.21')) {
+  throw new Error('Toolchain Android estável da Alpha 3 foi alterada.');
+}
+const workflow = await readFile(path.join(root, '.github/workflows/build-v6.yml'), 'utf8');
+if (!workflow.includes('platforms;android-35') || !workflow.includes("gradle-version: '8.9'")) {
+  throw new Error('Workflow Android não está alinhado com API 35 e Gradle 8.9.');
+}
+
 const phrases = JSON.parse(await readFile(path.join(root, 'android/app/src/main/assets/funny_phrases.json'), 'utf8'));
 const phraseCount = Object.values(phrases).reduce((total, group) => total + group.length, 0);
 if (phraseCount < 300) throw new Error(`Banco de frases incompleto: ${phraseCount}`);
@@ -46,6 +58,18 @@ const kotlinText = (await Promise.all(kotlinFiles.map((file) => readFile(file, '
 if (/\bWebView\b|addJavascriptInterface|loadUrl\s*\(/.test(kotlinText)) {
   throw new Error('A reconstrução V6 não pode depender de WebView.');
 }
+
+
+const apiClient = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/data/ApiClient.kt'), 'utf8');
+for (const route of ['/v1/products/resolve', '/api/product', '/v1/radar', '/api/radar']) {
+  if (!apiClient.includes(route)) throw new Error(`Compatibilidade Android ausente para ${route}.`);
+}
+const appUi = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/ui/App.kt'), 'utf8');
+for (const feature of ['Compartilhar no WhatsApp', 'Copiar texto completo', 'Trocar frase', 'Biblioteca de Afiliados']) {
+  if (!appUi.includes(feature)) throw new Error(`Recurso visual ausente: ${feature}.`);
+}
+const formatting = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/Formatting.kt'), 'utf8');
+if (!formatting.includes('fun Product.offerText')) throw new Error('Gerador automático de texto ausente.');
 
 const priceModel = await readFile(path.join(root, 'backend/src/core/priceModel.js'), 'utf8');
 for (const protectedKind of ['cashback', 'installment', 'unit']) {

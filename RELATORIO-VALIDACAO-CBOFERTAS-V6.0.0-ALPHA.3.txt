@@ -1,0 +1,57 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 3
+=================================================
+
+DATA: 24/07/2026
+
+ESCOPO IMPLEMENTADO
+- Aplicativo Android nativo em Kotlin + Jetpack Compose.
+- Frase engraçada automática antes do título.
+- Banco com 352 frases em 22 categorias.
+- Troca aleatória de frase sem repetição imediata.
+- Texto completo da oferta em português do Brasil.
+- Copiar texto, compartilhar no WhatsApp e compartilhar em outros aplicativos.
+- Cards completos na oferta e no Radar.
+- Preço atual, original, desconto, economia e parcelamento separados.
+- Cashback e preço por unidade exibidos como informação, nunca como preço principal.
+- Cupons salvos e aplicados ao texto.
+- Histórico, Favoritos e Biblioteca de Afiliados.
+- Aplicação automática do link afiliado por MLB.
+- Tema claro e escuro.
+- Compartilhamento de link para dentro do aplicativo.
+- Backend padrão: https://mercado-yvqn.onrender.com
+- Compatibilidade automática com rotas V5.2.1 e V6.
+
+VERSÕES
+- workspace: 6.0.0-alpha.3
+- backend: 6.0.0-alpha.3
+- Android versionName: 6.0.0-alpha.3
+- Android versionCode: 600003
+- Android API: 35
+- AGP: 8.7.3
+- Gradle: 8.9
+- Kotlin: 2.0.21
+- JDK: 17
+
+VALIDAÇÕES EXECUTADAS
+- Validação estrutural do projeto: APROVADA.
+- JavaScript do backend: APROVADO.
+- JSON das 352 frases: APROVADO.
+- AndroidManifest.xml e styles.xml: APROVADOS.
+- YAML do GitHub Actions e Render: APROVADOS.
+- Compilação isolada dos modelos e gerador de texto Kotlin: APROVADA.
+- Teste manual do texto: R$ 142,39 confirmado e cashback R$ 427,00 rejeitado como preço.
+- Testes backend: 20 aprovados, 0 falhas.
+
+CASOS AUTOMATIZADOS DO BACKEND
+- Galaxy A17: R$ 806,65 / R$ 1.855,71.
+- Kit de toalhas: R$ 142,39 / R$ 185,29.
+- Cadeira Python: R$ 475,96 / R$ 1.248,75.
+- Redirecionamentos 302 e 307.
+- Links comuns e páginas de catálogo.
+- MLB vencedor do catálogo.
+- Rejeição de cashback, parcelas e preço por unidade.
+- Radar ordenado pelo desconto real.
+- Rotas /v1 e rotas de compatibilidade /api.
+
+LIMITAÇÃO DO AMBIENTE
+O APK Alpha 3 não foi compilado localmente porque este ambiente não possui Android SDK e Gradle instalados e não permite baixar o toolchain. O workflow incluído executará a compilação real no GitHub Actions. A Alpha 2 já confirmou que a combinação AGP 8.7.3, Gradle 8.9, Kotlin 2.0.21 e API 35 funciona no repositório.

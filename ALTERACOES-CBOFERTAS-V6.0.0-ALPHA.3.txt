@@ -1,0 +1,29 @@
+ALTERAÇÕES CBOFERTAS V6.0.0 ALPHA 3
+===================================
+
+ANDROID
+- Interface completa e mais colorida.
+- Frase engraçada antes do título.
+- Botão para trocar frase.
+- Texto completo da oferta.
+- Copiar texto.
+- WhatsApp.
+- Compartilhamento genérico.
+- Abrir anúncio.
+- Favoritos.
+- Cupons salvos.
+- Cards completos do Radar.
+- Histórico visual.
+- Biblioteca de Afiliados.
+- Fallback automático V6 -> V5.2.1 em erros 404/405.
+- Backend padrão configurado para mercado-yvqn.onrender.com.
+
+BACKEND
+- Rotas V6 mantidas.
+- Rotas /api/product e /api/radar adicionadas para compatibilidade.
+- GET alternativo em /v1/products/resolve.
+- Health informa compatibilidade V5.2.1 e V6.
+
+VERSÃO
+- versionName 6.0.0-alpha.3
+- versionCode 600003

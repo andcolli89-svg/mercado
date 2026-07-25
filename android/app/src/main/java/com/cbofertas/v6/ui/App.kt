@@ -1,11 +1,16 @@
 package com.cbofertas.v6.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,13 +22,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -44,10 +56,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +72,7 @@ import com.cbofertas.v6.data.ApiClient
 import com.cbofertas.v6.data.LocalStore
 import com.cbofertas.v6.data.PhraseLibrary
 import com.cbofertas.v6.domain.AffiliateRecord
+import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
 import com.cbofertas.v6.domain.Product
@@ -63,12 +80,19 @@ import com.cbofertas.v6.domain.SearchAction
 import com.cbofertas.v6.domain.SearchState
 import com.cbofertas.v6.domain.asBrl
 import com.cbofertas.v6.domain.asDateTime
+import com.cbofertas.v6.domain.bestLink
+import com.cbofertas.v6.domain.installmentText
+import com.cbofertas.v6.domain.offerText
 import com.cbofertas.v6.domain.reduceSearch
 import com.cbofertas.v6.ui.theme.CbOfertasTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
+
+private val MercadoYellow = Color(0xFFFFE600)
+private val MercadoGreen = Color(0xFF00A650)
+private val WhatsAppGreen = Color(0xFF1FA855)
 
 enum class Page(val title: String, val symbol: String) {
     HOME("Início", "⌂"),
@@ -92,38 +116,75 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
     var backendUrl by remember { mutableStateOf(store.backendUrl) }
     var urlInput by remember { mutableStateOf("") }
     var searchState by remember { mutableStateOf<SearchState>(SearchState.Idle) }
+    var currentPhrase by remember { mutableStateOf("") }
+    var selectedCoupon by remember { mutableStateOf("") }
     var history by remember { mutableStateOf(store.history()) }
     var favorites by remember { mutableStateOf(store.favorites()) }
     var affiliates by remember { mutableStateOf(store.affiliates()) }
+    var coupons by remember { mutableStateOf(store.coupons()) }
     var radarQuery by remember { mutableStateOf("") }
     var radarProducts by remember { mutableStateOf<List<Product>>(emptyList()) }
     var radarLoading by remember { mutableStateOf(false) }
     var radarMessage by remember { mutableStateOf<String?>(null) }
     var backendMessage by remember { mutableStateOf<String?>(null) }
 
+    fun finishProduct(product: Product, originalInput: String) {
+        currentPhrase = phrases.next(product.title)
+        store.recordHistory(product)
+        history = store.history()
+        if (originalInput.contains("meli.la", ignoreCase = true)) {
+            store.saveAffiliate(product, originalInput)
+            affiliates = store.affiliates()
+        }
+        searchState = reduceSearch(SearchAction.Succeed(product))
+    }
+
     fun search(url: String) {
         val clean = url.trim()
         searchState = reduceSearch(SearchAction.Clear)
+        currentPhrase = ""
         if (clean.isBlank()) {
-            searchState = reduceSearch(SearchAction.Fail("Cole um link do Mercado Livre."))
+            searchState = reduceSearch(SearchAction.Fail("Cole um link do Mercado Livre ou meli.la."))
             return
         }
         if (backendUrl.isBlank()) {
-            searchState = reduceSearch(SearchAction.Fail("Configure o backend V6 em Ajustes."))
+            searchState = reduceSearch(SearchAction.Fail("Configure o endereço do backend em Ajustes."))
             return
         }
         searchState = reduceSearch(SearchAction.Start(clean))
         scope.launch {
             api.resolveProduct(backendUrl, clean)
-                .onSuccess { product ->
-                    store.recordHistory(product)
-                    history = store.history()
-                    searchState = reduceSearch(SearchAction.Succeed(product))
-                }
+                .onSuccess { finishProduct(it, clean) }
                 .onFailure { error ->
-                    searchState = reduceSearch(SearchAction.Fail(error.message ?: "Não foi possível confirmar o produto."))
+                    searchState = reduceSearch(
+                        SearchAction.Fail(error.message ?: "Não foi possível confirmar o produto."),
+                    )
                 }
         }
+    }
+
+    fun copyText(text: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Oferta CbOfertas", text))
+        Toast.makeText(context, "Texto da oferta copiado!", Toast.LENGTH_SHORT).show()
+    }
+
+    fun shareText(text: String, whatsappOnly: Boolean) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+            if (whatsappOnly) setPackage("com.whatsapp")
+        }
+        runCatching {
+            context.startActivity(if (whatsappOnly) intent else Intent.createChooser(intent, "Compartilhar oferta"))
+        }.onFailure {
+            Toast.makeText(context, "Não foi possível abrir o aplicativo de compartilhamento.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun openUrl(url: String) {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+            .onFailure { Toast.makeText(context, "Não foi possível abrir o link.", Toast.LENGTH_SHORT).show() }
     }
 
     LaunchedEffect(sharedUrl) {
@@ -138,22 +199,13 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
     CbOfertasTheme(darkTheme) {
         Scaffold(
             topBar = {
-                Surface(tonalElevation = 2.dp) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
-                            Text("🏷️ CbOfertas", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                            Text("V6 Alpha 2 • Android nativo", style = MaterialTheme.typography.bodySmall)
-                        }
-                        TextButton(onClick = {
-                            darkTheme = !darkTheme
-                            store.darkTheme = darkTheme
-                        }) { Text(if (darkTheme) "☀ Claro" else "☾ Escuro") }
-                    }
-                }
+                AppHeader(
+                    darkTheme = darkTheme,
+                    onToggleTheme = {
+                        darkTheme = !darkTheme
+                        store.darkTheme = darkTheme
+                    },
+                )
             },
             bottomBar = {
                 NavigationBar {
@@ -161,8 +213,8 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         NavigationBarItem(
                             selected = page == item,
                             onClick = { page = item },
-                            icon = { Text(item.symbol, fontSize = 19.sp) },
-                            label = { Text(item.title, fontSize = 8.sp, maxLines = 1) },
+                            icon = { Text(item.symbol, fontSize = 20.sp) },
+                            label = { Text(item.title, fontSize = 9.sp, maxLines = 1) },
                         )
                     }
                 }
@@ -174,9 +226,16 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         url = urlInput,
                         onUrlChange = { urlInput = it },
                         searchState = searchState,
+                        phrase = currentPhrase,
+                        selectedCoupon = selectedCoupon,
+                        onCouponChange = { selectedCoupon = it },
+                        coupons = coupons,
                         affiliates = affiliates,
                         favorites = favorites,
-                        phraseFor = phrases::next,
+                        onNewPhrase = newPhrase@ {
+                            val product = (searchState as? SearchState.Success)?.product ?: return@newPhrase
+                            currentPhrase = phrases.next(product.title)
+                        },
                         onSearch = { search(urlInput) },
                         onFavorite = { product ->
                             store.toggleFavorite(product)
@@ -185,7 +244,12 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         onSaveAffiliate = { product ->
                             store.saveAffiliate(product, urlInput)
                             affiliates = store.affiliates()
+                            Toast.makeText(context, "Link salvo na Biblioteca de Afiliados.", Toast.LENGTH_SHORT).show()
                         },
+                        onCopy = ::copyText,
+                        onShare = { text -> shareText(text, false) },
+                        onWhatsApp = { text -> shareText(text, true) },
+                        onOpen = ::openUrl,
                     )
 
                     Page.RADAR -> RadarScreen(
@@ -194,17 +258,25 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         loading = radarLoading,
                         message = radarMessage,
                         products = radarProducts,
+                        affiliates = affiliates,
+                        phraseFor = phrases::next,
                         onSearch = {
-                            if (radarQuery.isBlank()) return@RadarScreen
+                            if (radarQuery.isBlank()) {
+                                radarMessage = "Digite o produto que deseja procurar."
+                                return@RadarScreen
+                            }
                             if (backendUrl.isBlank()) {
-                                radarMessage = "Configure o backend V6 em Ajustes."
+                                radarMessage = "Configure o backend em Ajustes."
                                 return@RadarScreen
                             }
                             radarLoading = true
                             radarMessage = null
                             scope.launch {
                                 api.radar(backendUrl, radarQuery)
-                                    .onSuccess { radarProducts = it }
+                                    .onSuccess {
+                                        radarProducts = it
+                                        radarMessage = if (it.isEmpty()) "Nenhuma oferta confirmada foi encontrada." else null
+                                    }
                                     .onFailure { radarMessage = it.message }
                                 radarLoading = false
                             }
@@ -212,28 +284,40 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         onUse = { product ->
                             page = Page.HOME
                             urlInput = product.permalink
-                            searchState = reduceSearch(SearchAction.Succeed(product))
-                            store.recordHistory(product)
-                            history = store.history()
+                            finishProduct(product, product.permalink)
+                        },
+                        onShare = { product, phrase ->
+                            val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
+                            shareText(product.offerText(phrase, selectedCoupon, affiliate), true)
+                        },
+                        onOpen = ::openUrl,
+                    )
+
+                    Page.HISTORY -> HistoryScreen(history, onOpen = ::openUrl)
+                    Page.FAVORITES -> FavoritesScreen(favorites, onOpen = ::openUrl)
+                    Page.AFFILIATES -> AffiliatesScreen(
+                        records = affiliates,
+                        onCopy = ::copyText,
+                        onOpen = ::openUrl,
+                        onRemove = { itemId ->
+                            store.removeAffiliate(itemId)
+                            affiliates = store.affiliates()
                         },
                     )
 
-                    Page.HISTORY -> HistoryScreen(history)
-                    Page.FAVORITES -> FavoritesScreen(favorites)
-                    Page.AFFILIATES -> AffiliatesScreen(affiliates)
                     Page.SETTINGS -> SettingsScreen(
                         backendUrl = backendUrl,
                         onBackendChange = { backendUrl = it },
                         onSave = {
                             store.backendUrl = backendUrl
-                            backendMessage = "Endereço salvo."
+                            backendMessage = "Endereço salvo. A Alpha 3 aceita backend V5.2.1 e V6."
                         },
                         onTest = {
                             backendMessage = "Testando conexão..."
                             scope.launch {
                                 backendMessage = api.health(backendUrl).fold(
                                     onSuccess = { "Conectado: $it" },
-                                    onFailure = { "Falha: ${it.message}" },
+                                    onFailure = { it.message ?: "Falha na conexão." },
                                 )
                             }
                         },
@@ -243,14 +327,50 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             darkTheme = it
                             store.darkTheme = it
                         },
+                        coupons = coupons,
+                        onAddCoupon = { code, description ->
+                            store.saveCoupon(code, description)
+                            coupons = store.coupons()
+                        },
+                        onRemoveCoupon = { code ->
+                            store.removeCoupon(code)
+                            coupons = store.coupons()
+                            if (selectedCoupon.equals(code, ignoreCase = true)) selectedCoupon = ""
+                        },
                         onClear = {
                             store.clearLocalData()
                             history = emptyList()
                             favorites = emptyList()
                             affiliates = emptyList()
-                            backendMessage = "Histórico local apagado."
+                            coupons = emptyList()
+                            searchState = SearchState.Idle
+                            backendMessage = "Dados locais apagados."
                         },
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppHeader(darkTheme: Boolean, onToggleTheme: () -> Unit) {
+    Column {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(7.dp).background(MercadoYellow),
+        )
+        Surface(tonalElevation = 3.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text("🏷️ CbOfertas", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("V6 Alpha 3 • Ofertas com personalidade", style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onClick = onToggleTheme) {
+                    Text(if (darkTheme) "☀ Claro" else "☾ Escuro", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -262,12 +382,20 @@ private fun HomeScreen(
     url: String,
     onUrlChange: (String) -> Unit,
     searchState: SearchState,
+    phrase: String,
+    selectedCoupon: String,
+    onCouponChange: (String) -> Unit,
+    coupons: List<CouponRecord>,
     affiliates: List<AffiliateRecord>,
     favorites: List<FavoriteRecord>,
-    phraseFor: (String) -> String,
+    onNewPhrase: () -> Unit,
     onSearch: () -> Unit,
     onFavorite: (Product) -> Unit,
     onSaveAffiliate: (Product) -> Unit,
+    onCopy: (String) -> Unit,
+    onShare: (String) -> Unit,
+    onWhatsApp: (String) -> Unit,
+    onOpen: (String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -275,109 +403,280 @@ private fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            SectionCard {
-                Text("1. Buscar produto", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = onUrlChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Link Mercado Livre ou meli.la") },
-                    singleLine = true,
-                )
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = onSearch, modifier = Modifier.fillMaxWidth()) { Text("Buscar e confirmar oferta") }
-            }
+            SearchCard(
+                url = url,
+                onUrlChange = onUrlChange,
+                loading = searchState is SearchState.Loading,
+                onSearch = onSearch,
+            )
         }
 
         when (searchState) {
-            SearchState.Idle -> item { InfoCard("Aguardando um link. Nenhum produto anterior fica preso na tela.") }
-            is SearchState.Loading -> item {
-                SectionCard {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CircularProgressIndicator(Modifier.size(30.dp))
-                        Text("Consultando backend e confirmando anúncio...")
-                    }
-                }
-            }
+            SearchState.Idle -> item { WelcomeCard() }
+            is SearchState.Loading -> item { LoadingCard("Conferindo anúncio, preço, vendedor e disponibilidade...") }
             is SearchState.Error -> item { ErrorCard(searchState.message) }
-            is SearchState.Success -> item {
-                val product = searchState.product
-                ProductCard(
-                    product = product,
-                    affiliate = affiliates.firstOrNull { it.itemId == product.itemId },
-                    favorite = favorites.any { it.itemId == product.itemId },
-                    phrase = phraseFor(product.title),
-                    onFavorite = { onFavorite(product) },
-                    onSaveAffiliate = { onSaveAffiliate(product) },
-                )
+            is SearchState.Success -> {
+                item {
+                    val product = searchState.product
+                    val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
+                    val offerText = product.offerText(phrase, selectedCoupon, affiliate)
+                    ProductOfferCard(
+                        product = product,
+                        phrase = phrase,
+                        selectedCoupon = selectedCoupon,
+                        onCouponChange = onCouponChange,
+                        coupons = coupons,
+                        affiliate = affiliate,
+                        favorite = favorites.any { it.itemId == product.itemId },
+                        offerText = offerText,
+                        onNewPhrase = onNewPhrase,
+                        onFavorite = { onFavorite(product) },
+                        onSaveAffiliate = { onSaveAffiliate(product) },
+                        onCopy = { onCopy(offerText) },
+                        onShare = { onShare(offerText) },
+                        onWhatsApp = { onWhatsApp(offerText) },
+                        onOpen = { onOpen(product.bestLink(affiliate)) },
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProductCard(
-    product: Product,
-    affiliate: AffiliateRecord?,
-    favorite: Boolean,
-    phrase: String,
-    onFavorite: () -> Unit,
-    onSaveAffiliate: () -> Unit,
+private fun SearchCard(
+    url: String,
+    onUrlChange: (String) -> Unit,
+    loading: Boolean,
+    onSearch: () -> Unit,
 ) {
-    val context = LocalContext.current
     SectionCard {
-        Text("2. Produto confirmado", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(6.dp))
-        Text("“$phrase”", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(12.dp))
-        RemoteImage(product.imageUrl, product.title)
-        Spacer(Modifier.height(12.dp))
-        Text(product.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text("Anúncio: ${product.itemId}", style = MaterialTheme.typography.bodySmall)
-        if (!product.sellerName.isNullOrBlank()) Text("Vendido por: ${product.sellerName}")
-        Spacer(Modifier.height(12.dp))
-
-        PriceLine("Preço atual", product.price.current?.amount.asBrl(), emphasized = true)
-        PriceLine("Preço original", product.price.original?.amount.asBrl(), crossed = product.price.original != null)
-        PriceLine("Desconto", if (product.price.discountPercent > 0) "${product.price.discountPercent}%" else "—")
-        PriceLine("Economia", product.price.savings.takeIf { it > 0.0 }.asBrl())
-        PriceLine("Parcelamento", product.price.installment?.label ?: product.price.installment?.amount.asBrl())
-        PriceLine("Cashback (separado)", product.price.cashback?.amount.asBrl())
-        PriceLine("Preço por unidade", product.price.unit?.amount.asBrl())
-        PriceLine("Confiança", "${(product.price.confidence * 100).toInt()}%")
-
-        if (!product.price.confirmed) {
-            Spacer(Modifier.height(8.dp))
-            ErrorCard(product.price.reason ?: "Preço não confirmado.")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StepBadge("1")
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("Buscar produto", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("Cole o link do Mercado Livre ou meli.la")
+            }
         }
-
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(
+            value = url,
+            onValueChange = onUrlChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("🔗 Link da oferta") },
+            placeholder = { Text("https://meli.la/...") },
+            minLines = 1,
+            maxLines = 3,
+        )
         Spacer(Modifier.height(12.dp))
         Button(
-            onClick = {
-                val destination = affiliate?.affiliateUrl ?: product.permalink
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(destination)))
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(if (affiliate == null) "Abrir anúncio" else "Abrir link afiliado") }
+            onClick = onSearch,
+            enabled = !loading,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+        ) {
+            Text(if (loading) "Conferindo oferta..." else "🔎 Buscar e confirmar oferta", fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(
-            onClick = {
-                val destination = affiliate?.affiliateUrl ?: product.permalink
-                val text = "$phrase\n\n${product.title}\n${product.price.current?.amount.asBrl()}\n$destination"
-                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, text)
-                }, "Compartilhar oferta"))
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Compartilhar oferta") }
+@Composable
+private fun WelcomeCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(22.dp),
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Text("A oferta entra. O texto sai pronto. 😎", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(6.dp))
+            Text("A CbOfertas confirma o produto, escolhe uma frase engraçada, monta o anúncio e aplica seu link afiliado automaticamente.")
+        }
+    }
+}
 
+@Composable
+private fun ProductOfferCard(
+    product: Product,
+    phrase: String,
+    selectedCoupon: String,
+    onCouponChange: (String) -> Unit,
+    coupons: List<CouponRecord>,
+    affiliate: AffiliateRecord?,
+    favorite: Boolean,
+    offerText: String,
+    onNewPhrase: () -> Unit,
+    onFavorite: () -> Unit,
+    onSaveAffiliate: () -> Unit,
+    onCopy: () -> Unit,
+    onShare: () -> Unit,
+    onWhatsApp: () -> Unit,
+    onOpen: () -> Unit,
+) {
+    SectionCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StepBadge("2")
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Oferta pronta", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("Confira os dados e compartilhe")
+            }
+            if (product.price.discountPercent > 0) {
+                DiscountBadge(product.price.discountPercent)
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+        PhraseBanner(phrase = phrase, onNewPhrase = onNewPhrase)
+        Spacer(Modifier.height(14.dp))
+        RemoteImage(product.imageUrl, product.title, height = 230)
+        Spacer(Modifier.height(14.dp))
+
+        Text(product.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+        Text(product.itemId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp))
+
+        PricePanel(product)
+        Spacer(Modifier.height(12.dp))
+
+        ProductFacts(product)
+        Spacer(Modifier.height(14.dp))
+
+        CouponSelector(
+            selected = selectedCoupon,
+            onSelectedChange = onCouponChange,
+            coupons = coupons,
+        )
+
+        Spacer(Modifier.height(14.dp))
+        if (affiliate != null) {
+            InfoCard("✅ Link afiliado aplicado automaticamente para ${product.itemId}.")
+        } else {
+            OutlinedButton(onClick = onSaveAffiliate, modifier = Modifier.fillMaxWidth()) {
+                Text("🔗 Salvar link atual como afiliado")
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+        Text("Prévia do texto", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+        Spacer(Modifier.height(7.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Text(offerText, modifier = Modifier.fillMaxWidth().padding(14.dp), lineHeight = 21.sp)
+        }
+
+        Spacer(Modifier.height(14.dp))
+        Button(
+            onClick = onWhatsApp,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen, contentColor = Color.White),
+        ) { Text("💬 Compartilhar no WhatsApp", fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onFavorite) { Text(if (favorite) "★ Remover favorito" else "☆ Favoritar") }
-            TextButton(onClick = onSaveAffiliate) { Text(if (affiliate == null) "Salvar link atual" else "✓ Afiliado salvo") }
+        Button(onClick = onCopy, modifier = Modifier.fillMaxWidth()) { Text("📋 Copiar texto completo") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("↗ Compartilhar em outro aplicativo") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { Text("🛒 Abrir anúncio") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onFavorite, modifier = Modifier.fillMaxWidth()) {
+            Text(if (favorite) "★ Remover dos favoritos" else "☆ Salvar nos favoritos")
+        }
+    }
+}
+
+@Composable
+private fun PhraseBanner(phrase: String, onNewPhrase: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(15.dp)) {
+            Text("😂 ${phrase.ifBlank { "Essa oferta está boa demais para ficar escondida." }}", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+            TextButton(onClick = onNewPhrase, modifier = Modifier.align(Alignment.End)) {
+                Text("🎲 Trocar frase")
+            }
+        }
+    }
+}
+
+@Composable
+private fun PricePanel(product: Product) {
+    val price = product.price
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            price.original?.let {
+                Text(
+                    "De ${it.amount.asBrl()}",
+                    textDecoration = TextDecoration.LineThrough,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                price.current?.amount.asBrl(),
+                fontSize = 35.sp,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (price.savings > 0) Text("Você economiza ${price.savings.asBrl()}", fontWeight = FontWeight.Bold)
+            product.installmentText()?.let { Text("💳 $it", textAlign = TextAlign.Center) }
+        }
+    }
+}
+
+@Composable
+private fun ProductFacts(product: Product) {
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        if (product.freeShipping) FactLine("🚚", "Frete grátis")
+        product.sellerName?.takeIf(String::isNotBlank)?.let { FactLine("🏪", "Vendido por $it") }
+        if (product.logisticType == "fulfillment") FactLine("📦", "Envio FULL")
+        FactLine("🛡️", "Confiança do preço: ${(product.price.confidence * 100).toInt()}%")
+        product.price.cashback?.let { FactLine("🪙", "Cashback separado: ${it.amount.asBrl()} — não usado como preço") }
+        product.price.unit?.let { FactLine("⚖️", "Preço por unidade: ${it.amount.asBrl()} — não usado como preço") }
+    }
+}
+
+@Composable
+private fun FactLine(icon: String, text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(icon)
+        Spacer(Modifier.width(8.dp))
+        Text(text, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun CouponSelector(
+    selected: String,
+    onSelectedChange: (String) -> Unit,
+    coupons: List<CouponRecord>,
+) {
+    Text("🎟️ Cupom da oferta", fontWeight = FontWeight.ExtraBold)
+    Spacer(Modifier.height(6.dp))
+    OutlinedTextField(
+        value = selected,
+        onValueChange = onSelectedChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Digite ou escolha um cupom") },
+        singleLine = true,
+    )
+    if (coupons.isNotEmpty()) {
+        Spacer(Modifier.height(7.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            coupons.filter { it.active }.forEach { coupon ->
+                AssistChip(
+                    onClick = { onSelectedChange(coupon.code) },
+                    label = { Text(coupon.code) },
+                    leadingIcon = { Text(if (selected == coupon.code) "✓" else "🎫") },
+                )
+            }
         }
     }
 }
@@ -389,95 +688,196 @@ private fun RadarScreen(
     loading: Boolean,
     message: String?,
     products: List<Product>,
+    affiliates: List<AffiliateRecord>,
+    phraseFor: (String) -> String,
     onSearch: () -> Unit,
     onUse: (Product) -> Unit,
+    onShare: (Product, String) -> Unit,
+    onOpen: (String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
             SectionCard {
-                Text("Radar V6", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Somente ofertas cujo preço atual foi confirmado pelo backend.")
-                Spacer(Modifier.height(8.dp))
+                Text("⚡ Radar de Ofertas", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("Busca produtos e confirma o preço antes de exibir.")
+                Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Ex.: creatina, cadeira, celular") },
+                    label = { Text("Ex.: creatina, toalha, celular") },
                     singleLine = true,
                 )
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = onSearch, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (loading) "Buscando..." else "Buscar ofertas")
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = onSearch, enabled = !loading, modifier = Modifier.fillMaxWidth().height(54.dp)) {
+                    Text(if (loading) "Buscando e confirmando..." else "🔍 Buscar ofertas", fontWeight = FontWeight.Bold)
                 }
                 if (loading) {
-                    Spacer(Modifier.height(8.dp))
-                    CircularProgressIndicator(Modifier.size(28.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(26.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Confirmando os preços encontrados...")
+                    }
                 }
                 if (!message.isNullOrBlank()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(message, color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(10.dp))
+                    Text(message, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
-        items(products, key = { it.itemId }) { product ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.fillMaxWidth().padding(14.dp)) {
-                    Text(product.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
-                    Text(product.price.current?.amount.asBrl(), color = MaterialTheme.colorScheme.primary, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                    if (product.price.original != null) {
-                        Text(product.price.original.amount.asBrl(), textDecoration = TextDecoration.LineThrough)
+
+        if (products.isNotEmpty()) {
+            item {
+                val bestDiscount = products.maxOfOrNull { it.price.discountPercent } ?: 0
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(18.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(15.dp),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                    ) {
+                        RadarMetric(products.size.toString(), "Encontradas")
+                        RadarMetric("$bestDiscount%", "Melhor desconto")
                     }
-                    Text("${product.price.discountPercent}% OFF • confiança ${(product.price.confidence * 100).toInt()}%")
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { onUse(product) }, modifier = Modifier.fillMaxWidth()) { Text("Usar oferta confirmada") }
                 }
             }
         }
+
+        items(products, key = { it.itemId }) { product ->
+            val phrase = remember(product.itemId) { phraseFor(product.title) }
+            val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
+            RadarProductCard(
+                product = product,
+                phrase = phrase,
+                affiliate = affiliate,
+                onUse = { onUse(product) },
+                onShare = { onShare(product, phrase) },
+                onOpen = { onOpen(product.bestLink(affiliate)) },
+            )
+        }
     }
 }
 
 @Composable
-private fun HistoryScreen(records: List<HistoryRecord>) {
-    RecordList(title = "Histórico", emptyText = "Nenhuma consulta ainda.") {
+private fun RadarMetric(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontSize = 25.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+        Text(label, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun RadarProductCard(
+    product: Product,
+    phrase: String,
+    affiliate: AffiliateRecord?,
+    onUse: () -> Unit,
+    onShare: () -> Unit,
+    onOpen: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                CompactRemoteImage(product.imageUrl, product.title)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    if (product.price.discountPercent > 0) DiscountBadge(product.price.discountPercent)
+                    Spacer(Modifier.height(6.dp))
+                    Text(product.title, maxLines = 3, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                    Text(product.price.current?.amount.asBrl(), color = MaterialTheme.colorScheme.primary, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                    product.price.original?.let {
+                        Text(it.amount.asBrl(), textDecoration = TextDecoration.LineThrough, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("😂 $phrase", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            if (product.freeShipping) Text("🚚 Frete grátis", fontWeight = FontWeight.SemiBold)
+            if (affiliate != null) Text("🔗 Link afiliado aplicado", color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(10.dp))
+            Button(onClick = onUse, modifier = Modifier.fillMaxWidth()) { Text("✓ Usar esta oferta") }
+            Spacer(Modifier.height(7.dp))
+            OutlinedButton(onClick = onShare, modifier = Modifier.fillMaxWidth()) { Text("💬 Compartilhar") }
+            Spacer(Modifier.height(7.dp))
+            TextButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { Text("↗ Abrir anúncio") }
+        }
+    }
+}
+
+@Composable
+private fun HistoryScreen(records: List<HistoryRecord>, onOpen: (String) -> Unit) {
+    RecordList(title = "Histórico", subtitle = "Acompanhe consultas e menores preços", emptyText = "Nenhuma consulta ainda.", showEmpty = records.isEmpty()) {
         items(records, key = { it.itemId }) { record ->
             SectionCard {
+                Row(verticalAlignment = Alignment.Top) {
+                    CompactRemoteImage(record.imageUrl, record.title)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(record.title, fontWeight = FontWeight.ExtraBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        PriceLine("Preço atual", record.currentPrice.asBrl(), emphasized = true)
+                        PriceLine("Menor preço", record.minPrice.asBrl())
+                        PriceLine("Maior desconto", "${record.maxDiscount}%")
+                        PriceLine("Consultas", record.queryCount.toString())
+                    }
+                }
+                Text("Última consulta: ${record.lastQueryAt.asDateTime()}", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { onOpen(record.permalink) }, modifier = Modifier.align(Alignment.End)) { Text("Abrir") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoritesScreen(records: List<FavoriteRecord>, onOpen: (String) -> Unit) {
+    RecordList(title = "Favoritos", subtitle = "Suas ofertas guardadas", emptyText = "Nenhum favorito salvo.", showEmpty = records.isEmpty()) {
+        items(records, key = { it.itemId }) { record ->
+            SectionCard {
+                Row(verticalAlignment = Alignment.Top) {
+                    CompactRemoteImage(record.imageUrl, record.title)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(record.title, fontWeight = FontWeight.ExtraBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text(record.currentPrice.asBrl(), color = MaterialTheme.colorScheme.primary, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                        Text("Salvo em ${record.savedAt.asDateTime()}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Button(onClick = { onOpen(record.permalink) }, modifier = Modifier.fillMaxWidth()) { Text("Abrir oferta") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AffiliatesScreen(
+    records: List<AffiliateRecord>,
+    onCopy: (String) -> Unit,
+    onOpen: (String) -> Unit,
+    onRemove: (String) -> Unit,
+) {
+    RecordList(title = "Biblioteca de Afiliados", subtitle = "Um MLB, um link afiliado automático", emptyText = "Nenhum link afiliado salvo.", showEmpty = records.isEmpty()) {
+        items(records, key = { it.itemId }) { record ->
+            SectionCard {
+                Text("🔗 ${record.itemId}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
                 Text(record.title, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                PriceLine("Preço atual", record.currentPrice.asBrl(), emphasized = true)
-                PriceLine("Menor preço", record.minPrice.asBrl())
-                PriceLine("Maior desconto", "${record.maxDiscount}%")
-                PriceLine("Consultas", record.queryCount.toString())
-                Text("Última: ${record.lastQueryAt.asDateTime()}", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-@Composable
-private fun FavoritesScreen(records: List<FavoriteRecord>) {
-    RecordList(title = "Favoritos", emptyText = "Nenhum favorito salvo.") {
-        items(records, key = { it.itemId }) { record ->
-            SectionCard {
-                Text(record.title, fontWeight = FontWeight.Bold)
-                Text(record.currentPrice.asBrl(), color = MaterialTheme.colorScheme.primary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text("Salvo em ${record.savedAt.asDateTime()}", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-@Composable
-private fun AffiliatesScreen(records: List<AffiliateRecord>) {
-    RecordList(title = "Biblioteca de afiliados", emptyText = "Nenhum link afiliado salvo.") {
-        items(records, key = { it.itemId }) { record ->
-            SectionCard {
-                Text(record.title, fontWeight = FontWeight.Bold)
-                Text(record.itemId, style = MaterialTheme.typography.bodySmall)
-                Text(record.affiliateUrl, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.primary)
-                Text("Salvo em ${record.savedAt.asDateTime()}", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(5.dp))
+                Text(record.affiliateUrl, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text("Último uso: ${record.lastUsedAt.asDateTime()}", style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { onCopy(record.affiliateUrl) }, modifier = Modifier.fillMaxWidth()) { Text("📋 Copiar link") }
+                Spacer(Modifier.height(7.dp))
+                OutlinedButton(onClick = { onOpen(record.affiliateUrl) }, modifier = Modifier.fillMaxWidth()) { Text("Abrir") }
+                TextButton(onClick = { onRemove(record.itemId) }, modifier = Modifier.fillMaxWidth()) { Text("Remover") }
             }
         }
     }
@@ -492,8 +892,14 @@ private fun SettingsScreen(
     message: String?,
     darkTheme: Boolean,
     onDarkTheme: (Boolean) -> Unit,
+    coupons: List<CouponRecord>,
+    onAddCoupon: (String, String) -> Unit,
+    onRemoveCoupon: (String) -> Unit,
     onClear: () -> Unit,
 ) {
+    var couponCode by remember { mutableStateOf("") }
+    var couponDescription by remember { mutableStateOf("") }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -501,26 +907,68 @@ private fun SettingsScreen(
     ) {
         item {
             SectionCard {
-                Text("Backend V6", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Use um serviço Render separado da V5 enquanto a versão nova está em testes.")
-                Spacer(Modifier.height(8.dp))
+                Text("🌐 Backend", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("A Alpha 3 detecta automaticamente as rotas da V5.2.1 ou da V6.")
+                Spacer(Modifier.height(9.dp))
                 OutlinedTextField(
                     value = backendUrl,
                     onValueChange = onBackendChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("https://seu-backend-v6.onrender.com") },
+                    label = { Text("https://seu-backend.onrender.com") },
                     singleLine = true,
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) { Text("Salvar endereço") }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(7.dp))
                 OutlinedButton(onClick = onTest, modifier = Modifier.fillMaxWidth()) { Text("Testar conexão") }
                 if (!message.isNullOrBlank()) {
                     Spacer(Modifier.height(8.dp))
-                    Text(message)
+                    InfoCard(message)
                 }
             }
         }
+
+        item {
+            SectionCard {
+                Text("🎟️ Cupons salvos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                OutlinedTextField(
+                    value = couponCode,
+                    onValueChange = { couponCode = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Código do cupom") },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(7.dp))
+                OutlinedTextField(
+                    value = couponDescription,
+                    onValueChange = { couponDescription = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Descrição opcional") },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        onAddCoupon(couponCode, couponDescription)
+                        couponCode = ""
+                        couponDescription = ""
+                    },
+                    enabled = couponCode.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Salvar cupom") }
+                coupons.forEach { coupon ->
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(coupon.code, fontWeight = FontWeight.ExtraBold)
+                            if (coupon.description.isNotBlank()) Text(coupon.description, style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(onClick = { onRemoveCoupon(coupon.code) }) { Text("Remover") }
+                    }
+                }
+            }
+        }
+
         item {
             SectionCard {
                 Row(
@@ -528,15 +976,19 @@ private fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Tema escuro", fontWeight = FontWeight.Bold)
+                    Column {
+                        Text("Tema escuro", fontWeight = FontWeight.ExtraBold)
+                        Text("Alterna a aparência do aplicativo", style = MaterialTheme.typography.bodySmall)
+                    }
                     Switch(checked = darkTheme, onCheckedChange = onDarkTheme)
                 }
             }
         }
+
         item {
             SectionCard {
-                Text("Dados locais", fontWeight = FontWeight.Bold)
-                Text("Apaga histórico, favoritos e afiliados desta Alpha, mantendo o endereço do backend.")
+                Text("🧹 Dados locais", fontWeight = FontWeight.ExtraBold)
+                Text("Apaga histórico, favoritos, cupons e afiliados, mantendo o endereço do backend.")
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text("Limpar dados locais") }
             }
@@ -547,7 +999,9 @@ private fun SettingsScreen(
 @Composable
 private fun RecordList(
     title: String,
+    subtitle: String,
     emptyText: String,
+    showEmpty: Boolean,
     content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
 ) {
     LazyColumn(
@@ -555,28 +1009,29 @@ private fun RecordList(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item {
+            Column {
+                Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                Text(subtitle)
+            }
+        }
         content()
-        item { Text(emptyText, style = MaterialTheme.typography.bodySmall) }
+        if (showEmpty && emptyText.isNotBlank()) item { Text(emptyText, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
 @Composable
-private fun RemoteImage(url: String?, description: String) {
-    val bitmap by produceState<Bitmap?>(initialValue = null, key1 = url) {
-        value = if (url.isNullOrBlank()) null else withContext(Dispatchers.IO) {
-            runCatching { URL(url).openStream().use(BitmapFactory::decodeStream) }.getOrNull()
-        }
-    }
+private fun RemoteImage(url: String?, description: String, height: Int) {
+    val bitmap by loadRemoteBitmap(url)
     Box(
-        modifier = Modifier.fillMaxWidth().height(210.dp).background(
-            MaterialTheme.colorScheme.surfaceVariant,
-            RoundedCornerShape(16.dp),
-        ),
+        modifier = Modifier.fillMaxWidth().height(height.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
         if (bitmap == null) {
-            Text("Imagem indisponível", style = MaterialTheme.typography.bodyMedium)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🖼️", fontSize = 35.sp)
+                Text("Imagem indisponível")
+            }
         } else {
             Image(
                 bitmap = bitmap!!.asImageBitmap(),
@@ -589,9 +1044,63 @@ private fun RemoteImage(url: String?, description: String) {
 }
 
 @Composable
-private fun PriceLine(label: String, value: String, emphasized: Boolean = false, crossed: Boolean = false) {
+private fun CompactRemoteImage(url: String?, description: String) {
+    val bitmap by loadRemoteBitmap(url)
+    Box(
+        modifier = Modifier.size(105.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (bitmap == null) {
+            Text("🛍️", fontSize = 30.sp)
+        } else {
+            Image(
+                bitmap = bitmap!!.asImageBitmap(),
+                contentDescription = description,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
+    }
+}
+
+@Composable
+private fun loadRemoteBitmap(url: String?) = produceState<Bitmap?>(initialValue = null, key1 = url) {
+    value = if (url.isNullOrBlank()) null else withContext(Dispatchers.IO) {
+        runCatching {
+            val connection = URL(url).openConnection().apply {
+                connectTimeout = 15_000
+                readTimeout = 20_000
+                setRequestProperty("User-Agent", "Mozilla/5.0 CbOfertas/6.0")
+            }
+            connection.getInputStream().use(BitmapFactory::decodeStream)
+        }.getOrNull()
+    }
+}
+
+@Composable
+private fun StepBadge(value: String) {
+    Box(
+        modifier = Modifier.size(50.dp).background(
+            brush = Brush.linearGradient(listOf(MercadoGreen, Color(0xFF00C853))),
+            shape = CircleShape,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(value, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun DiscountBadge(discount: Int) {
+    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(50)) {
+        Text("🔥 $discount% OFF", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+@Composable
+private fun PriceLine(label: String, value: String, emphasized: Boolean = false) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -599,39 +1108,51 @@ private fun PriceLine(label: String, value: String, emphasized: Boolean = false,
         Text(
             value,
             color = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            fontSize = if (emphasized) 23.sp else 16.sp,
-            fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Medium,
-            textDecoration = if (crossed) TextDecoration.LineThrough else null,
+            fontSize = if (emphasized) 21.sp else 15.sp,
+            fontWeight = if (emphasized) FontWeight.Black else FontWeight.SemiBold,
         )
     }
 }
 
 @Composable
-private fun SectionCard(content: @Composable () -> Unit) {
+private fun SectionCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(22.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) { content() }
+        Column(Modifier.fillMaxWidth().padding(17.dp), content = content)
+    }
+}
+
+@Composable
+private fun LoadingCard(message: String) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(18.dp)) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(28.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(message, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
 @Composable
 private fun InfoCard(message: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-        Text(message, modifier = Modifier.fillMaxWidth().padding(14.dp))
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(16.dp)) {
+        Text(message, modifier = Modifier.fillMaxWidth().padding(13.dp), fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun ErrorCard(message: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-        Text(
-            message,
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            color = MaterialTheme.colorScheme.onErrorContainer,
-            fontWeight = FontWeight.SemiBold,
-        )
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer), shape = RoundedCornerShape(18.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text("Não deu certo desta vez", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onErrorContainer)
+            Spacer(Modifier.height(4.dp))
+            Text(message, color = MaterialTheme.colorScheme.onErrorContainer)
+            Spacer(Modifier.height(6.dp))
+            Text("A Alpha 3 não mantém dados antigos na tela após um erro.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+        }
     }
 }

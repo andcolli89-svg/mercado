@@ -12,13 +12,13 @@ android {
         applicationId = "com.cbofertas.v6.alpha"
         minSdk = 26
         targetSdk = 35
-        versionCode = 600002
-        versionName = "6.0.0-alpha.2"
+        versionCode = 600003
+        versionName = "6.0.0-alpha.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
-        val defaultApi = providers.gradleProperty("CBOFERTAS_API_URL").orElse("").get()
+        val defaultApi = providers.gradleProperty("CBOFERTAS_API_URL").orElse("https://mercado-yvqn.onrender.com").get()
         buildConfigField("String", "DEFAULT_API_URL", "\"${defaultApi.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
     }
 

@@ -1,4 +1,4 @@
-name: Validar e Gerar CbOfertas V6 Alpha 2
+name: Validar e Gerar CbOfertas V6 Alpha 3
 
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         run: npm test
 
   android:
-    name: Compilar Android limpo
+    name: Compilar Android Alpha 3
     needs: backend
     runs-on: ubuntu-latest
     steps:
@@ -53,14 +53,14 @@ jobs:
       - name: Preparar artefatos
         run: |
           mkdir -p dist
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist/CbOfertas-V6.0.0-alpha.2.apk
-          sha256sum dist/CbOfertas-V6.0.0-alpha.2.apk > dist/CbOfertas-V6.0.0-alpha.2.apk.sha256
-          zip -qr dist/CbOfertas-V6.0.0-alpha.2-FONTES.zip . \
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/CbOfertas-V6.0.0-alpha.3.apk
+          sha256sum dist/CbOfertas-V6.0.0-alpha.3.apk > dist/CbOfertas-V6.0.0-alpha.3.apk.sha256
+          zip -qr dist/CbOfertas-V6.0.0-alpha.3-FONTES.zip . \
             -x '.git/*' 'dist/*' 'android/.gradle/*' 'android/**/build/*'
-          sha256sum dist/CbOfertas-V6.0.0-alpha.2-FONTES.zip > dist/CbOfertas-V6.0.0-alpha.2-FONTES.zip.sha256
+          sha256sum dist/CbOfertas-V6.0.0-alpha.3-FONTES.zip > dist/CbOfertas-V6.0.0-alpha.3-FONTES.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: CbOfertas-V6.0.0-alpha.2
+          name: CbOfertas-V6.0.0-alpha.3
           path: dist/*
           if-no-files-found: error
           retention-days: 30

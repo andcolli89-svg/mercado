@@ -1,0 +1,16 @@
+ATUALIZAR A BRANCH v6-rebuild
+============================
+
+1. Copie todo o conteúdo da pasta CbOfertas_V6_0_ALPHA_3 para dentro da pasta clonada CbOfertas_V6_0.
+2. Escolha Substituir os arquivos no destino.
+3. Não apague a pasta oculta .git.
+4. Abra Git Bash Here na pasta CbOfertas_V6_0.
+5. Execute:
+
+   git status
+   git add -A
+   git commit -m "Cria CbOfertas V6 Alpha 3 completa"
+   git push origin v6-rebuild
+
+6. No GitHub, abra Ações > Validar e Gerar CbOfertas V6 Alpha 3.
+7. Baixe o artefato CbOfertas-V6.0.0-alpha.3.

@@ -3,6 +3,7 @@ package com.cbofertas.v6.data
 import android.content.Context
 import com.cbofertas.v6.BuildConfig
 import com.cbofertas.v6.domain.AffiliateRecord
+import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
 import com.cbofertas.v6.domain.Product
@@ -32,11 +33,31 @@ class LocalStore(context: Context) {
     }
 
     fun saveAffiliate(product: Product, affiliateUrl: String) {
-        if (!affiliateUrl.startsWith("https://")) return
+        val clean = affiliateUrl.trim()
+        if (!clean.startsWith("https://")) return
         val now = System.currentTimeMillis()
-        val updated = listOf(AffiliateRecord(product.itemId, affiliateUrl, product.permalink, product.title, now, now)) +
-            affiliates().filterNot { it.itemId == product.itemId }
-        writeArray("affiliates", updated.take(500).map { it.toJson() })
+        val existing = affiliates().firstOrNull { it.itemId == product.itemId }
+        val record = AffiliateRecord(
+            itemId = product.itemId,
+            affiliateUrl = clean,
+            originalUrl = product.permalink,
+            title = product.title,
+            savedAt = existing?.savedAt ?: now,
+            lastUsedAt = now,
+        )
+        writeArray("affiliates", (listOf(record) + affiliates().filterNot { it.itemId == product.itemId }).take(500).map { it.toJson() })
+    }
+
+    fun markAffiliateUsed(itemId: String) {
+        val now = System.currentTimeMillis()
+        val updated = affiliates().map { record ->
+            if (record.itemId == itemId) record.copy(lastUsedAt = now) else record
+        }
+        writeArray("affiliates", updated.map { it.toJson() })
+    }
+
+    fun removeAffiliate(itemId: String) {
+        writeArray("affiliates", affiliates().filterNot { it.itemId == itemId }.map { it.toJson() })
     }
 
     fun affiliateFor(itemId: String): AffiliateRecord? = affiliates().firstOrNull { it.itemId == itemId }
@@ -90,9 +111,44 @@ class LocalStore(context: Context) {
         val updated = if (existing.any { it.itemId == product.itemId }) {
             existing.filterNot { it.itemId == product.itemId }
         } else {
-            listOf(FavoriteRecord(product.itemId, product.title, product.imageUrl, product.permalink, product.price.current?.amount, System.currentTimeMillis())) + existing
+            listOf(
+                FavoriteRecord(
+                    itemId = product.itemId,
+                    title = product.title,
+                    imageUrl = product.imageUrl,
+                    permalink = product.permalink,
+                    currentPrice = product.price.current?.amount,
+                    savedAt = System.currentTimeMillis(),
+                ),
+            ) + existing
         }
         writeArray("favorites", updated.map { it.toJson() })
+    }
+
+    fun coupons(): List<CouponRecord> = readArray("coupons") { json ->
+        CouponRecord(
+            code = json.getString("code"),
+            description = json.optString("description"),
+            active = json.optBoolean("active", true),
+            savedAt = json.optLong("savedAt", System.currentTimeMillis()),
+        )
+    }
+
+    fun saveCoupon(code: String, description: String = "") {
+        val clean = code.trim().uppercase()
+        if (clean.isBlank()) return
+        val existing = coupons().firstOrNull { it.code.equals(clean, ignoreCase = true) }
+        val record = CouponRecord(
+            code = clean,
+            description = description.trim(),
+            active = true,
+            savedAt = existing?.savedAt ?: System.currentTimeMillis(),
+        )
+        writeArray("coupons", (listOf(record) + coupons().filterNot { it.code.equals(clean, ignoreCase = true) }).take(100).map { it.toJson() })
+    }
+
+    fun removeCoupon(code: String) {
+        writeArray("coupons", coupons().filterNot { it.code.equals(code, ignoreCase = true) }.map { it.toJson() })
     }
 
     fun clearLocalData() {
@@ -132,6 +188,9 @@ private fun HistoryRecord.toJson() = JSONObject()
 private fun FavoriteRecord.toJson() = JSONObject()
     .put("itemId", itemId).put("title", title).putNullable("imageUrl", imageUrl)
     .put("permalink", permalink).putNullable("currentPrice", currentPrice).put("savedAt", savedAt)
+
+private fun CouponRecord.toJson() = JSONObject()
+    .put("code", code).put("description", description).put("active", active).put("savedAt", savedAt)
 
 private fun JSONObject.putNullable(key: String, value: Any?): JSONObject = put(key, value ?: JSONObject.NULL)
 private fun JSONObject.nullableString(key: String): String? = if (!has(key) || isNull(key)) null else optString(key).takeIf(String::isNotBlank)

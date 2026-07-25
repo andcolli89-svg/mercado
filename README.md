@@ -1,52 +1,71 @@
-# CbOfertas V6.0.0 Alpha 2 — reconstrução Android limpa
+# CbOfertas V6.0.0 Alpha 3
 
-Esta entrega substitui integralmente o módulo Android da Alpha 1. O backend V6 foi preservado porque os testes de produto, preço, redirecionamento e Radar já passam.
+A Alpha 3 recupera a personalidade da CbOfertas sem voltar para a arquitetura WebView da V5.
 
-## O que mudou
+## O que voltou
 
-- Projeto Android recriado com uma combinação estável e fechada de versões.
-- Removidas todas as configurações do AGP 9, API 36/37 e Kotlin integrado que provocaram erros em sequência.
-- Interface Compose reescrita sem reutilizar o arquivo `App.kt` problemático.
-- Novo `applicationId` de teste, permitindo instalar a V6 ao lado da V5.
-- Estado de busca sempre limpo antes de uma consulta.
-- Preço atual, original, parcela, cashback e preço por unidade exibidos separadamente.
-- Biblioteca de afiliados, Radar, histórico, favoritos, tema e compartilhamento mantidos na nova base.
-- Backend configurável pela tela Ajustes.
+- frase engraçada automática antes do título;
+- 352 frases em 22 categorias, sem repetição imediata;
+- texto completo da oferta pronto para copiar;
+- compartilhamento direto no WhatsApp;
+- preço atual, original, desconto, economia e parcelamento;
+- frete, vendedor, cashback e preço por unidade exibidos separadamente;
+- cards completos no Radar;
+- Histórico com menor preço, maior desconto, consultas e última consulta;
+- Favoritos;
+- Biblioteca de Afiliados por MLB;
+- cupons salvos e aplicados ao texto;
+- tema claro e escuro;
+- recebimento de links pelo menu Compartilhar do Android.
+
+## Compatibilidade de backend
+
+O aplicativo tenta primeiro as rotas novas da V6:
+
+- `POST /v1/products/resolve`
+- `GET /v1/radar`
+
+Se o servidor responder 404 ou 405, ele muda automaticamente para as rotas da V5.2.1:
+
+- `GET /api/product`
+- `GET /api/radar`
+
+Por isso, a Alpha 3 já vem apontando para o backend atual:
+
+`https://mercado-yvqn.onrender.com`
+
+O endereço continua editável em **Ajustes**.
 
 ## Toolchain Android congelada
 
 - Android Gradle Plugin 8.7.3
 - Gradle 8.9
-- Kotlin e Compose Compiler 2.0.21
-- compileSdk e targetSdk 35
-- Core KTX 1.15.0
-- Activity Compose 1.10.0
-- Compose BOM 2024.12.01
+- Kotlin 2.0.21
+- Android API 35
 - JDK 17
+- Compose BOM 2024.12.01
 
-## Branch e produção
+## Testes
 
-Use somente a branch `v6-rebuild`. Não faça merge na `main` e não substitua o backend V5.
+O backend contém testes para:
 
-O APK Alpha usa o identificador `com.cbofertas.v6.alpha.debug` e pode coexistir com a CbOfertas V5.
+- Galaxy A17: R$ 806,65 / R$ 1.855,71;
+- Kit de toalhas: R$ 142,39 / R$ 185,29;
+- Cadeira Python: R$ 475,96 / R$ 1.248,75;
+- redirecionamentos meli.la;
+- catálogo e MLB vencedor;
+- cashback, parcela e preço por unidade;
+- rotas V6 e rotas de compatibilidade V5.2.1;
+- Radar ordenado pelo desconto real.
 
-## Backend V6
-
-```bash
-cd backend
-npm run validate
-npm test
-npm start
-```
-
-Crie um serviço Render separado apontando para a branch `v6-rebuild` e para a pasta `backend`. Depois informe o endereço HTTPS desse serviço na tela **Ajustes** do aplicativo.
+O Android também testa a montagem do texto e a prioridade do link afiliado.
 
 ## GitHub Actions
 
-O workflow `.github/workflows/build-v6.yml` valida o backend, instala Android API 35, executa os testes Android e gera:
+O workflow `.github/workflows/build-v6.yml` gera:
 
-- `CbOfertas-V6.0.0-alpha.2.apk`
-- checksum SHA-256
-- ZIP das fontes
+- `CbOfertas-V6.0.0-alpha.3.apk`
+- checksum SHA-256;
+- ZIP das fontes.
 
-Esta versão ainda é Alpha e não deve substituir a V5 em produção.
+Use somente a branch `v6-rebuild` durante os testes.

@@ -50,3 +50,21 @@ test('URL inválida retorna erro de validação, não erro interno', async () =>
     assert.equal(payload.error.code, 'VALIDATION_ERROR');
   });
 });
+
+test('rota de compatibilidade /api/product existe e valida URL', async () => {
+  await withApp(async (base) => {
+    const response = await fetch(`${base}/api/product`);
+    const payload = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(payload.error.code, 'VALIDATION_ERROR');
+  });
+});
+
+test('rota de compatibilidade /api/radar existe e valida termo', async () => {
+  await withApp(async (base) => {
+    const response = await fetch(`${base}/api/radar`);
+    const payload = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(payload.error.code, 'VALIDATION_ERROR');
+  });
+});

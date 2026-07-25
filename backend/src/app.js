@@ -38,6 +38,62 @@ async function readJson(request) {
   }
 }
 
+function legacyProduct(product) {
+  const current = product.price?.current?.amount || null;
+  const original = product.price?.original?.amount || null;
+  const installment = product.price?.installment;
+  const installmentMatch = String(installment?.label || '').match(/(\d{1,2})x/i);
+  return {
+    id: product.itemId,
+    platform: product.platform,
+    catalogProductId: product.catalogProductId,
+    title: product.title,
+    price: current,
+    currentPrice: current,
+    pixPrice: current,
+    oldPrice: original,
+    originalPrice: original,
+    discount: product.price?.discountPercent || 0,
+    seller: product.seller?.nickname || '',
+    store: product.seller?.nickname || '',
+    installments: installmentMatch ? Number(installmentMatch[1]) : 0,
+    installmentAmount: installment?.amount || null,
+    image: product.thumbnail || product.images?.[0] || '',
+    permalink: product.permalink,
+    originalPermalink: product.permalink,
+    full: product.shipping?.logisticType === 'fulfillment',
+    freeShipping: Boolean(product.shipping?.free),
+    freight: product.shipping?.free ? 'Frete grátis' : '',
+    source: {
+      platform: product.platform,
+      itemId: product.itemId,
+      catalogProductId: product.catalogProductId,
+      priceSource: product.price?.current?.source || '',
+      priceConfidence: product.price?.confidence || 0,
+      resolvedUrl: product.resolvedUrl,
+    },
+  };
+}
+
+function legacyRadarItem(product) {
+  return {
+    id: product.itemId,
+    itemId: product.itemId,
+    catalogProductId: product.catalogProductId,
+    title: product.title,
+    price: product.price?.current?.amount || null,
+    oldPrice: product.price?.original?.amount || null,
+    discount: product.price?.discountPercent || 0,
+    link: product.permalink,
+    image: product.thumbnail || product.images?.[0] || '',
+    seller: product.seller?.nickname || '',
+    full: product.shipping?.logisticType === 'fulfillment',
+    freeShipping: Boolean(product.shipping?.free),
+    priceConfidence: product.price?.confidence || 0,
+    score: Math.round((product.price?.discountPercent || 0) * 2 + (product.shipping?.free ? 8 : 0)),
+  };
+}
+
 export function createApp() {
   return async function app(request, response) {
     const origin = request.headers.origin || '';
@@ -49,13 +105,14 @@ export function createApp() {
 
     const requestUrl = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
     try {
-      if (request.method === 'GET' && requestUrl.pathname === '/health') {
+      if (request.method === 'GET' && (requestUrl.pathname === '/' || requestUrl.pathname === '/health')) {
         sendJson(response, 200, {
           ok: true,
           service: 'cbofertas-v6-api',
           version: config.version,
           timestamp: new Date().toISOString(),
           mercadoLivreTokenConfigured: Boolean(config.mercadoLivreToken),
+          compatibility: ['v6', 'v5.2.1'],
         }, origin);
         return;
       }
@@ -67,12 +124,40 @@ export function createApp() {
         return;
       }
 
+      if (request.method === 'GET' && requestUrl.pathname === '/v1/products/resolve') {
+        const product = await resolveProduct(requestUrl.searchParams.get('url'));
+        sendJson(response, 200, { ok: true, product }, origin);
+        return;
+      }
+
       if (request.method === 'GET' && requestUrl.pathname === '/v1/radar') {
         const query = requestUrl.searchParams.get('query')?.trim();
         if (!query) throw new ValidationError('Informe o termo do Radar.');
         const limit = Number.parseInt(requestUrl.searchParams.get('limit') || '8', 10);
         const products = await runRadar(query, Math.min(12, Math.max(1, limit)));
         sendJson(response, 200, { ok: true, query, products }, origin);
+        return;
+      }
+
+      // Compatibilidade direta com o backend V5.2.1 e com APKs que usam as rotas antigas.
+      if (request.method === 'GET' && requestUrl.pathname === '/api/product') {
+        const product = await resolveProduct(requestUrl.searchParams.get('url'));
+        sendJson(response, 200, legacyProduct(product), origin);
+        return;
+      }
+
+      if (request.method === 'GET' && requestUrl.pathname === '/api/radar') {
+        const query = requestUrl.searchParams.get('query')?.trim();
+        if (!query) throw new ValidationError('Informe o termo do Radar.');
+        const limit = Number.parseInt(requestUrl.searchParams.get('limit') || '8', 10);
+        const products = await runRadar(query, Math.min(12, Math.max(1, limit)));
+        sendJson(response, 200, {
+          items: products.map(legacyRadarItem),
+          total: products.length,
+          source: 'CbOfertas V6',
+          updatedAt: Date.now(),
+          cached: false,
+        }, origin);
         return;
       }
 

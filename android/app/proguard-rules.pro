@@ -1,1 +1,1 @@
-# Alpha 2: minificação desativada para facilitar diagnóstico.
+# Alpha 3: minificação desativada para facilitar diagnóstico.

@@ -1,12 +1,28 @@
-CBOFERTAS V6.0.0 ALPHA 1
+CBOFERTAS V6.0.0 ALPHA 3
+=========================
 
-Esta é uma reconstrução nova e separada.
-Não copie por cima da V5 ainda.
+Esta versão mantém o Android nativo da Alpha 2 e devolve os recursos visuais e de compartilhamento da CbOfertas.
 
-Recomendado:
-1. Criar a branch v6-rebuild.
-2. Colocar o conteúdo deste ZIP nessa branch.
-3. Criar outro serviço no Render usando a pasta backend.
-4. Informar a URL desse novo serviço em Ajustes no aplicativo.
-5. Testar os quatro produtos reais descritos em docs/PLANO-DE-TESTES-REAIS.md.
-6. Somente depois promover para main/produção.
+PRINCIPAIS NOVIDADES
+- Frase engraçada automática.
+- Texto completo pronto para WhatsApp.
+- Cards ricos no produto e no Radar.
+- Cupons salvos.
+- Biblioteca de Afiliados aplicada ao texto.
+- Compatibilidade automática com backend V5.2.1 e V6.
+- Endereço padrão: https://mercado-yvqn.onrender.com
+
+COMO ENVIAR PARA O GITHUB
+1. Copie o conteúdo desta pasta para a pasta clonada da branch v6-rebuild.
+2. Não apague a pasta oculta .git.
+3. Abra Git Bash Here na pasta do repositório.
+4. Execute:
+
+   git add -A
+   git commit -m "Cria CbOfertas V6 Alpha 3 completa"
+   git push origin v6-rebuild
+
+5. Abra GitHub > Ações > Validar e Gerar CbOfertas V6 Alpha 3.
+6. Baixe o artefato CbOfertas-V6.0.0-alpha.3.
+
+A V5 da branch main não será alterada.
