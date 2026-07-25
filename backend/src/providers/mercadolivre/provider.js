@@ -2,7 +2,7 @@ import { ProductNotFoundError } from '../../core/errors.js';
 import { priceCandidate, selectPriceModel } from '../../core/priceModel.js';
 import { getCatalogProduct, getItem, getPrices, getSalePrice, getUser } from './apiClient.js';
 import { extractLabeledVisiblePrices, extractStructuredProduct } from './htmlExtractor.js';
-import { resolveMercadoLivreLink } from './linkResolver.js';
+import { extractMercadoLivreId, resolveMercadoLivreLink } from './linkResolver.js';
 
 function itemPictures(item) {
   const pictures = Array.isArray(item?.pictures) ? item.pictures : [];
@@ -106,15 +106,34 @@ function candidatesFromApis({ itemId, item, salePrice, prices, catalog }) {
   return candidates;
 }
 
+function settledValue(result) {
+  return result?.status === 'fulfilled' ? result.value : null;
+}
+
+function settledError(result) {
+  if (result?.status !== 'rejected') return null;
+  const error = result.reason;
+  return {
+    message: error?.message || 'Falha desconhecida',
+    status: Number.isFinite(error?.status) ? error.status : null,
+    code: error?.payload?.code || error?.code || null,
+  };
+}
+
 export async function resolveMercadoLivreProduct(url, { includeSeller = true } = {}) {
   const resolved = await resolveMercadoLivreLink(url);
   let catalog = null;
   let itemId = resolved.type === 'item' ? resolved.id : null;
-  let catalogProductId = resolved.type === 'catalog' ? resolved.id : null;
+  const catalogProductId = resolved.type === 'catalog' ? resolved.id : null;
 
   if (catalogProductId) {
     catalog = await getCatalogProduct(catalogProductId);
     itemId = catalog?.buy_box_winner?.item_id || null;
+
+    if (!itemId) {
+      const embedded = extractMercadoLivreId(resolved.html);
+      if (embedded?.type === 'item') itemId = embedded.id;
+    }
   }
 
   if (!itemId) {
@@ -123,16 +142,15 @@ export async function resolveMercadoLivreProduct(url, { includeSeller = true } =
     });
   }
 
-  const [item, salePrice, prices] = await Promise.all([
+  const [itemResult, salePriceResult, pricesResult] = await Promise.allSettled([
     getItem(itemId),
     getSalePrice(itemId),
     getPrices(itemId),
   ]);
 
-  if (!item?.id) {
-    throw new ProductNotFoundError('O MLB foi identificado, mas os dados do anúncio não foram confirmados.', { itemId });
-  }
-
+  const item = settledValue(itemResult) || {};
+  const salePrice = settledValue(salePriceResult);
+  const prices = settledValue(pricesResult);
   const structured = extractStructuredProduct(resolved.html, itemId);
   const candidates = [
     ...candidatesFromApis({ itemId, item, salePrice, prices, catalog }),
@@ -140,9 +158,20 @@ export async function resolveMercadoLivreProduct(url, { includeSeller = true } =
     ...extractLabeledVisiblePrices(resolved.html, itemId),
   ];
   const price = selectPriceModel(candidates, { expectedItemId: itemId });
-  const seller = includeSeller
-    ? await getUser(item.seller_id || catalog?.buy_box_winner?.seller_id || null)
-    : null;
+
+  if (!item.id && !structured.title && !structured.image && !price.confirmed) {
+    throw new ProductNotFoundError('O MLB foi identificado, mas os dados públicos do anúncio não puderam ser confirmados.', {
+      itemId,
+      apiErrors: {
+        item: settledError(itemResult),
+        salePrice: settledError(salePriceResult),
+        prices: settledError(pricesResult),
+      },
+    });
+  }
+
+  const sellerId = item.seller_id || catalog?.buy_box_winner?.seller_id || null;
+  const seller = includeSeller && sellerId ? await getUser(sellerId) : null;
   const images = [...new Set([...itemPictures(item), structured.image].filter(Boolean))];
 
   return {
@@ -151,7 +180,7 @@ export async function resolveMercadoLivreProduct(url, { includeSeller = true } =
     catalogProductId: catalogProductId || item.catalog_product_id || null,
     title: item.title || catalog?.name || structured.title || 'Produto do Mercado Livre',
     seller: {
-      id: item.seller_id || catalog?.buy_box_winner?.seller_id || null,
+      id: sellerId,
       nickname: seller?.nickname || null,
     },
     availability: {
@@ -164,7 +193,7 @@ export async function resolveMercadoLivreProduct(url, { includeSeller = true } =
     },
     images,
     thumbnail: images[0] || item.thumbnail || null,
-    permalink: item.permalink || resolved.canonicalUrl || resolved.finalUrl,
+    permalink: item.permalink || structured.permalink || resolved.canonicalUrl || resolved.finalUrl,
     sourceUrl: resolved.inputUrl,
     resolvedUrl: resolved.finalUrl,
     price,
@@ -174,6 +203,12 @@ export async function resolveMercadoLivreProduct(url, { includeSeller = true } =
       listingTypeId: item.listing_type_id || null,
       redirects: resolved.redirects,
       apiTokenConfigured: Boolean(process.env.MELI_ACCESS_TOKEN),
+      apiFallbackUsed: !item.id,
+      apiErrors: {
+        item: settledError(itemResult),
+        salePrice: settledError(salePriceResult),
+        prices: settledError(pricesResult),
+      },
     },
   };
 }
