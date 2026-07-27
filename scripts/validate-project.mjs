@@ -34,11 +34,11 @@ const buildGradle = await readFile(path.join(root, 'android/app/build.gradle.kts
 if (!buildGradle.includes(`versionName = "${workspacePackage.version}"`)) throw new Error('versionName Android não coincide com o workspace.');
 
 if (!buildGradle.includes('compileSdk = 35') || !buildGradle.includes('targetSdk = 35')) {
-  throw new Error('Alpha 4 deve usar Android API 35 estável.');
+  throw new Error('A V6 deve usar Android API 35 estável.');
 }
 const rootGradle = await readFile(path.join(root, 'android/build.gradle.kts'), 'utf8');
 if (!rootGradle.includes('com.android.application") version "8.7.3') || !rootGradle.includes('org.jetbrains.kotlin.android") version "2.0.21')) {
-  throw new Error('Toolchain Android estável da Alpha 4 foi alterada.');
+  throw new Error('Toolchain Android estável da V6 foi alterada.');
 }
 const workflow = await readFile(path.join(root, '.github/workflows/build-v6.yml'), 'utf8');
 if (!workflow.includes('platforms;android-35') || !workflow.includes("gradle-version: '8.9'")) {
@@ -86,6 +86,15 @@ for (const feature of ['Compra mínima', 'Cupom confirmado', 'Palavras-chave']) 
 const scheduleUi = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/ui/ScheduleScreen.kt'), 'utf8');
 for (const feature of ['Agenda de ofertas', 'Diário', 'Semanal', 'WhatsApp Business']) {
   if (!scheduleUi.includes(feature)) throw new Error(`Agenda incompleta: ${feature}.`);
+}
+
+
+const batchParser = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/BatchParser.kt'), 'utf8');
+for (const feature of ['cleanBatchOfferText', 'whatsappBracketPrefix', 'phoneOnlyPrefix', 'joinToString("\\n")']) {
+  if (!batchParser.includes(feature)) throw new Error(`Lote WhatsApp sem limpeza esperada: ${feature}.`);
+}
+if (batchParser.includes('joinToString("\\\\n")')) {
+  throw new Error('O Lote WhatsApp não pode gravar barras \\n literais no texto.');
 }
 
 const formatting = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/Formatting.kt'), 'utf8');

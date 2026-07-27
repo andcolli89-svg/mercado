@@ -1,0 +1,19 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 5.2
+
+CORREÇÃO PRINCIPAL
+- Sequências literais \n, inclusive duplicadas como \\n, são convertidas em quebras de linha reais.
+- Data, hora, telefone e nome do remetente acrescentados pelo WhatsApp são removidos.
+- A limpeza é executada na importação, ao carregar anúncios antigos e imediatamente antes do compartilhamento.
+- Asteriscos, emojis, cupons, preços e parágrafos do anúncio são preservados.
+
+VERSÕES
+- workspace/backend: 6.0.0-alpha.5.2
+- Android versionName: 6.0.0-alpha.5.2
+- Android versionCode: 600008
+
+VALIDAÇÕES
+- npm run validate
+- testes automatizados do backend
+- compilação isolada de BatchParser.kt e Models.kt com kotlinc
+- teste reproduzindo o anúncio de creatina enviado pelo usuário
+- teste com uma e duas barras antes de n

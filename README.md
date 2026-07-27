@@ -1,59 +1,46 @@
-# CbOfertas V6.0.0 Alpha 4
+# CbOfertas V6.0.0 Alpha 5.2
 
-Aplicativo Android nativo e backend Node.js para confirmar ofertas, montar textos com personalidade, aplicar links afiliados, localizar oportunidades no Radar e preparar publicações no WhatsApp Business.
+Aplicativo Android nativo e backend Node.js para consultar ofertas, organizar anúncios copiados do WhatsApp, aplicar links afiliados e compartilhar pelo WhatsApp Business.
 
-## Recursos da Alpha 4
+## Consulta individual preservada
 
-- confirmação separada de preço atual, original, parcelas, cashback e preço unitário;
-- fallback para HTML público quando a API do Mercado Livre responde 401/403/404;
-- links comuns, páginas de catálogo e links curtos `meli.la`;
-- Radar com busca pública alternativa, concorrência limitada e remoção de duplicados;
-- cupons inteligentes por valor, porcentagem, compra mínima, limite máximo, validade e palavras-chave;
-- distinção visual entre cupom confirmado e cupom apenas sugerido;
-- cálculo de preço estimado depois do cupom;
-- frase engraçada automática, com 352 frases em 22 categorias;
-- texto completo da oferta;
-- Biblioteca de Afiliados por MLB;
-- compartilhamento prioritário no WhatsApp Business;
-- agenda local de publicações únicas, diárias e semanais;
-- notificação que abre a mensagem pronta no WhatsApp Business;
-- reagendamento após reiniciar o celular ou atualizar o aplicativo;
-- histórico de consultas, favoritos e histórico local de compartilhamentos;
-- tema claro e escuro.
+- consulta de links comuns, páginas de catálogo e links curtos `meli.la`;
+- preço atual, original, parcelamento, cashback e preço unitário separados;
+- correção manual do parcelamento com opção sem juros, com juros ou sem informação;
+- cupons, Radar, histórico, favoritos, afiliados e agenda;
+- compartilhamento prioritário no WhatsApp Business.
+
+## Lote WhatsApp
+
+- recebe vários anúncios colados de uma vez;
+- separa cada anúncio pelo link;
+- preserva parágrafos, emojis, asteriscos e formatação do texto recebido;
+- converte corretamente quebras copiadas como `\\n`;
+- remove data, hora, telefone e nome do remetente adicionados pelo WhatsApp;
+- remove cabeçalhos que apareçam antes do primeiro anúncio;
+- limpa automaticamente anúncios que já estavam salvos na Alpha 5;
+- busca título, MLB e foto principal pelo link;
+- reutiliza links afiliados salvos por produto;
+- compartilha foto e texto pelo WhatsApp Business;
+- mantém filas separadas de Pendentes e Enviados.
 
 ## Backend de produção
 
 `https://cbofertas-v6-api.onrender.com`
 
-O endereço pode ser alterado na tela **Ajustes**.
+## Versão
 
-## Rotas
-
-- `GET /health`
-- `POST /v1/products/resolve`
-- `GET /v1/products/resolve?url=...`
-- `GET /v1/radar?query=...&limit=8`
-- `POST /v1/coupons/evaluate`
-- compatibilidade: `GET /api/product` e `GET /api/radar`
+- workspace/backend: `6.0.0-alpha.5.2`
+- Android versionName: `6.0.0-alpha.5.2`
+- Android versionCode: `600008`
+- Android API 35
+- Gradle 8.9
+- Kotlin 2.0.21
+- JDK 17
+- Node.js 24 no GitHub Actions
 
 ## Compilação
 
-A branch de testes é `v6-rebuild`. O workflow `.github/workflows/build-v6.yml` executa testes, compila o APK e publica:
+A branch de testes é `v6-rebuild`. O workflow `.github/workflows/build-v6.yml` valida o backend, executa os testes Android, compila o APK e publica o artefato:
 
-- `CbOfertas-V6.0.0-alpha.4.1.apk`
-- checksum SHA-256 do APK;
-- ZIP completo das fontes;
-- checksum SHA-256 do ZIP.
-
-Toolchain congelada:
-
-- Android Gradle Plugin 8.7.3
-- Gradle 8.9
-- Kotlin 2.0.21
-- Android API 35
-- JDK 17
-- Node.js 24
-
-## Segurança do agendamento
-
-A agenda não envia mensagens escondidas. No horário marcado, o Android exibe uma notificação; ao tocar, o WhatsApp Business abre com o texto pronto para o usuário confirmar o destinatário e o envio.
+`CbOfertas-V6.0.0-alpha.5.2-COMPLETA`

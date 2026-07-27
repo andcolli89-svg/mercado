@@ -3,6 +3,7 @@ package com.cbofertas.v6.data
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import com.cbofertas.v6.domain.cleanBatchOfferText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -14,10 +15,11 @@ object ShareUtils {
         text: String,
         imageUrl: String?,
     ): Boolean = withContext(Dispatchers.IO) {
+        val safeText = cleanBatchOfferText(text)
         val imageFile = imageUrl?.takeIf { it.startsWith("http") }?.let { downloadImage(context, it) }
         withContext(Dispatchers.Main) {
             val intent = Intent(Intent.ACTION_SEND).apply {
-                putExtra(Intent.EXTRA_TEXT, text)
+                putExtra(Intent.EXTRA_TEXT, safeText)
                 if (imageFile != null) {
                     type = "image/*"
                     val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", imageFile)

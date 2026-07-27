@@ -4,6 +4,7 @@ import android.content.Context
 import com.cbofertas.v6.BuildConfig
 import com.cbofertas.v6.domain.AffiliateRecord
 import com.cbofertas.v6.domain.BatchOffer
+import com.cbofertas.v6.domain.cleanBatchOfferText
 import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
@@ -213,7 +214,7 @@ class LocalStore(context: Context) {
     fun batchOffers(): List<BatchOffer> = readArray("batch_offers") { json ->
         BatchOffer(
             id = json.getString("id"),
-            originalText = json.optString("originalText"),
+            originalText = cleanBatchOfferText(json.optString("originalText")),
             originalUrl = json.optString("originalUrl"),
             itemId = json.optString("itemId"),
             title = json.optString("title"),

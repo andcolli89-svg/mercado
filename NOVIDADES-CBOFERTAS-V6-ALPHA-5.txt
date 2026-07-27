@@ -1,7 +1,9 @@
-CBOFERTAS V6 ALPHA 5 — CONSULTA + LOTE WHATSAPP
+CBOFERTAS V6 ALPHA 5.2 — CONSULTA + LOTE WHATSAPP
 
 NOVA ABA: LOTE WHATSAPP
 - Cola vários anúncios copiados do WhatsApp.
+- Remove data, hora, telefone e remetente adicionados pelo WhatsApp.
+- Preserva parágrafos e converte \n literais em quebras reais.
 - Separa automaticamente cada anúncio pelo link encontrado.
 - Busca título, MLB e foto principal pelo backend já configurado.
 - Reutiliza automaticamente o link afiliado salvo para o MLB.
@@ -19,8 +21,8 @@ SISTEMA ANTIGO PRESERVADO
 - Correção manual de parcelamento com/sem juros.
 
 VERSÃO
-- versionName: 6.0.0-alpha.5
-- versionCode: 600006
+- versionName: 6.0.0-alpha.5.2
+- versionCode: 600008
 
 GITHUB
 Extraia o ZIP na raiz do repositório e execute:

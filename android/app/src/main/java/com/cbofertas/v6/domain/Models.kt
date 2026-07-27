@@ -133,8 +133,11 @@ data class BatchOffer(
 ) {
     val finalUrl: String get() = affiliateUrl.ifBlank { originalUrl }
     val finalText: String
-        get() = if (originalUrl.isBlank()) originalText.trim()
-        else originalText.replace(originalUrl, finalUrl).trim()
+        get() {
+            val cleaned = cleanBatchOfferText(originalText)
+            return if (originalUrl.isBlank()) cleaned
+            else cleaned.replace(originalUrl, finalUrl).trim()
+        }
 }
 data class ShareHistoryRecord(
     val id: String,

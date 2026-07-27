@@ -1,0 +1,34 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 5.1
+Data: 27/07/2026
+
+CORREÇÃO PRINCIPAL
+- Corrigido o texto do Lote WhatsApp que mostrava os caracteres literais \n.
+- Quebras de linha e parágrafos agora são preservados.
+- Data, hora, telefone e nome do remetente do WhatsApp são removidos.
+- Cabeçalhos soltos antes do título do primeiro anúncio são removidos.
+- Registros importados pela Alpha 5 também são limpos ao serem carregados.
+- A prévia do card exibe o texto final que será enviado, inclusive com o link afiliado substituído.
+
+VERSÃO
+- workspace: 6.0.0-alpha.5.1
+- backend: 6.0.0-alpha.5.1
+- Android versionName: 6.0.0-alpha.5.1
+- Android versionCode: 600007
+
+VALIDAÇÕES EXECUTADAS
+- Teste reproduzindo o formato da captura enviada: APROVADO.
+- Remoção de [27/7 18:23] +55 55 9221-5536: APROVADA.
+- Conversão de \n literal em quebra real: APROVADA.
+- Preservação de parágrafos, asteriscos, preços, cupons e emojis: APROVADA.
+- Separação de dois anúncios com remetentes diferentes: APROVADA.
+- Compilação isolada de Models.kt + BatchParser.kt com kotlinc: APROVADA.
+- Validação estrutural do projeto: APROVADA.
+- Sintaxe do backend: APROVADA.
+- Testes do backend: 23 aprovados, 0 falhas.
+- AndroidManifest.xml, styles.xml e file_paths.xml: XML VÁLIDO.
+- render.yaml e workflow do GitHub Actions: YAML VÁLIDO.
+- Banco de frases: 352 frases preservadas.
+
+LIMITAÇÃO HONESTA
+- O APK não foi compilado localmente porque este ambiente não possui Android SDK/Gradle completos.
+- O workflow incluído executa os testes Android e a compilação real no GitHub Actions.

@@ -550,7 +550,7 @@ private fun AppHeader(darkTheme: Boolean, onToggleTheme: () -> Unit) {
             ) {
                 Column {
                     Text("🏷️ CbOfertas", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("V6 Alpha 5 • Consulta + Lote WhatsApp", style = MaterialTheme.typography.bodySmall)
+                    Text("V6 Alpha 5.2 • Consulta + Lote WhatsApp", style = MaterialTheme.typography.bodySmall)
                 }
                 TextButton(onClick = onToggleTheme) {
                     Text(if (darkTheme) "☀ Claro" else "☾ Escuro", fontWeight = FontWeight.Bold)

@@ -1,0 +1,20 @@
+CBOFERTAS V6 ALPHA 5.2 — FORMATAÇÃO DO WHATSAPP
+
+Problema corrigido:
+- O texto compartilhado mostrava os caracteres literais \n.
+- Algumas mensagens continham barras duplicadas, como \\n.
+- O cabeçalho do WhatsApp permanecia no anúncio: nome do grupo/loja, data, hora e telefone.
+
+Nova proteção em três pontos:
+1. Limpeza ao importar o lote.
+2. Limpeza ao carregar anúncios já salvos.
+3. Limpeza final imediatamente antes de abrir o WhatsApp Business.
+
+A formatação original do anúncio é preservada:
+- linhas e parágrafos;
+- negrito com asteriscos;
+- emojis;
+- preço, cupom e link afiliado.
+
+Versão Android: 6.0.0-alpha.5.2
+VersionCode: 600008

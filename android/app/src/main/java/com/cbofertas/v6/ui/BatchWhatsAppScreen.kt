@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cbofertas.v6.domain.BatchOffer
 
 @Composable
@@ -116,7 +117,12 @@ private fun BatchOfferCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             BatchRemoteImage(offer.imageUrl)
             Text(offer.title.ifBlank { "Anúncio sem título" }, fontWeight = FontWeight.Bold)
-            Text(offer.originalText.take(700), style = MaterialTheme.typography.bodyMedium)
+            Text("Texto que será enviado", style = MaterialTheme.typography.labelLarge, color = Color(0xFF00A650))
+            Text(
+                offer.finalText.take(1600),
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 21.sp,
+            )
             when {
                 offer.affiliateUrl.isNotBlank() -> Text("✅ Link afiliado aplicado", color = Color(0xFF00A650), fontWeight = FontWeight.Bold)
                 offer.itemId.isNotBlank() -> Text("🟡 Produto identificado; falta seu link afiliado")

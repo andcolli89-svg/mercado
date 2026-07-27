@@ -1,0 +1,16 @@
+CBOFERTAS V6 ALPHA 5.1 — CORREÇÃO DO LOTE WHATSAPP
+
+CORRIGIDO
+- Quebras de linha copiadas como \\n agora viram quebras reais.
+- O texto mantém parágrafos, emojis, asteriscos, preços e cupons.
+- Data, hora, telefone e nome do remetente do WhatsApp são removidos.
+- Textos soltos antes do primeiro cabeçalho do WhatsApp são removidos.
+- Anúncios salvos anteriormente também são limpos ao abrir o aplicativo.
+- A prévia mostra exatamente o texto que será enviado, já com o link afiliado aplicado.
+
+EXEMPLO REMOVIDO AUTOMATICAMENTE
+[27/7 18:23] +55 55 9221-5536:
+
+VERSÃO
+- versionName: 6.0.0-alpha.5.1
+- versionCode: 600007
