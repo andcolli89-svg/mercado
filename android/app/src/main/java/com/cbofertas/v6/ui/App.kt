@@ -71,7 +71,9 @@ import com.cbofertas.v6.data.ApiClient
 import com.cbofertas.v6.data.LocalStore
 import com.cbofertas.v6.data.OfferScheduler
 import com.cbofertas.v6.data.PhraseLibrary
+import com.cbofertas.v6.data.ShareUtils
 import com.cbofertas.v6.domain.AffiliateRecord
+import com.cbofertas.v6.domain.BatchOffer
 import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
@@ -89,6 +91,7 @@ import com.cbofertas.v6.domain.couponByCode
 import com.cbofertas.v6.domain.couponMatches
 import com.cbofertas.v6.domain.installmentText
 import com.cbofertas.v6.domain.offerText
+import com.cbofertas.v6.domain.parseBatchOffers
 import com.cbofertas.v6.domain.reduceSearch
 import com.cbofertas.v6.ui.theme.CbOfertasTheme
 import kotlinx.coroutines.Dispatchers
@@ -103,6 +106,7 @@ private val WhatsAppGreen = Color(0xFF1FA855)
 enum class Page(val title: String, val symbol: String) {
     HOME("Início", "⌂"),
     RADAR("Radar", "⚡"),
+    BATCH("Lote", "📥"),
     HISTORY("Histórico", "◷"),
     FAVORITES("Favoritos", "★"),
     AFFILIATES("Afiliados", "🔗"),
@@ -138,6 +142,8 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
     var radarLoading by remember { mutableStateOf(false) }
     var radarMessage by remember { mutableStateOf<String?>(null) }
     var backendMessage by remember { mutableStateOf<String?>(null) }
+    var batchOffers by remember { mutableStateOf(store.batchOffers()) }
+    var batchLoadingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     fun finishProduct(product: Product, originalInput: String) {
         currentPhrase = phrases.next(product.title)
@@ -341,6 +347,105 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         onOpen = ::openUrl,
                     )
 
+                    Page.BATCH -> BatchWhatsAppScreen(
+                        offers = batchOffers,
+                        loadingIds = batchLoadingIds,
+                        onImport = { pasted ->
+                            val parsed = parseBatchOffers(pasted)
+                            store.saveBatchOffers(parsed)
+                            batchOffers = store.batchOffers()
+                            Toast.makeText(context, "${parsed.size} anúncios separados. Buscando fotos...", Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                for (offer in parsed.filter { it.originalUrl.isNotBlank() }) {
+                                    batchLoadingIds = batchLoadingIds + offer.id
+                                    api.resolveProduct(backendUrl, offer.originalUrl)
+                                        .onSuccess { product ->
+                                            val known = store.affiliateFor(product.itemId)
+                                            store.updateBatchOffer(
+                                                offer.copy(
+                                                    itemId = product.itemId,
+                                                    title = product.title,
+                                                    imageUrl = product.imageUrl,
+                                                    affiliateUrl = known?.affiliateUrl.orEmpty(),
+                                                ),
+                                            )
+                                            batchOffers = store.batchOffers()
+                                        }
+                                    batchLoadingIds = batchLoadingIds - offer.id
+                                }
+                            }
+                        },
+                        onResolve = { offer ->
+                            if (offer.originalUrl.isBlank()) {
+                                Toast.makeText(context, "Este anúncio não possui link.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                batchLoadingIds = batchLoadingIds + offer.id
+                                scope.launch {
+                                    api.resolveProduct(backendUrl, offer.originalUrl)
+                                        .onSuccess { product ->
+                                            val known = store.affiliateFor(product.itemId)
+                                            val updated = offer.copy(
+                                                itemId = product.itemId,
+                                                title = product.title,
+                                                imageUrl = product.imageUrl,
+                                                affiliateUrl = known?.affiliateUrl.orEmpty(),
+                                            )
+                                            store.updateBatchOffer(updated)
+                                            batchOffers = store.batchOffers()
+                                        }
+                                        .onFailure { error ->
+                                            Toast.makeText(context, error.message ?: "Não foi possível buscar o produto.", Toast.LENGTH_LONG).show()
+                                        }
+                                    batchLoadingIds = batchLoadingIds - offer.id
+                                }
+                            }
+                        },
+                        onUseClipboardAffiliate = { offer ->
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty().trim()
+                            if (!clip.startsWith("https://")) {
+                                Toast.makeText(context, "Copie primeiro o seu link afiliado.", Toast.LENGTH_LONG).show()
+                            } else {
+                                val updated = offer.copy(affiliateUrl = clip)
+                                store.updateBatchOffer(updated)
+                                batchOffers = store.batchOffers()
+                                if (offer.itemId.isNotBlank()) {
+                                    val product = Product(
+                                        platform = "mercado_livre", itemId = offer.itemId, catalogProductId = null,
+                                        title = offer.title, sellerId = null, sellerName = null, freeShipping = false,
+                                        logisticType = null, imageUrl = offer.imageUrl, permalink = offer.originalUrl,
+                                        sourceUrl = offer.originalUrl, resolvedUrl = offer.originalUrl,
+                                        price = com.cbofertas.v6.domain.PriceInfo(false, null, null, null, null, null, 0, 0.0, 0.0),
+                                    )
+                                    store.saveAffiliate(product, clip)
+                                    affiliates = store.affiliates()
+                                }
+                                Toast.makeText(context, "Link afiliado aplicado e salvo.", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onOpen = ::openUrl,
+                        onShare = { offer ->
+                            scope.launch {
+                                val opened = ShareUtils.shareToWhatsAppBusiness(context, offer.finalText, offer.imageUrl)
+                                if (opened) {
+                                    store.markBatchSent(offer.id, true)
+                                    batchOffers = store.batchOffers()
+                                    Toast.makeText(context, "Anúncio movido para Enviados.", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "WhatsApp Business não encontrado.", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
+                        onMarkSent = { offer, sent ->
+                            store.markBatchSent(offer.id, sent)
+                            batchOffers = store.batchOffers()
+                        },
+                        onDelete = { offer ->
+                            store.removeBatchOffer(offer.id)
+                            batchOffers = store.batchOffers()
+                        },
+                    )
+
                     Page.HISTORY -> HistoryScreen(history, onOpen = ::openUrl)
                     Page.FAVORITES -> FavoritesScreen(favorites, onOpen = ::openUrl)
                     Page.AFFILIATES -> AffiliatesScreen(
@@ -420,6 +525,7 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             schedules = emptyList()
                             scheduleDraft = null
                             shareHistory = emptyList()
+                            batchOffers = emptyList()
                             searchState = SearchState.Idle
                             backendMessage = "Dados locais apagados."
                         },
@@ -444,7 +550,7 @@ private fun AppHeader(darkTheme: Boolean, onToggleTheme: () -> Unit) {
             ) {
                 Column {
                     Text("🏷️ CbOfertas", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("V6 Alpha 4.1.1 • Parcelamento corrigível", style = MaterialTheme.typography.bodySmall)
+                    Text("V6 Alpha 5 • Consulta + Lote WhatsApp", style = MaterialTheme.typography.bodySmall)
                 }
                 TextButton(onClick = onToggleTheme) {
                     Text(if (darkTheme) "☀ Claro" else "☾ Escuro", fontWeight = FontWeight.Bold)

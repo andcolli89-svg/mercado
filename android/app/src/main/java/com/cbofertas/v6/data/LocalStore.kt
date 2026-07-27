@@ -3,6 +3,7 @@ package com.cbofertas.v6.data
 import android.content.Context
 import com.cbofertas.v6.BuildConfig
 import com.cbofertas.v6.domain.AffiliateRecord
+import com.cbofertas.v6.domain.BatchOffer
 import com.cbofertas.v6.domain.CouponRecord
 import com.cbofertas.v6.domain.FavoriteRecord
 import com.cbofertas.v6.domain.HistoryRecord
@@ -209,6 +210,43 @@ class LocalStore(context: Context) {
         return next.takeIf { it.active }
     }
 
+    fun batchOffers(): List<BatchOffer> = readArray("batch_offers") { json ->
+        BatchOffer(
+            id = json.getString("id"),
+            originalText = json.optString("originalText"),
+            originalUrl = json.optString("originalUrl"),
+            itemId = json.optString("itemId"),
+            title = json.optString("title"),
+            imageUrl = json.nullableString("imageUrl"),
+            affiliateUrl = json.optString("affiliateUrl"),
+            status = json.optString("status", "pending"),
+            createdAt = json.optLong("createdAt", System.currentTimeMillis()),
+            sentAt = json.nullableLong("sentAt"),
+        )
+    }.sortedByDescending { it.createdAt }
+
+    fun saveBatchOffers(records: List<BatchOffer>) {
+        val existing = batchOffers().associateBy { it.id }.toMutableMap()
+        records.forEach { existing[it.id] = it }
+        writeArray("batch_offers", existing.values.sortedByDescending { it.createdAt }.take(1000).map { it.toJson() })
+    }
+
+    fun updateBatchOffer(record: BatchOffer) {
+        saveBatchOffers(listOf(record))
+    }
+
+    fun removeBatchOffer(id: String) {
+        writeArray("batch_offers", batchOffers().filterNot { it.id == id }.map { it.toJson() })
+    }
+
+    fun markBatchSent(id: String, sent: Boolean = true) {
+        val now = System.currentTimeMillis()
+        val updated = batchOffers().map {
+            if (it.id == id) it.copy(status = if (sent) "sent" else "pending", sentAt = if (sent) now else null) else it
+        }
+        writeArray("batch_offers", updated.map { it.toJson() })
+    }
+
     fun shareHistory(): List<ShareHistoryRecord> = readArray("share_history") { json ->
         ShareHistoryRecord(
             id = json.getString("id"),
@@ -298,6 +336,13 @@ private fun ScheduledOffer.toJson() = JSONObject()
     .put("offerText", offerText).put("shareUrl", shareUrl).put("scheduledAt", scheduledAt)
     .put("recurrence", recurrence).put("active", active).put("createdAt", createdAt)
     .putNullable("lastTriggeredAt", lastTriggeredAt)
+
+
+private fun BatchOffer.toJson() = JSONObject()
+    .put("id", id).put("originalText", originalText).put("originalUrl", originalUrl)
+    .put("itemId", itemId).put("title", title).putNullable("imageUrl", imageUrl)
+    .put("affiliateUrl", affiliateUrl).put("status", status).put("createdAt", createdAt)
+    .putNullable("sentAt", sentAt)
 
 private fun ShareHistoryRecord.toJson() = JSONObject()
     .put("id", id).put("itemId", itemId).put("title", title)

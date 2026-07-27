@@ -1,0 +1,33 @@
+CBOFERTAS V6 ALPHA 5 — CONSULTA + LOTE WHATSAPP
+
+NOVA ABA: LOTE WHATSAPP
+- Cola vários anúncios copiados do WhatsApp.
+- Separa automaticamente cada anúncio pelo link encontrado.
+- Busca título, MLB e foto principal pelo backend já configurado.
+- Reutiliza automaticamente o link afiliado salvo para o MLB.
+- Botão Abrir ML para gerar/copiar um novo link afiliado.
+- Botão Usar link copiado salva a associação para usos futuros.
+- Compartilha foto + texto no WhatsApp Business.
+- Depois de abrir o WhatsApp, o anúncio vai para Enviados e some dos Pendentes.
+- A aba Enviados permite devolver o anúncio para Pendentes.
+- Identificação e histórico ficam salvos localmente.
+
+SISTEMA ANTIGO PRESERVADO
+- Consulta individual por link.
+- Radar.
+- Histórico, favoritos, afiliados, cupons e agenda.
+- Correção manual de parcelamento com/sem juros.
+
+VERSÃO
+- versionName: 6.0.0-alpha.5
+- versionCode: 600006
+
+GITHUB
+Extraia o ZIP na raiz do repositório e execute:
+
+git switch v6-rebuild
+git add -A
+git commit -m "Adiciona Lote WhatsApp com fotos links afiliados e fila de enviados"
+git push origin v6-rebuild
+
+O GitHub Actions gera o APK real e o ZIP completo.

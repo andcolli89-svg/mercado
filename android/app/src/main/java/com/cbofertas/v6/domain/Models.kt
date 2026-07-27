@@ -117,6 +117,25 @@ data class ScheduledOffer(
     val lastTriggeredAt: Long? = null,
 )
 
+
+
+data class BatchOffer(
+    val id: String,
+    val originalText: String,
+    val originalUrl: String,
+    val itemId: String = "",
+    val title: String = "",
+    val imageUrl: String? = null,
+    val affiliateUrl: String = "",
+    val status: String = "pending",
+    val createdAt: Long = System.currentTimeMillis(),
+    val sentAt: Long? = null,
+) {
+    val finalUrl: String get() = affiliateUrl.ifBlank { originalUrl }
+    val finalText: String
+        get() = if (originalUrl.isBlank()) originalText.trim()
+        else originalText.replace(originalUrl, finalUrl).trim()
+}
 data class ShareHistoryRecord(
     val id: String,
     val itemId: String,
