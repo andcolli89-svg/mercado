@@ -1,0 +1,20 @@
+CBOFERTAS V6 ALPHA 5.3 — PREPARAÇÃO AUTOMÁTICA DO LOTE
+
+NOVO BOTÃO PRINCIPAL
+- Preparar tudo automaticamente.
+- Identifica os produtos de todos os anúncios pendentes.
+- Aplica os links afiliados já salvos na Biblioteca de Afiliados.
+- Busca as fotos faltantes.
+- Exibe progresso e resumo final.
+
+BOTÕES AUXILIARES
+- Aplicar links afiliados já salvos.
+- Buscar fotos faltantes.
+
+SEGURANÇA
+- O WhatsApp Business fica desabilitado quando falta o link afiliado, evitando compartilhar o link de outra pessoa.
+- Produtos novos ainda precisam ter o link afiliado gerado uma vez no Mercado Livre; depois ele é reutilizado automaticamente.
+
+VERSÃO
+- Android versionName: 6.0.0-alpha.5.3
+- Android versionCode: 600009

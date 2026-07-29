@@ -71,6 +71,7 @@ import com.cbofertas.v6.data.ApiClient
 import com.cbofertas.v6.data.LocalStore
 import com.cbofertas.v6.data.OfferScheduler
 import com.cbofertas.v6.data.PhraseLibrary
+import com.cbofertas.v6.data.PostingReminderScheduler
 import com.cbofertas.v6.data.ShareUtils
 import com.cbofertas.v6.domain.AffiliateRecord
 import com.cbofertas.v6.domain.BatchOffer
@@ -103,6 +104,8 @@ private val MercadoYellow = Color(0xFFFFE600)
 private val MercadoGreen = Color(0xFF00A650)
 private val WhatsAppGreen = Color(0xFF1FA855)
 
+private enum class BatchPreparationMode { ALL, LINKS, PHOTOS }
+
 enum class Page(val title: String, val symbol: String) {
     HOME("Início", "⌂"),
     RADAR("Radar", "⚡"),
@@ -115,7 +118,12 @@ enum class Page(val title: String, val symbol: String) {
 }
 
 @Composable
-fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
+fun CbOfertasApp(
+    sharedUrl: String,
+    onSharedUrlConsumed: () -> Unit,
+    requestedPage: String = "",
+    onRequestedPageConsumed: () -> Unit = {},
+) {
     val context = LocalContext.current
     val store = remember { LocalStore(context) }
     val api = remember { ApiClient() }
@@ -125,6 +133,8 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
     var page by remember { mutableStateOf(Page.HOME) }
     var darkTheme by remember { mutableStateOf(store.darkTheme) }
     var backendUrl by remember { mutableStateOf(store.backendUrl) }
+    var postingReminderEnabled by remember { mutableStateOf(store.postingReminderEnabled) }
+    var postingReminderNextAt by remember { mutableStateOf(store.postingReminderNextAt) }
     var urlInput by remember { mutableStateOf("") }
     var searchState by remember { mutableStateOf<SearchState>(SearchState.Idle) }
     var currentPhrase by remember { mutableStateOf("") }
@@ -144,6 +154,8 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
     var backendMessage by remember { mutableStateOf<String?>(null) }
     var batchOffers by remember { mutableStateOf(store.batchOffers()) }
     var batchLoadingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var batchAutomationRunning by remember { mutableStateOf(false) }
+    var batchAutomationMessage by remember { mutableStateOf<String?>(null) }
 
     fun finishProduct(product: Product, originalInput: String) {
         currentPhrase = phrases.next(product.title)
@@ -217,6 +229,8 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                 store.recordShare(itemId, title, "whatsapp_business")
                 shareHistory = store.shareHistory()
             }
+            PostingReminderScheduler.resetAfterPosting(context)
+            postingReminderNextAt = store.postingReminderNextAt
         } else {
             Toast.makeText(context, "WhatsApp Business não encontrado. Abrindo outros aplicativos.", Toast.LENGTH_LONG).show()
             runCatching { context.startActivity(Intent.createChooser(baseIntent, "Compartilhar oferta")) }
@@ -228,12 +242,104 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
             .onFailure { Toast.makeText(context, "Não foi possível abrir o link.", Toast.LENGTH_SHORT).show() }
     }
 
+    fun prepareBatch(mode: BatchPreparationMode) {
+        val targets = store.batchOffers().filter { it.status == "pending" && it.originalUrl.isNotBlank() }
+        if (targets.isEmpty()) {
+            batchAutomationMessage = "Nenhum anúncio pendente com link para preparar."
+            return
+        }
+        if (backendUrl.isBlank() && mode != BatchPreparationMode.LINKS) {
+            batchAutomationMessage = "Configure o backend em Ajustes para buscar produtos e fotos."
+            return
+        }
+        if (batchAutomationRunning) return
+
+        batchAutomationRunning = true
+        batchAutomationMessage = "Iniciando preparação de ${targets.size} anúncios..."
+        scope.launch {
+            var processed = 0
+            var newlyAppliedLinks = 0
+            var newlyFoundPhotos = 0
+            var failures = 0
+
+            for (snapshot in targets) {
+                var current = store.batchOffers().firstOrNull { it.id == snapshot.id } ?: continue
+                batchLoadingIds = batchLoadingIds + current.id
+
+                val shouldResolve = when (mode) {
+                    BatchPreparationMode.ALL -> current.itemId.isBlank() || current.imageUrl.isNullOrBlank()
+                    BatchPreparationMode.LINKS -> current.itemId.isBlank()
+                    BatchPreparationMode.PHOTOS -> current.itemId.isBlank() || current.imageUrl.isNullOrBlank()
+                }
+
+                if (shouldResolve && backendUrl.isNotBlank()) {
+                    val beforeImage = current.imageUrl
+                    api.resolveProduct(backendUrl, current.originalUrl)
+                        .onSuccess { product ->
+                            current = current.copy(
+                                itemId = product.itemId,
+                                title = product.title.ifBlank { current.title },
+                                imageUrl = when (mode) {
+                                    BatchPreparationMode.LINKS -> current.imageUrl
+                                    else -> product.imageUrl ?: current.imageUrl
+                                },
+                            )
+                            if (beforeImage.isNullOrBlank() && !current.imageUrl.isNullOrBlank()) newlyFoundPhotos++
+                        }
+                        .onFailure { failures++ }
+                }
+
+                if (mode != BatchPreparationMode.PHOTOS || current.affiliateUrl.isBlank()) {
+                    val known = current.itemId.takeIf(String::isNotBlank)?.let(store::affiliateFor)
+                    if (current.affiliateUrl.isBlank() && known != null) {
+                        current = current.copy(affiliateUrl = known.affiliateUrl)
+                        store.markAffiliateUsed(current.itemId)
+                        newlyAppliedLinks++
+                    }
+                }
+
+                store.updateBatchOffer(current)
+                processed++
+                batchOffers = store.batchOffers()
+                batchLoadingIds = batchLoadingIds - current.id
+                batchAutomationMessage = "Preparando $processed de ${targets.size} • $newlyAppliedLinks links • $newlyFoundPhotos fotos"
+            }
+
+            val pendingNow = store.batchOffers().filter { it.status == "pending" }
+            val readyNow = pendingNow.count { it.affiliateUrl.isNotBlank() && !it.imageUrl.isNullOrBlank() }
+            val missingLinks = pendingNow.count { it.affiliateUrl.isBlank() }
+            val missingPhotos = pendingNow.count { it.imageUrl.isNullOrBlank() }
+            batchOffers = store.batchOffers()
+            batchLoadingIds = emptySet()
+            batchAutomationRunning = false
+            batchAutomationMessage = buildString {
+                append("Concluído: $readyNow prontos")
+                append(" • $missingLinks sem link")
+                append(" • $missingPhotos sem foto")
+                if (failures > 0) append(" • $failures falhas de consulta")
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        PostingReminderScheduler.sync(context)
+        postingReminderNextAt = store.postingReminderNextAt
+    }
+
     LaunchedEffect(sharedUrl) {
         if (sharedUrl.isNotBlank()) {
             page = Page.HOME
             urlInput = sharedUrl
             onSharedUrlConsumed()
             search(sharedUrl)
+        }
+    }
+
+    LaunchedEffect(requestedPage) {
+        if (requestedPage.equals("batch", ignoreCase = true)) {
+            page = Page.BATCH
+            batchOffers = store.batchOffers()
+            onRequestedPageConsumed()
         }
     }
 
@@ -258,6 +364,10 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                                 if (item == Page.AGENDA) {
                                     schedules = store.schedules()
                                     shareHistory = store.shareHistory()
+                                }
+                                if (item == Page.SETTINGS) {
+                                    postingReminderEnabled = store.postingReminderEnabled
+                                    postingReminderNextAt = store.postingReminderNextAt
                                 }
                             },
                             icon = { Text(item.symbol, fontSize = 20.sp) },
@@ -350,31 +460,22 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                     Page.BATCH -> BatchWhatsAppScreen(
                         offers = batchOffers,
                         loadingIds = batchLoadingIds,
+                        automationRunning = batchAutomationRunning,
+                        automationMessage = batchAutomationMessage,
                         onImport = { pasted ->
                             val parsed = parseBatchOffers(pasted)
                             store.saveBatchOffers(parsed)
                             batchOffers = store.batchOffers()
-                            Toast.makeText(context, "${parsed.size} anúncios separados. Buscando fotos...", Toast.LENGTH_SHORT).show()
-                            scope.launch {
-                                for (offer in parsed.filter { it.originalUrl.isNotBlank() }) {
-                                    batchLoadingIds = batchLoadingIds + offer.id
-                                    api.resolveProduct(backendUrl, offer.originalUrl)
-                                        .onSuccess { product ->
-                                            val known = store.affiliateFor(product.itemId)
-                                            store.updateBatchOffer(
-                                                offer.copy(
-                                                    itemId = product.itemId,
-                                                    title = product.title,
-                                                    imageUrl = product.imageUrl,
-                                                    affiliateUrl = known?.affiliateUrl.orEmpty(),
-                                                ),
-                                            )
-                                            batchOffers = store.batchOffers()
-                                        }
-                                    batchLoadingIds = batchLoadingIds - offer.id
-                                }
+                            batchAutomationMessage = if (parsed.isEmpty()) {
+                                "Nenhum anúncio com link foi identificado."
+                            } else {
+                                "${parsed.size} anúncios separados. Toque em Preparar tudo automaticamente."
                             }
+                            Toast.makeText(context, "${parsed.size} anúncios separados.", Toast.LENGTH_SHORT).show()
                         },
+                        onPrepareAll = { prepareBatch(BatchPreparationMode.ALL) },
+                        onApplyKnownAffiliates = { prepareBatch(BatchPreparationMode.LINKS) },
+                        onFetchMissingPhotos = { prepareBatch(BatchPreparationMode.PHOTOS) },
                         onResolve = { offer ->
                             if (offer.originalUrl.isBlank()) {
                                 Toast.makeText(context, "Este anúncio não possui link.", Toast.LENGTH_SHORT).show()
@@ -388,7 +489,7 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                                                 itemId = product.itemId,
                                                 title = product.title,
                                                 imageUrl = product.imageUrl,
-                                                affiliateUrl = known?.affiliateUrl.orEmpty(),
+                                                affiliateUrl = offer.affiliateUrl.ifBlank { known?.affiliateUrl.orEmpty() },
                                             )
                                             store.updateBatchOffer(updated)
                                             batchOffers = store.batchOffers()
@@ -430,7 +531,9 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                                 if (opened) {
                                     store.markBatchSent(offer.id, true)
                                     batchOffers = store.batchOffers()
-                                    Toast.makeText(context, "Anúncio movido para Enviados.", Toast.LENGTH_SHORT).show()
+                                    PostingReminderScheduler.resetAfterPosting(context)
+                                    postingReminderNextAt = store.postingReminderNextAt
+                                    Toast.makeText(context, "Anúncio movido para Enviados. Próximo lembrete reiniciado.", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "WhatsApp Business não encontrado.", Toast.LENGTH_LONG).show()
                                 }
@@ -439,6 +542,10 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                         onMarkSent = { offer, sent ->
                             store.markBatchSent(offer.id, sent)
                             batchOffers = store.batchOffers()
+                            if (sent) {
+                                PostingReminderScheduler.resetAfterPosting(context)
+                                postingReminderNextAt = store.postingReminderNextAt
+                            }
                         },
                         onDelete = { offer ->
                             store.removeBatchOffer(offer.id)
@@ -503,6 +610,22 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             darkTheme = it
                             store.darkTheme = it
                         },
+                        postingReminderEnabled = postingReminderEnabled,
+                        postingReminderNextAt = postingReminderNextAt,
+                        onPostingReminderEnabled = { enabled ->
+                            postingReminderEnabled = enabled
+                            store.postingReminderEnabled = enabled
+                            store.postingReminderIntervalMinutes = 30
+                            store.postingReminderStartHour = 8
+                            store.postingReminderEndHour = 21
+                            if (enabled) PostingReminderScheduler.sync(context) else PostingReminderScheduler.cancel(context)
+                            postingReminderNextAt = store.postingReminderNextAt
+                            backendMessage = if (enabled) {
+                                "Lembretes ativados: a cada 30 minutos, das 8h às 21h."
+                            } else {
+                                "Lembretes de postagem desativados."
+                            }
+                        },
                         coupons = coupons,
                         onAddCoupon = { coupon ->
                             store.saveCoupon(coupon)
@@ -516,7 +639,10 @@ fun CbOfertasApp(sharedUrl: String, onSharedUrlConsumed: () -> Unit) {
                             if (selectedCoupon.equals(code, ignoreCase = true)) selectedCoupon = ""
                         },
                         onClear = {
+                            PostingReminderScheduler.cancel(context)
                             store.clearLocalData()
+                            postingReminderEnabled = false
+                            postingReminderNextAt = 0L
                             history = emptyList()
                             favorites = emptyList()
                             affiliates = emptyList()
@@ -1212,6 +1338,9 @@ private fun SettingsScreen(
     message: String?,
     darkTheme: Boolean,
     onDarkTheme: (Boolean) -> Unit,
+    postingReminderEnabled: Boolean,
+    postingReminderNextAt: Long,
+    onPostingReminderEnabled: (Boolean) -> Unit,
     coupons: List<CouponRecord>,
     onAddCoupon: (CouponRecord) -> Unit,
     onRemoveCoupon: (String) -> Unit,
@@ -1252,6 +1381,29 @@ private fun SettingsScreen(
                     onSave = onAddCoupon,
                     onRemove = onRemoveCoupon,
                 )
+            }
+        }
+
+        item {
+            SectionCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("🔔 Lembrete de postagem", fontWeight = FontWeight.ExtraBold)
+                        Text("A cada 30 minutos, das 8h às 21h", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = postingReminderEnabled, onCheckedChange = onPostingReminderEnabled)
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Som e vibração ficam ativos pelo canal de notificações do Android.")
+                Text("Às 21h os avisos pausam automaticamente e voltam às 8h do dia seguinte.", style = MaterialTheme.typography.bodySmall)
+                if (postingReminderEnabled && postingReminderNextAt > 0L) {
+                    Spacer(Modifier.height(8.dp))
+                    InfoCard("Próximo aviso: ${postingReminderNextAt.asDateTime()}")
+                }
             }
         }
 

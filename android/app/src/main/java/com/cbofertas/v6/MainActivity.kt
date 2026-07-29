@@ -16,15 +16,19 @@ import com.cbofertas.v6.ui.CbOfertasApp
 
 class MainActivity : ComponentActivity() {
     private var sharedUrl by mutableStateOf("")
+    private var requestedPage by mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         sharedUrl = extractUrl(intent)
+        requestedPage = extractRequestedPage(intent)
         requestNotificationPermission()
         setContent {
             CbOfertasApp(
                 sharedUrl = sharedUrl,
                 onSharedUrlConsumed = { sharedUrl = "" },
+                requestedPage = requestedPage,
+                onRequestedPageConsumed = { requestedPage = "" },
             )
         }
     }
@@ -33,6 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         sharedUrl = extractUrl(intent)
+        requestedPage = extractRequestedPage(intent)
     }
 
     private fun requestNotificationPermission() {
@@ -40,6 +45,9 @@ class MainActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
         ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 604)
     }
+
+    private fun extractRequestedPage(intent: Intent?): String =
+        intent?.getStringExtra("open_page").orEmpty()
 
     private fun extractUrl(intent: Intent?): String {
         if (intent?.action != Intent.ACTION_SEND || intent.type != "text/plain") return ""

@@ -17,6 +17,9 @@ const required = [
   'android/app/src/main/java/com/cbofertas/v6/ui/SmartCouponComponents.kt',
   'android/app/src/main/java/com/cbofertas/v6/data/OfferScheduler.kt',
   'android/app/src/main/java/com/cbofertas/v6/data/OfferAlarmReceiver.kt',
+  'android/app/src/main/java/com/cbofertas/v6/data/PostingReminderScheduler.kt',
+  'android/app/src/main/java/com/cbofertas/v6/data/PostingReminderReceiver.kt',
+  'android/app/src/main/java/com/cbofertas/v6/domain/PostingReminderPolicy.kt',
   'android/app/src/main/java/com/cbofertas/v6/ShareOfferActivity.kt',
   'backend/src/services/couponService.js',
   'android/app/src/main/assets/funny_phrases.json',
@@ -76,7 +79,7 @@ for (const feature of ['Compartilhar no WhatsApp Business', 'Agendar publicaçã
 }
 
 const manifest = await readFile(path.join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
-for (const feature of ['POST_NOTIFICATIONS', 'RECEIVE_BOOT_COMPLETED', 'OfferAlarmReceiver', 'ShareOfferActivity', 'com.whatsapp.w4b']) {
+for (const feature of ['POST_NOTIFICATIONS', 'RECEIVE_BOOT_COMPLETED', 'OfferAlarmReceiver', 'PostingReminderReceiver', 'ShareOfferActivity', 'com.whatsapp.w4b']) {
   if (!manifest.includes(feature)) throw new Error(`Integração Android ausente: ${feature}.`);
 }
 const couponUi = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/ui/SmartCouponComponents.kt'), 'utf8');
@@ -95,6 +98,26 @@ for (const feature of ['cleanBatchOfferText', 'whatsappBracketPrefix', 'phoneOnl
 }
 if (batchParser.includes('joinToString("\\\\n")')) {
   throw new Error('O Lote WhatsApp não pode gravar barras \\n literais no texto.');
+}
+
+const batchUi = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/ui/BatchWhatsAppScreen.kt'), 'utf8');
+for (const feature of ['Preparar tudo automaticamente', 'Aplicar links afiliados já salvos', 'Buscar fotos faltantes', 'Falta link afiliado']) {
+  if (!batchUi.includes(feature)) throw new Error(`Automação do lote incompleta: ${feature}.`);
+}
+for (const feature of ['BatchPreparationMode.ALL', 'BatchPreparationMode.LINKS', 'BatchPreparationMode.PHOTOS', 'prepareBatch']) {
+  if (!appUi.includes(feature)) throw new Error(`Processamento automático do lote ausente: ${feature}.`);
+}
+
+for (const feature of ['Lembrete de postagem', 'a cada 30 minutos', 'das 8h às 21h', 'PostingReminderScheduler.resetAfterPosting']) {
+  if (!appUi.includes(feature)) throw new Error(`Lembrete de postagem incompleto: ${feature}.`);
+}
+const reminderPolicy = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/PostingReminderPolicy.kt'), 'utf8');
+for (const feature of ['DEFAULT_INTERVAL_MINUTES = 30', 'DEFAULT_START_HOUR = 8', 'DEFAULT_END_HOUR = 21', 'nextTriggerAt']) {
+  if (!reminderPolicy.includes(feature)) throw new Error(`Regra do lembrete ausente: ${feature}.`);
+}
+const reminderReceiver = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/data/PostingReminderReceiver.kt'), 'utf8');
+for (const feature of ['Hora de publicar outra oferta', 'DEFAULT_SOUND', 'DEFAULT_VIBRATE', 'open_page']) {
+  if (!reminderReceiver.includes(feature)) throw new Error(`Notificação do lembrete incompleta: ${feature}.`);
 }
 
 const formatting = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/Formatting.kt'), 'utf8');

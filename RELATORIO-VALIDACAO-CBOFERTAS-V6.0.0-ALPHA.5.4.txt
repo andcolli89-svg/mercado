@@ -1,0 +1,34 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 5.4
+===================================================
+
+VERSÕES
+- Workspace/backend: 6.0.0-alpha.5.4
+- Android versionName: 6.0.0-alpha.5.4
+- Android versionCode: 600010
+- Android API: 35
+- Gradle: 8.9
+- Kotlin: 2.0.21
+- JDK: 17
+
+LEMBRETE IMPLEMENTADO
+- Intervalo padrão de 30 minutos.
+- Horário ativo das 8h às 21h.
+- Pausa noturna automática.
+- Próximo disparo às 8h quando o horário já encerrou.
+- Som e vibração.
+- Abertura direta da aba Lote.
+- Contagem reiniciada depois de compartilhar ou marcar como enviado.
+- Restauração após BOOT_COMPLETED e MY_PACKAGE_REPLACED.
+- Sem aviso quando a fila de pendentes estiver vazia.
+
+VALIDAÇÕES LOCAIS
+- npm run validate: executado.
+- npm test do backend: executado.
+- Regra de horários compilada isoladamente com kotlinc.
+- Casos 07:20 -> 08:00, 10:15 -> 10:45, 20:30 -> 21:00 e 21:01 -> 08:00 do dia seguinte verificados.
+- AndroidManifest.xml parseado.
+- YAML do GitHub Actions parseado.
+- Integridade do ZIP verificada.
+
+LIMITAÇÃO DO AMBIENTE
+O APK não é compilado localmente porque o ambiente não contém Android SDK e dependências Maven completas. O GitHub Actions incluído executa os testes Android e gera o APK real. Nenhum APK falso foi criado.

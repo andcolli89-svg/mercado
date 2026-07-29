@@ -1,0 +1,21 @@
+CBOFERTAS V6.0.0 ALPHA 5.4
+==========================
+
+NOVO LEMBRETE DE POSTAGEM
+- Alerta aproximadamente a cada 30 minutos.
+- Janela diária fixa das 8h às 21h.
+- Pausa automática depois das 21h.
+- Retorno automático às 8h do dia seguinte.
+- Som e vibração pelo canal de notificações do Android.
+- A notificação abre diretamente a aba Lote.
+- Mostra a quantidade de anúncios pendentes.
+- Não toca quando não houver anúncio pendente.
+- Reinicia a contagem quando uma oferta é aberta no WhatsApp Business ou marcada como enviada.
+- Restaura o agendamento depois de reiniciar ou atualizar o celular.
+
+RECURSOS PRESERVADOS
+- Consulta individual por link.
+- Radar.
+- Lote WhatsApp com busca automática de fotos.
+- Biblioteca de links afiliados já usados.
+- Histórico, favoritos, cupons, agenda e temas.

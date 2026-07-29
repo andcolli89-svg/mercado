@@ -1,0 +1,33 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 5.3
+====================================================
+
+ESCOPO IMPLEMENTADO
+- Botão “Preparar tudo automaticamente” na aba Lote WhatsApp.
+- Identificação sequencial dos produtos para evitar sobrecarga no backend.
+- Aplicação automática dos links afiliados já salvos por MLB.
+- Busca automática das fotos faltantes.
+- Botões separados para reaplicar links conhecidos e tentar novamente as fotos.
+- Indicadores de pendentes, prontos, sem link e sem foto.
+- Progresso durante o processamento e resumo final.
+- Compartilhamento bloqueado enquanto falta o link afiliado, evitando reenviar o link de outro anunciante.
+
+VERSÕES
+- Workspace: 6.0.0-alpha.5.3
+- Backend: 6.0.0-alpha.5.3
+- Android versionName: 6.0.0-alpha.5.3
+- Android versionCode: 600009
+
+VALIDAÇÕES EXECUTADAS
+- npm run validate: APROVADO.
+- Sintaxe de todos os arquivos JavaScript: APROVADA.
+- Testes automatizados do backend: 23 aprovados, 0 falhas.
+- Banco de frases: 352 frases.
+- Modelos e separador do Lote compilados com kotlinc: APROVADOS.
+- Workflow GitHub Actions alinhado com Android API 35, Gradle 8.9 e JDK 17.
+- Integridade do ZIP: APROVADA.
+
+LIMITAÇÃO HONESTA
+A Alpha 5.3 aplica automaticamente links que já estão na Biblioteca de Afiliados. Um link afiliado novo não pode ser criado silenciosamente dentro da conta do Mercado Livre sem um fluxo oficial autenticado. Para um produto novo, o usuário abre o produto, gera o link uma vez, copia e toca em “Usar link copiado”. Nas próximas aparições do mesmo MLB, o preenchimento é automático.
+
+COMPILAÇÃO DO APK
+Este ambiente não contém o Android SDK/Gradle completo para gerar o APK local. O workflow incluído executa os testes Android e compila o APK real no GitHub Actions. Nenhum APK falso foi criado.

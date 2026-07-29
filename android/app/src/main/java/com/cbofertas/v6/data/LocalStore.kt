@@ -31,6 +31,26 @@ class LocalStore(context: Context) {
         get() = prefs.getBoolean("dark_theme", false)
         set(value) = prefs.edit().putBoolean("dark_theme", value).apply()
 
+    var postingReminderEnabled: Boolean
+        get() = prefs.getBoolean("posting_reminder_enabled", false)
+        set(value) = prefs.edit().putBoolean("posting_reminder_enabled", value).apply()
+
+    var postingReminderIntervalMinutes: Int
+        get() = prefs.getInt("posting_reminder_interval_minutes", 30).coerceAtLeast(15)
+        set(value) = prefs.edit().putInt("posting_reminder_interval_minutes", value.coerceAtLeast(15)).apply()
+
+    var postingReminderStartHour: Int
+        get() = prefs.getInt("posting_reminder_start_hour", 8).coerceIn(0, 22)
+        set(value) = prefs.edit().putInt("posting_reminder_start_hour", value.coerceIn(0, 22)).apply()
+
+    var postingReminderEndHour: Int
+        get() = prefs.getInt("posting_reminder_end_hour", 21).coerceIn(1, 23)
+        set(value) = prefs.edit().putInt("posting_reminder_end_hour", value.coerceIn(1, 23)).apply()
+
+    var postingReminderNextAt: Long
+        get() = prefs.getLong("posting_reminder_next_at", 0L)
+        set(value) = prefs.edit().putLong("posting_reminder_next_at", value).apply()
+
     fun affiliates(): List<AffiliateRecord> = readArray("affiliates") { json ->
         AffiliateRecord(
             itemId = json.getString("itemId"),

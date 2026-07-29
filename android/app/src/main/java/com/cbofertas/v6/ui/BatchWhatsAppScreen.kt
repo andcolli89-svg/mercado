@@ -1,5 +1,8 @@
 package com.cbofertas.v6.ui
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,32 +20,34 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.Image
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.net.URL
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cbofertas.v6.domain.BatchOffer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
 
 @Composable
 fun BatchWhatsAppScreen(
     offers: List<BatchOffer>,
     loadingIds: Set<String>,
+    automationRunning: Boolean,
+    automationMessage: String?,
     onImport: (String) -> Unit,
+    onPrepareAll: () -> Unit,
+    onApplyKnownAffiliates: () -> Unit,
+    onFetchMissingPhotos: () -> Unit,
     onResolve: (BatchOffer) -> Unit,
     onUseClipboardAffiliate: (BatchOffer) -> Unit,
     onOpen: (String) -> Unit,
@@ -53,6 +58,10 @@ fun BatchWhatsAppScreen(
     var input by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf("pending") }
     val shown = offers.filter { it.status == tab }
+    val pending = offers.filter { it.status == "pending" }
+    val ready = pending.count { it.affiliateUrl.isNotBlank() && !it.imageUrl.isNullOrBlank() }
+    val missingAffiliate = pending.count { it.affiliateUrl.isBlank() }
+    val missingPhoto = pending.count { it.imageUrl.isNullOrBlank() }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -60,7 +69,7 @@ fun BatchWhatsAppScreen(
     ) {
         item {
             Text("📥 Lote WhatsApp", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-            Text("Cole vários anúncios. O aplicativo separa cada oferta, busca a foto e troca pelos links afiliados já salvos.")
+            Text("Cole vários anúncios. O aplicativo separa as ofertas, aplica links afiliados já salvos e busca as fotos automaticamente.")
         }
         item {
             OutlinedTextField(
@@ -76,7 +85,40 @@ fun BatchWhatsAppScreen(
             Button(
                 onClick = { if (input.isNotBlank()) { onImport(input); input = "" } },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !automationRunning,
             ) { Text("Separar anúncios") }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("⚡ Preparação automática", fontWeight = FontWeight.ExtraBold)
+                    Text("Pendentes: ${pending.size} • Prontos: $ready • Sem link: $missingAffiliate • Sem foto: $missingPhoto")
+                    Button(
+                        onClick = onPrepareAll,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = pending.isNotEmpty() && !automationRunning,
+                    ) {
+                        Text(if (automationRunning) "Preparando anúncios..." else "⚡ Preparar tudo automaticamente")
+                    }
+                    OutlinedButton(
+                        onClick = onApplyKnownAffiliates,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = pending.isNotEmpty() && !automationRunning,
+                    ) { Text("🔗 Aplicar links afiliados já salvos") }
+                    OutlinedButton(
+                        onClick = onFetchMissingPhotos,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = pending.isNotEmpty() && !automationRunning,
+                    ) { Text("🖼️ Buscar fotos faltantes") }
+                    if (!automationMessage.isNullOrBlank()) {
+                        Text(automationMessage, color = Color(0xFF006B35), fontWeight = FontWeight.SemiBold)
+                    }
+                    Text(
+                        "Links novos ainda precisam ser gerados uma vez no Mercado Livre. Depois de salvos, serão aplicados automaticamente nos próximos lotes.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -131,11 +173,13 @@ private fun BatchOfferCard(
             Text("Link final: ${offer.finalUrl}", style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onResolve, enabled = !loading) { Text(if (loading) "Buscando..." else "Buscar foto") }
-                OutlinedButton(onClick = onOpen, enabled = offer.originalUrl.isNotBlank()) { Text("Abrir ML") }
+                OutlinedButton(onClick = onOpen, enabled = offer.originalUrl.isNotBlank()) { Text("Gerar link no ML") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onUseClipboardAffiliate) { Text("Usar link copiado") }
-                Button(onClick = onShare) { Text("WhatsApp Business") }
+                Button(onClick = onShare, enabled = offer.affiliateUrl.isNotBlank()) {
+                    Text(if (offer.affiliateUrl.isNotBlank()) "WhatsApp Business" else "Falta link afiliado")
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onMarkSent) { Text(if (offer.status == "sent") "Voltar para pendentes" else "Marcar como enviado") }
@@ -144,7 +188,6 @@ private fun BatchOfferCard(
         }
     }
 }
-
 
 @Composable
 private fun BatchRemoteImage(url: String?) {
