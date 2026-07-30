@@ -114,7 +114,7 @@ export function createApp() {
           timestamp: new Date().toISOString(),
           mercadoLivreTokenConfigured: Boolean(config.mercadoLivreToken),
           compatibility: ['v6', 'v5.2.1'],
-          features: ['radar-fallback', 'smart-coupons'],
+          features: ['radar-fallback', 'smart-coupons', 'automatic-product-images', 'promozone-redirects'],
         }, origin);
         return;
       }
@@ -163,7 +163,7 @@ export function createApp() {
         sendJson(response, 200, {
           items: products.map(legacyRadarItem),
           total: products.length,
-          source: 'CbOfertas V6 Alpha 4.1',
+          source: 'CbOfertas V6 Alpha 5.5',
           updatedAt: Date.now(),
           cached: false,
         }, origin);

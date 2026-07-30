@@ -1,0 +1,29 @@
+CBOFERTAS V6.0.0 ALPHA 5.5
+===========================
+
+1. FOTOS AUTOMÁTICAS NO LOTE
+- A busca da foto começa automaticamente ao separar os anúncios colados.
+- O botão "Buscar fotos faltantes" permanece para novas tentativas.
+- A foto encontrada fica salva junto ao card e é enviada com a mensagem.
+
+2. LINKS INTERMEDIÁRIOS
+- Suporte a links diretos do Mercado Livre.
+- Suporte a links curtos meli.la.
+- Suporte a go.promozone.ai/mercadolivre/...
+- O backend segue redirecionamentos HTTP, meta refresh e JavaScript comum.
+- O destino final precisa ser Mercado Livre; domínios arbitrários são bloqueados.
+
+3. BUSCA INDIVIDUAL PARA O LOTE
+- Novo botão "Adicionar esta oferta ao Lote".
+- Leva texto revisado, foto, título, MLB, cupom, parcelamento e link salvo.
+- Se o mesmo produto já estiver pendente, o card é atualizado em vez de duplicado.
+
+4. LINKS AFILIADOS
+- Links afiliados já salvos continuam sendo aplicados automaticamente.
+- Links novos continuam sendo gerados manualmente no Mercado Livre e salvos uma única vez.
+- Um link recebido para consulta não é mais salvo silenciosamente como afiliado.
+
+VERSÕES
+- Workspace/backend: 6.0.0-alpha.5.5
+- Android versionName: 6.0.0-alpha.5.5
+- Android versionCode: 600011

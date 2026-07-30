@@ -12,8 +12,8 @@ android {
         applicationId = "com.cbofertas.v6.alpha"
         minSdk = 26
         targetSdk = 35
-        versionCode = 600010
-        versionName = "6.0.0-alpha.5.4"
+        versionCode = 600011
+        versionName = "6.0.0-alpha.5.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

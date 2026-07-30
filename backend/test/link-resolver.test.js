@@ -58,3 +58,58 @@ test('campos explícitos diferenciam item e catálogo', () => {
   assert.deepEqual(extractMercadoLivreId('{"item_id":"MLB4812130742"}'), { id: 'MLB4812130742', type: 'item' });
   assert.deepEqual(extractMercadoLivreId('{"catalog_product_id":"MLB45678901"}'), { id: 'MLB45678901', type: 'catalog' });
 });
+
+import {
+  extractMercadoLivreTarget,
+  isSupportedMercadoLivreInputHostname,
+  resolveMercadoLivreLink,
+} from '../src/providers/mercadolivre/linkResolver.js';
+
+test('habilita o redirecionador go.promozone.ai sem liberar domínios arbitrários', () => {
+  assert.equal(isSupportedMercadoLivreInputHostname('go.promozone.ai'), true);
+  assert.equal(isSupportedMercadoLivreInputHostname('meli.la'), true);
+  assert.equal(isSupportedMercadoLivreInputHostname('example.com'), false);
+});
+
+test('extrai destino do Mercado Livre de página intermediária', () => {
+  const html = '<script>window.location.href="https:\\/\\/meli.la\\/1MxHWTB"</script>';
+  assert.equal(extractMercadoLivreTarget(html, 'https://go.promozone.ai/mercadolivre/KDJSNW'), 'https://meli.la/1MxHWTB');
+});
+
+test('resolve redirecionador Promozone, segue meli.la e preserva HTML com foto', async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === 'https://go.promozone.ai/mercadolivre/KDJSNW') {
+      return new Response('<html><script>location.replace("https://meli.la/1MxHWTB")</script></html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+    if (url === 'https://meli.la/1MxHWTB') {
+      return new Response('', {
+        status: 302,
+        headers: { location: 'https://produto.mercadolivre.com.br/MLB-1234567890-produto' },
+      });
+    }
+    if (url === 'https://produto.mercadolivre.com.br/MLB-1234567890-produto') {
+      return new Response(`
+        <html><head>
+          <link rel="canonical" href="https://produto.mercadolivre.com.br/MLB-1234567890-produto">
+          <meta property="og:title" content="Produto de teste">
+          <meta property="og:image" content="https://http2.mlstatic.com/teste.jpg">
+        </head><body></body></html>
+      `, { status: 200, headers: { 'content-type': 'text/html' } });
+    }
+    throw new Error(`URL inesperada: ${url}`);
+  };
+
+  const result = await resolveMercadoLivreLink('https://go.promozone.ai/mercadolivre/KDJSNW');
+  assert.equal(result.id, 'MLB1234567890');
+  assert.equal(result.type, 'item');
+  assert.equal(result.finalUrl, 'https://produto.mercadolivre.com.br/MLB-1234567890-produto');
+  assert.match(result.html, /https:\/\/http2\.mlstatic\.com\/teste\.jpg/);
+  assert.equal(result.redirects.length, 2);
+});

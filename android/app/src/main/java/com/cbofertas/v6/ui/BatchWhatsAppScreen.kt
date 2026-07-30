@@ -69,7 +69,7 @@ fun BatchWhatsAppScreen(
     ) {
         item {
             Text("📥 Lote WhatsApp", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-            Text("Cole vários anúncios. O aplicativo separa as ofertas, aplica links afiliados já salvos e busca as fotos automaticamente.")
+            Text("Cole vários anúncios. Ao separar, o aplicativo já começa a buscar as fotos de links Mercado Livre, meli.la e Promozone.")
         }
         item {
             OutlinedTextField(
@@ -91,7 +91,7 @@ fun BatchWhatsAppScreen(
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("⚡ Preparação automática", fontWeight = FontWeight.ExtraBold)
+                    Text("⚡ Fotos e links salvos", fontWeight = FontWeight.ExtraBold)
                     Text("Pendentes: ${pending.size} • Prontos: $ready • Sem link: $missingAffiliate • Sem foto: $missingPhoto")
                     Button(
                         onClick = onPrepareAll,
@@ -114,7 +114,7 @@ fun BatchWhatsAppScreen(
                         Text(automationMessage, color = Color(0xFF006B35), fontWeight = FontWeight.SemiBold)
                     }
                     Text(
-                        "Links novos ainda precisam ser gerados uma vez no Mercado Livre. Depois de salvos, serão aplicados automaticamente nos próximos lotes.",
+                        "As fotos são buscadas automaticamente ao separar o lote. Links afiliados já salvos continuam sendo aplicados; links novos você gera no Mercado Livre e cola uma única vez.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }

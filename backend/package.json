@@ -1,6 +1,6 @@
 {
   "name": "cbofertas-v6-backend",
-  "version": "6.0.0-alpha.5.4",
+  "version": "6.0.0-alpha.5.5",
   "private": true,
   "description": "Backend novo da CbOfertas V6, sem dependências de runtime.",
   "type": "module",

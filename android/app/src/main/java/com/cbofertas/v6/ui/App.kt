@@ -94,6 +94,7 @@ import com.cbofertas.v6.domain.installmentText
 import com.cbofertas.v6.domain.offerText
 import com.cbofertas.v6.domain.parseBatchOffers
 import com.cbofertas.v6.domain.reduceSearch
+import com.cbofertas.v6.domain.toPendingBatchOffer
 import com.cbofertas.v6.ui.theme.CbOfertasTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -162,10 +163,6 @@ fun CbOfertasApp(
         selectedCoupon = product.bestCoupon(coupons)?.coupon?.code.orEmpty()
         store.recordHistory(product)
         history = store.history()
-        if (originalInput.contains("meli.la", ignoreCase = true)) {
-            store.saveAffiliate(product, originalInput)
-            affiliates = store.affiliates()
-        }
         searchState = reduceSearch(SearchAction.Succeed(product))
     }
 
@@ -174,7 +171,7 @@ fun CbOfertasApp(
         searchState = reduceSearch(SearchAction.Clear)
         currentPhrase = ""
         if (clean.isBlank()) {
-            searchState = reduceSearch(SearchAction.Fail("Cole um link do Mercado Livre ou meli.la."))
+            searchState = reduceSearch(SearchAction.Fail("Cole um link do Mercado Livre, meli.la ou go.promozone.ai."))
             return
         }
         if (backendUrl.isBlank()) {
@@ -406,6 +403,29 @@ fun CbOfertasApp(
                         onCopy = ::copyText,
                         onShare = { product, text -> shareText(text, false, product.itemId, product.title) },
                         onWhatsApp = { product, text -> shareText(text, true, product.itemId, product.title) },
+                        onAddToBatch = { product, text ->
+                            val affiliate = affiliates.firstOrNull { it.itemId == product.itemId }
+                            val productUrl = product.permalink.ifBlank { product.resolvedUrl.ifBlank { product.sourceUrl } }
+                            val existing = store.batchOffers().firstOrNull { saved ->
+                                saved.status == "pending" && (
+                                    (product.itemId.isNotBlank() && saved.itemId == product.itemId)
+                                        || (productUrl.isNotBlank() && saved.originalUrl == productUrl)
+                                )
+                            }
+                            val batch = product.toPendingBatchOffer(
+                                offerText = text,
+                                affiliateUrl = affiliate?.affiliateUrl.orEmpty(),
+                                existing = existing,
+                            )
+                            store.updateBatchOffer(batch)
+                            if (affiliate != null) store.markAffiliateUsed(product.itemId)
+                            batchOffers = store.batchOffers()
+                            Toast.makeText(
+                                context,
+                                if (existing == null) "Oferta adicionada ao Lote WhatsApp." else "Oferta atualizada no Lote WhatsApp.",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
                         onSchedule = { draft ->
                             scheduleDraft = draft
                             scheduleMessage = null
@@ -469,9 +489,10 @@ fun CbOfertasApp(
                             batchAutomationMessage = if (parsed.isEmpty()) {
                                 "Nenhum anúncio com link foi identificado."
                             } else {
-                                "${parsed.size} anúncios separados. Toque em Preparar tudo automaticamente."
+                                "${parsed.size} anúncios separados. Buscando as fotos automaticamente..."
                             }
-                            Toast.makeText(context, "${parsed.size} anúncios separados.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "${parsed.size} anúncios separados. Buscando fotos...", Toast.LENGTH_SHORT).show()
+                            if (parsed.isNotEmpty()) prepareBatch(BatchPreparationMode.PHOTOS)
                         },
                         onPrepareAll = { prepareBatch(BatchPreparationMode.ALL) },
                         onApplyKnownAffiliates = { prepareBatch(BatchPreparationMode.LINKS) },
@@ -676,7 +697,7 @@ private fun AppHeader(darkTheme: Boolean, onToggleTheme: () -> Unit) {
             ) {
                 Column {
                     Text("🏷️ CbOfertas", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("V6 Alpha 5.2 • Consulta + Lote WhatsApp", style = MaterialTheme.typography.bodySmall)
+                    Text("V6 Alpha 5.5 • Fotos automáticas + Lote WhatsApp", style = MaterialTheme.typography.bodySmall)
                 }
                 TextButton(onClick = onToggleTheme) {
                     Text(if (darkTheme) "☀ Claro" else "☾ Escuro", fontWeight = FontWeight.Bold)
@@ -704,6 +725,7 @@ private fun HomeScreen(
     onCopy: (String) -> Unit,
     onShare: (Product, String) -> Unit,
     onWhatsApp: (Product, String) -> Unit,
+    onAddToBatch: (Product, String) -> Unit,
     onSchedule: (ScheduleDraft) -> Unit,
     onOpen: (String) -> Unit,
 ) {
@@ -778,6 +800,7 @@ private fun HomeScreen(
                         onCopy = { onCopy(offerText) },
                         onShare = { onShare(product, offerText) },
                         onWhatsApp = { onWhatsApp(product, offerText) },
+                        onAddToBatch = { onAddToBatch(product, offerText) },
                         onSchedule = {
                             onSchedule(
                                 ScheduleDraft(
@@ -810,7 +833,7 @@ private fun SearchCard(
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("Buscar produto", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text("Cole o link do Mercado Livre ou meli.la")
+                Text("Cole o link do Mercado Livre, meli.la ou Promozone")
             }
         }
         Spacer(Modifier.height(14.dp))
@@ -819,7 +842,7 @@ private fun SearchCard(
             onValueChange = onUrlChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("🔗 Link da oferta") },
-            placeholder = { Text("https://meli.la/...") },
+            placeholder = { Text("https://meli.la/... ou https://go.promozone.ai/mercadolivre/...") },
             minLines = 1,
             maxLines = 3,
         )
@@ -872,6 +895,7 @@ private fun ProductOfferCard(
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onWhatsApp: () -> Unit,
+    onAddToBatch: () -> Unit,
     onSchedule: () -> Unit,
     onOpen: () -> Unit,
 ) {
@@ -947,6 +971,10 @@ private fun ProductOfferCard(
             modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen, contentColor = Color.White),
         ) { Text("💬 Compartilhar no WhatsApp Business", fontWeight = FontWeight.Bold) }
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = onAddToBatch, modifier = Modifier.fillMaxWidth()) {
+            Text("➕ Adicionar esta oferta ao Lote", fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onSchedule, modifier = Modifier.fillMaxWidth()) { Text("🗓️ Agendar publicação") }
         Spacer(Modifier.height(8.dp))

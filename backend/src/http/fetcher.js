@@ -63,6 +63,11 @@ export async function fetchWithRedirects(url, options = {}) {
     }
 
     const nextUrl = new URL(location, currentUrl).toString();
+    if (typeof options.isRedirectAllowed === 'function' && !options.isRedirectAllowed(nextUrl, currentUrl)) {
+      throw new UpstreamError('O redirecionamento saiu dos domínios permitidos.', {
+        details: { from: currentUrl, to: nextUrl, redirects },
+      });
+    }
     redirects.push({ status: response.status, from: currentUrl, to: nextUrl });
     currentUrl = nextUrl;
 

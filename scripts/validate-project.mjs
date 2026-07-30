@@ -20,6 +20,7 @@ const required = [
   'android/app/src/main/java/com/cbofertas/v6/data/PostingReminderScheduler.kt',
   'android/app/src/main/java/com/cbofertas/v6/data/PostingReminderReceiver.kt',
   'android/app/src/main/java/com/cbofertas/v6/domain/PostingReminderPolicy.kt',
+  'android/app/src/main/java/com/cbofertas/v6/domain/BatchOfferFactory.kt',
   'android/app/src/main/java/com/cbofertas/v6/ShareOfferActivity.kt',
   'backend/src/services/couponService.js',
   'android/app/src/main/assets/funny_phrases.json',
@@ -69,12 +70,22 @@ if (/\bWebView\b|addJavascriptInterface|loadUrl\s*\(/.test(kotlinText)) {
 }
 
 
+
+const linkResolver = await readFile(path.join(root, 'backend/src/providers/mercadolivre/linkResolver.js'), 'utf8');
+for (const feature of ['go.promozone.ai', 'extractMercadoLivreTarget', 'isRedirectAllowed', 'meta refresh']) {
+  if (!linkResolver.includes(feature)) throw new Error(`Suporte a redirecionadores incompleto: ${feature}.`);
+}
+const productService = await readFile(path.join(root, 'backend/src/services/productService.js'), 'utf8');
+if (!productService.includes('isSupportedMercadoLivreInputHostname')) {
+  throw new Error('A busca de produto não aceita os redirecionadores habilitados.');
+}
+
 const apiClient = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/data/ApiClient.kt'), 'utf8');
 for (const route of ['/v1/products/resolve', '/api/product', '/v1/radar', '/api/radar']) {
   if (!apiClient.includes(route)) throw new Error(`Compatibilidade Android ausente para ${route}.`);
 }
 const appUi = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/ui/App.kt'), 'utf8');
-for (const feature of ['Compartilhar no WhatsApp Business', 'Agendar publicação', 'Copiar texto completo', 'Trocar frase', 'Biblioteca de Afiliados']) {
+for (const feature of ['Compartilhar no WhatsApp Business', 'Agendar publicação', 'Copiar texto completo', 'Trocar frase', 'Biblioteca de Afiliados', 'Adicionar esta oferta ao Lote']) {
   if (!appUi.includes(feature)) throw new Error(`Recurso visual ausente: ${feature}.`);
 }
 
@@ -108,9 +119,15 @@ for (const feature of ['BatchPreparationMode.ALL', 'BatchPreparationMode.LINKS',
   if (!appUi.includes(feature)) throw new Error(`Processamento automático do lote ausente: ${feature}.`);
 }
 
-for (const feature of ['Lembrete de postagem', 'a cada 30 minutos', 'das 8h às 21h', 'PostingReminderScheduler.resetAfterPosting']) {
+for (const feature of ['Lembrete de postagem', 'a cada 30 minutos', 'das 8h às 21h', 'PostingReminderScheduler.resetAfterPosting', 'prepareBatch(BatchPreparationMode.PHOTOS)', 'toPendingBatchOffer']) {
   if (!appUi.includes(feature)) throw new Error(`Lembrete de postagem incompleto: ${feature}.`);
 }
+
+const batchFactory = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/BatchOfferFactory.kt'), 'utf8');
+for (const feature of ['toPendingBatchOffer', 'imageUrl = imageUrl ?: existing?.imageUrl', 'status = "pending"']) {
+  if (!batchFactory.includes(feature)) throw new Error(`Conversão da busca para o lote incompleta: ${feature}.`);
+}
+
 const reminderPolicy = await readFile(path.join(root, 'android/app/src/main/java/com/cbofertas/v6/domain/PostingReminderPolicy.kt'), 'utf8');
 for (const feature of ['DEFAULT_INTERVAL_MINUTES = 30', 'DEFAULT_START_HOUR = 8', 'DEFAULT_END_HOUR = 21', 'nextTriggerAt']) {
   if (!reminderPolicy.includes(feature)) throw new Error(`Regra do lembrete ausente: ${feature}.`);

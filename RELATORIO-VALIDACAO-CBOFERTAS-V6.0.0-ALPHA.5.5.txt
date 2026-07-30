@@ -1,0 +1,54 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V6.0.0 ALPHA 5.5
+=================================================
+Data: 29/07/2026
+
+VERSÕES
+- Workspace/backend: 6.0.0-alpha.5.5
+- Backend reportado no /health: 6.0.0-alpha.5.5
+- Android versionName: 6.0.0-alpha.5.5
+- Android versionCode: 600011
+- Android API: 35
+- Gradle: 8.9
+- Kotlin: 2.0.21
+- JDK do workflow: 17
+- Node.js do workflow: 24
+
+IMPLEMENTADO
+1. Busca automática da foto logo após separar os anúncios do Lote WhatsApp.
+2. Suporte a links diretos do Mercado Livre e links curtos meli.la.
+3. Suporte ao redirecionador go.promozone.ai/mercadolivre/...
+4. Redirecionamentos HTTP 301/302/303/307/308.
+5. Detecção de destino em meta refresh e JavaScript comum.
+6. Bloqueio de redirecionamentos para domínios não autorizados.
+7. Captura da foto por API pública, og:image e JSON estruturado.
+8. Novo botão "Adicionar esta oferta ao Lote" na consulta individual.
+9. Preservação do texto revisado, cupom, parcelamento, foto, MLB e link salvo.
+10. Atualização do card pendente quando o mesmo produto já estiver no Lote.
+11. Links afiliados já usados continuam salvos e aplicados pela Biblioteca.
+12. Links recebidos para consulta não são gravados silenciosamente como afiliados.
+
+VALIDAÇÕES EXECUTADAS
+- npm run validate: APROVADO.
+- Sintaxe JavaScript do backend e testes: APROVADA.
+- Testes automatizados do backend: 26 aprovados, 0 falhas.
+- Teste de redirecionador Promozone simulado: APROVADO.
+- Teste de meli.la seguido até anúncio com og:image: APROVADO.
+- Teste de bloqueio de domínio arbitrário: APROVADO.
+- Compilação isolada dos modelos, parser e BatchOfferFactory Kotlin: APROVADA.
+- Teste executável da conversão de oferta buscada para o Lote: APROVADO.
+- YAML do GitHub Actions e render.yaml: VÁLIDOS.
+- Banco de frases: 352 frases preservadas.
+- Verificação de segredos expostos no pacote: nenhuma ocorrência encontrada.
+
+LIMITAÇÕES HONESTAS DESTA EXECUÇÃO
+- O ambiente não conseguiu resolver DNS externo; por isso os links reais
+  https://meli.la/1MxHWTB e https://go.promozone.ai/mercadolivre/KDJSNW
+  não puderam ser consultados ao vivo durante esta execução.
+- Os mesmos fluxos foram cobertos por testes automatizados com redirecionamentos,
+  página final do Mercado Livre e og:image simulados.
+- O APK não foi compilado localmente porque Android SDK/Gradle e dependências
+  Android não estão disponíveis neste ambiente. O GitHub Actions incluído fará
+  a compilação real após o push para a branch v6-rebuild.
+
+RESULTADO
+Código-fonte completo preparado para gerar a Alpha 5.5 pelo GitHub Actions.

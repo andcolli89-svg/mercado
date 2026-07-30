@@ -1,5 +1,5 @@
 export const config = Object.freeze({
-  version: '6.0.0-alpha.4.1',
+  version: '6.0.0-alpha.5.5',
   host: process.env.HOST || '0.0.0.0',
   port: Number.parseInt(process.env.PORT || '10000', 10),
   requestTimeoutMs: Number.parseInt(process.env.REQUEST_TIMEOUT_MS || '15000', 10),

@@ -1,4 +1,5 @@
 import { ValidationError } from '../core/errors.js';
+import { isSupportedMercadoLivreInputHostname } from '../providers/mercadolivre/linkResolver.js';
 import { resolveMercadoLivreProduct } from '../providers/mercadolivre/provider.js';
 
 export async function resolveProduct(url) {
@@ -16,8 +17,8 @@ export async function resolveProduct(url) {
   if (!['http:', 'https:'].includes(parsed.protocol)) {
     throw new ValidationError('Use um link HTTP ou HTTPS.');
   }
-  if (/(^|\.)(mercadolivre\.com\.br|mercadolivre\.com|meli\.la)$/i.test(parsed.hostname)) {
+  if (isSupportedMercadoLivreInputHostname(parsed.hostname)) {
     return resolveMercadoLivreProduct(parsed.toString());
   }
-  throw new ValidationError('Nesta primeira base da V6, somente links do Mercado Livre estão habilitados.');
+  throw new ValidationError('Use um link do Mercado Livre, meli.la ou go.promozone.ai.');
 }

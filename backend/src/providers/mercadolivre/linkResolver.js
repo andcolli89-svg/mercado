@@ -2,6 +2,26 @@ import { ProductNotFoundError } from '../../core/errors.js';
 import { fetchWithRedirects, readTextLimited } from '../../http/fetcher.js';
 
 const MLB = 'MLB';
+const TRUSTED_REDIRECT_HOSTS = new Set([
+  'go.promozone.ai',
+]);
+
+function normalizedHostname(value) {
+  return String(value || '').trim().toLowerCase().replace(/\.$/, '');
+}
+
+export function isMercadoLivreHostname(value) {
+  const hostname = normalizedHostname(value);
+  return /(^|\.)(mercadolivre\.com\.br|mercadolivre\.com|meli\.la)$/i.test(hostname);
+}
+
+export function isTrustedRedirectHostname(value) {
+  return TRUSTED_REDIRECT_HOSTS.has(normalizedHostname(value));
+}
+
+export function isSupportedMercadoLivreInputHostname(value) {
+  return isMercadoLivreHostname(value) || isTrustedRedirectHostname(value);
+}
 
 function normalizeId(value) {
   const match = String(value || '').match(/MLB[-_]?([0-9]{4,})/i);
@@ -82,7 +102,32 @@ function runCatchingDecode(value) {
   }
 }
 
-function extractCanonical(html) {
+function cleanEmbeddedUrl(value, baseUrl = '') {
+  const unescaped = String(value || '')
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\\//g, '/')
+    .replace(/&amp;/gi, '&')
+    .replace(/["'<>\s]+$/g, '')
+    .trim();
+  if (!unescaped) return null;
+  try {
+    return new URL(unescaped, baseUrl || undefined).toString();
+  } catch {
+    return null;
+  }
+}
+
+function mercadoLivreTarget(value, baseUrl = '') {
+  const target = cleanEmbeddedUrl(value, baseUrl);
+  if (!target) return null;
+  try {
+    return isMercadoLivreHostname(new URL(target).hostname) ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractCanonical(html, baseUrl = '') {
   const patterns = [
     /<link[^>]+rel=["'][^"']*canonical[^"']*["'][^>]+href=["']([^"']+)["']/i,
     /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*canonical[^"']*["']/i,
@@ -91,9 +136,55 @@ function extractCanonical(html) {
   ];
   for (const pattern of patterns) {
     const match = String(html || '').match(pattern);
-    if (match?.[1]) return match[1].replace(/&amp;/g, '&');
+    if (match?.[1]) return cleanEmbeddedUrl(match[1], baseUrl);
   }
   return null;
+}
+
+/**
+ * Encontra um destino do Mercado Livre dentro de páginas intermediárias.
+ * Suporta meta refresh, JavaScript, links comuns e URLs codificadas.
+ */
+export function extractMercadoLivreTarget(html, baseUrl = '') {
+  const text = String(html || '');
+  const decoded = runCatchingDecode(text);
+  const sources = decoded === text ? [text] : [text, decoded];
+  const patterns = [
+    /<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url\s*=\s*([^"';>]+)["']/gi,
+    /(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']/gi,
+    /location\.replace\(\s*["']([^"']+)["']\s*\)/gi,
+    /<a[^>]+href=["']([^"']+)["']/gi,
+    /(https?:\\?\/\\?\/(?:[^\s"'<>\\]|\\.)+)/gi,
+  ];
+
+  const canonical = extractCanonical(text, baseUrl);
+  const canonicalTarget = mercadoLivreTarget(canonical, baseUrl);
+  if (canonicalTarget) return canonicalTarget;
+
+  for (const source of sources) {
+    for (const pattern of patterns) {
+      pattern.lastIndex = 0;
+      for (const match of source.matchAll(pattern)) {
+        const target = mercadoLivreTarget(match[1], baseUrl);
+        if (target) return target;
+      }
+    }
+  }
+  return null;
+}
+
+function redirectAllowed(nextUrl) {
+  try {
+    return isSupportedMercadoLivreInputHostname(new URL(nextUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchPage(url) {
+  const result = await fetchWithRedirects(url, { isRedirectAllowed: redirectAllowed });
+  const html = await readTextLimited(result.response);
+  return { ...result, html };
 }
 
 export async function resolveMercadoLivreLink(inputUrl) {
@@ -104,45 +195,59 @@ export async function resolveMercadoLivreLink(inputUrl) {
     throw new ProductNotFoundError('O link informado é inválido.');
   }
 
-  if (!/(^|\.)(mercadolivre\.com\.br|mercadolivre\.com|meli\.la)$/i.test(parsed.hostname)) {
-    throw new ProductNotFoundError('O link não pertence ao Mercado Livre.', { hostname: parsed.hostname });
+  if (!isSupportedMercadoLivreInputHostname(parsed.hostname)) {
+    throw new ProductNotFoundError('O link não pertence ao Mercado Livre nem a um redirecionador habilitado.', {
+      hostname: parsed.hostname,
+    });
   }
 
-  const directId = fromUrl(parsed.toString());
-  if (directId && parsed.hostname !== 'meli.la') {
-    return {
-      inputUrl: parsed.toString(),
-      finalUrl: parsed.toString(),
-      canonicalUrl: parsed.toString(),
-      ...directId,
-      html: '',
-      redirects: [],
-      status: null,
-    };
+  const allRedirects = [];
+  let currentUrl = parsed.toString();
+  let page = null;
+
+  // Uma página intermediária, como go.promozone.ai, pode usar redirecionamento
+  // HTTP, meta refresh ou JavaScript. Seguimos no máximo três etapas públicas.
+  for (let step = 0; step < 3; step += 1) {
+    page = await fetchPage(currentUrl);
+    allRedirects.push(...page.redirects);
+
+    const finalHost = new URL(page.finalUrl).hostname;
+    const embeddedTarget = extractMercadoLivreTarget(page.html, page.finalUrl);
+    if (!isMercadoLivreHostname(finalHost) && embeddedTarget) {
+      allRedirects.push({ status: 200, from: page.finalUrl, to: embeddedTarget, kind: 'html' });
+      currentUrl = embeddedTarget;
+      continue;
+    }
+    break;
   }
 
-  const { response, finalUrl, redirects } = await fetchWithRedirects(parsed.toString());
-  const html = await readTextLimited(response);
-  const canonicalUrl = extractCanonical(html) || finalUrl;
+  if (!page) throw new ProductNotFoundError('O link não pôde ser aberto.');
+
+  const finalUrl = page.finalUrl;
+  const finalHost = new URL(finalUrl).hostname;
+  const canonicalCandidate = extractCanonical(page.html, finalUrl);
+  const canonicalUrl = mercadoLivreTarget(canonicalCandidate, finalUrl)
+    || (isMercadoLivreHostname(finalHost) ? finalUrl : extractMercadoLivreTarget(page.html, finalUrl));
+
   const identified = fromUrl(canonicalUrl)
     || fromUrl(finalUrl)
-    || fromExplicitMarkup(html);
+    || fromExplicitMarkup(page.html);
 
   if (!identified) {
     throw new ProductNotFoundError('O link foi aberto, mas o MLB não pôde ser confirmado.', {
-      status: response.status,
+      status: page.response.status,
       finalUrl,
-      redirects,
+      redirects: allRedirects,
     });
   }
 
   return {
     inputUrl: parsed.toString(),
     finalUrl,
-    canonicalUrl,
+    canonicalUrl: canonicalUrl || finalUrl,
     ...identified,
-    html,
-    redirects,
-    status: response.status,
+    html: page.html,
+    redirects: allRedirects,
+    status: page.response.status,
   };
 }

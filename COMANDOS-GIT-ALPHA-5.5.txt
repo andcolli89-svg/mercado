@@ -1,0 +1,4 @@
+git switch v6-rebuild
+git add -A
+git commit -m "Adiciona fotos automaticas e envio da busca para o lote"
+git push origin v6-rebuild
