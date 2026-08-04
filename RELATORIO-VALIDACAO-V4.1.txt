@@ -1,0 +1,18 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V4.1
+
+VALIDAÇÕES EXECUTADAS
+- Estrutura do projeto: aprovada.
+- JavaScript da interface: sintaxe aprovada.
+- Inicialização simulada da interface: aprovada.
+- Registro da função de recebimento de link compartilhado: aprovado.
+- Manifest Android com ACTION_SEND text/plain: aprovado.
+- Backend: sintaxe aprovada.
+- Testes automatizados do backend: 7 aprovados.
+- Conversão 2.500 -> 2500,00: aprovada.
+- Conversão 1.499,90 -> 1499,90: aprovada.
+- Normalização do Radar sem transformar milhares em centavos: aprovada.
+- Health local: version 4.1.0.
+- Android: versionCode 410 / versionName 4.1.
+
+OBSERVAÇÃO
+O APK deve ser compilado pelo GitHub Actions, que instala Android SDK e Gradle e publica CbOfertas-V4.1-APK.

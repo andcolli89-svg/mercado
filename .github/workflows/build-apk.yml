@@ -1,0 +1,85 @@
+name: Validar e Gerar APK CbOfertas V6.3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - '.github/workflows/build-apk.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar estrutura da V6.3
+        run: |
+          node scripts/validate-project.js
+          node scripts/smoke-webapp.js
+
+      - name: Verificar backend
+        working-directory: backend
+        run: |
+          npm run check
+          npm test
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma Android
+        run: sdkmanager "platforms;android-35" "build-tools;35.1.0"
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar APK
+        working-directory: android
+        run: gradle clean :app:assembleDebug --no-daemon
+
+      - name: Validar e nomear APK
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          unzip -l "$APK" | grep -q 'assets/www/index.html'
+          unzip -l "$APK" | grep -q 'assets/www/app.js'
+          unzip -l "$APK" | grep -q 'assets/www/style.css'
+          cp "$APK" CbOfertas-V6.3.apk
+          sha256sum CbOfertas-V6.3.apk > CbOfertas-V6.3.apk.sha256
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: CbOfertas-V6.3-APK
+          path: |
+            CbOfertas-V6.3.apk
+            CbOfertas-V6.3.apk.sha256
+          retention-days: 30

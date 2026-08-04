@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.cbofertas.app'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.cbofertas.app'
+        minSdk 24
+        targetSdk 35
+        versionCode 630
+        versionName '6.3'
+    }
+}
+
+
+dependencies {
+    implementation 'androidx.core:core:1.15.0'
+}

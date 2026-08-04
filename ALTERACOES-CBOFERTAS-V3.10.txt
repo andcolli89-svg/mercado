@@ -1,0 +1,12 @@
+CBOFERTAS V3.10 — CUPONS E VENDEDOR EDITÁVEIS
+
+1. Página Cupons agora permite cadastrar até 50 cupons.
+2. Cada cupom pode ser ativado, desativado, alterado ou excluído.
+3. É possível manter vários cupons ativos ao mesmo tempo.
+4. Na oferta, os cupons podem ser selecionados pelos botões rápidos, digitados manualmente ou alterados.
+5. Cada publicação salva mantém os próprios cupons, sem ser alterada quando a lista geral muda.
+6. O texto usa “CUPOM” para um código e “CUPONS” quando houver mais de um.
+7. O aviso da página de cupons aceita os marcadores {cupons} e {link}.
+8. Campo “Vendido por” está identificado como editável e pode ser corrigido antes de salvar.
+9. Vendedores usados ficam disponíveis como sugestões para as próximas ofertas.
+10. Servidor padrão mantido: https://mercado-yvqn.onrender.com

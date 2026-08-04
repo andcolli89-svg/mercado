@@ -1,65 +1,94 @@
-# CbOfertas V6.0.0 Alpha 5.5
+# CbOfertas V6.3 — Piloto Automático Completo
 
-## Alpha 5.5 — fotos automáticas e busca integrada ao Lote
+# CbOfertas V5.1
 
-A busca de produto agora aceita links diretos do Mercado Livre, links curtos `meli.la` e links intermediários `go.promozone.ai/mercadolivre/...`. O backend segue redirecionamentos HTTP, meta refresh e redirecionamentos comuns em JavaScript, confirma o produto final e tenta obter a foto principal por `og:image`, JSON estruturado ou API pública.
 
-Na aba **Lote WhatsApp**, a busca das fotos começa automaticamente logo depois de separar os anúncios. O botão **Buscar fotos faltantes** continua disponível para tentar novamente apenas os cards sem imagem.
+## Correções principais da V5.1
 
-Na consulta individual foi acrescentado o botão **Adicionar esta oferta ao Lote**. Ele leva para a fila de Pendentes o texto revisado, título, MLB, foto, cupom, parcelamento e link afiliado já salvo, sem obrigar o usuário a copiar a mensagem novamente.
+- O parâmetro `wid=MLB...` agora identifica o anúncio específico antes do catálogo `/p/`.
+- O preço é confirmado pelo item selecionado; cashback, parcelas e outras variações não são aceitos como preço final.
+- Campos antigos são limpos antes de cada busca. Se o preço não for confirmado, a oferta não é aprovada.
+- Links oficiais `meli.la` compartilhados para a CbOfertas são salvos em uma biblioteca local por anúncio e catálogo.
+- Radar, favoritos, histórico e mensagens reutilizam automaticamente o link afiliado já cadastrado.
+- Caso real incluído na validação: catálogo `MLB25929487`, anúncio `MLB4812130742` e afiliado `https://meli.la/2ZY9J9V`.
 
-## Consulta individual preservada
+Aplicativo Android para consultar produtos, localizar ofertas no Radar, montar mensagens promocionais e trabalhar com links oficiais de afiliado do Mercado Livre.
 
-- consulta de links comuns, páginas de catálogo, `meli.la` e `go.promozone.ai`;
-- preço atual, original, parcelamento, cashback e preço unitário separados;
-- correção manual do parcelamento com opção sem juros, com juros ou sem informação;
-- botão para adicionar a oferta confirmada ao Lote WhatsApp;
-- cupons, Radar, histórico, favoritos, afiliados e agenda;
-- compartilhamento prioritário no WhatsApp Business.
+## Novidades da V5.1
 
-## Lote WhatsApp
+- Corrige a leitura de preços brasileiros com separador de milhares: `2.500` passa a ser `R$ 2.500,00`, e não `R$ 2,50`.
+- O aplicativo agora aparece na lista de compartilhamento do Android.
+- Novo botão **Gerar link de afiliado**: abre o produto no Mercado Livre para que o link seja gerado pela faixa **Ganhos > Compartilhar**.
+- Ao escolher **CbOfertas** no compartilhamento, o link recebido substitui automaticamente o link normal da oferta.
+- Mensagens, histórico, favoritos e agendamentos preservam o link recebido.
+- Mantém Radar, cupons inteligentes, histórico, favoritos e backend modular.
 
-- recebe vários anúncios colados de uma vez;
-- separa cada anúncio pelo link;
-- inicia automaticamente a busca das fotos depois da separação;
-- suporta links diretos, `meli.la` e `go.promozone.ai`;
-- preserva parágrafos, emojis, asteriscos e formatação do texto recebido;
-- converte corretamente quebras copiadas como `\\n`;
-- remove data, hora, telefone e nome do remetente adicionados pelo WhatsApp;
-- busca título, MLB e foto principal pelo link;
-- reutiliza links afiliados salvos por produto;
-- guarda os links já utilizados na Biblioteca de Afiliados;
-- compartilha foto e texto pelo WhatsApp Business;
-- mantém filas separadas de Pendentes e Enviados;
-- reinicia o lembrete de 30 minutos depois de uma postagem.
+## Como usar o link de afiliado
 
-## Lembrete diário
+1. Busque ou selecione uma oferta no CbOfertas.
+2. Toque em **Gerar link de afiliado**.
+3. No Mercado Livre, toque em **Compartilhar** dentro da faixa **Ganhos**.
+4. Na lista de aplicativos, escolha **CbOfertas**.
+5. O aplicativo volta para a oferta, aplica o link recebido e confere novamente os dados do produto.
 
-- intervalo: 30 minutos;
-- horário ativo: 8h às 21h;
-- som e vibração pelo canal de notificações do Android;
-- não avisa quando não houver anúncios pendentes;
-- pausa automaticamente durante a noite;
-- volta automaticamente às 8h;
-- é restaurado depois de reiniciar ou atualizar o celular.
+O CbOfertas não solicita senha, token ou código de afiliado. O rastreamento é criado pelo próprio Mercado Livre na conta que está conectada ao aplicativo oficial.
 
-## Backend de produção
+## Servidor configurado
 
-`https://cbofertas-v6-api.onrender.com`
+O aplicativo usa por padrão:
 
-## Versão
+`https://mercado-yvqn.onrender.com`
 
-- workspace/backend: `6.0.0-alpha.5.5`
-- Android versionName: `6.0.0-alpha.5.5`
-- Android versionCode: `600011`
-- Android API 35
-- Gradle 8.9
-- Kotlin 2.0.21
-- JDK 17
-- Node.js 24 no GitHub Actions
+Publique a pasta `backend` desta versão no Render e abra `/health`. A versão esperada é `5.1.0`.
 
-## Compilação
+## Backend
 
-A branch de testes é `v6-rebuild`. O workflow `.github/workflows/build-v6.yml` valida o backend, executa os testes Android, compila o APK e publica o artefato:
+```text
+backend/
+├── server.js
+├── package.json
+├── src/
+│   ├── app.js
+│   ├── config.js
+│   ├── lib/
+│   │   ├── format.js
+│   │   └── http.js
+│   └── services/
+│       ├── imageService.js
+│       ├── productService.js
+│       └── radarService.js
+└── test/
+    └── smoke.test.js
+```
 
-`CbOfertas-V6.0.0-alpha.5.5-COMPLETA`
+Comandos:
+
+```bash
+cd backend
+npm run check
+npm test
+npm start
+```
+
+## Validação completa
+
+```bash
+node scripts/validate-project.js
+node scripts/smoke-webapp.js
+```
+
+## Gerar o APK no GitHub
+
+1. Envie todo o conteúdo desta pasta para a raiz do repositório.
+2. Abra **Actions**.
+3. Execute **Validar e Gerar APK CbOfertas V5.1**.
+4. Baixe o artefato `CbOfertas-V5.1-APK`.
+
+O workflow gera:
+
+- `CbOfertas-V5.1.apk`
+- `CbOfertas-V5.1.apk.sha256`
+
+## Observação sobre atualização do APK
+
+Se o Android informar que o aplicativo não pode ser atualizado, a assinatura do APK anterior é diferente. Nesse caso, salve o que for necessário, desinstale a versão anterior e instale a V5.1. Para futuras atualizações sem desinstalar, use uma chave de assinatura permanente no GitHub Actions.

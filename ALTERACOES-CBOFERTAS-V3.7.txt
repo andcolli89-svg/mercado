@@ -1,0 +1,17 @@
+CbOfertas V3.7
+================
+
+ALTERAÇÕES
+- Corrigido o seletor de fotos do Android WebView. O botão “Abrir galeria” agora abre imagens do aparelho.
+- A área de disparo de cupons foi movida para uma página separada, acessível pela aba “Cupons”.
+- O link oficial de cupons foi configurado como:
+  https://www.mercadolivre.com.br/cupons?source_page=mperfil#nav-header
+- Removida completamente a opção de links adicionais.
+- Cada item salvo usa somente o seu próprio link de produto.
+- Removidos os estilos Impacto, Urgente e Direto.
+- Mantida apenas a geração de frases engraçadas relacionadas ao tipo de produto.
+- Adicionadas dezenas de frases novas e mais engraçadas para calçados, roupas, cozinha, casa, tecnologia, beleza, fitness, infantil, pet, automotivo e produtos gerais.
+- A foto do modelo de cupons é comprimida antes de ser salva para reduzir falhas de armazenamento.
+
+OBSERVAÇÃO
+O WhatsApp Business ainda exige que o usuário escolha o grupo e confirme o envio.

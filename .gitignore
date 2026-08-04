@@ -1,11 +1,9 @@
 .gradle/
+**/.gradle/
 **/build/
-local.properties
 .idea/
 *.iml
-node_modules/
-.env
-*.keystore
-*.jks
-dist/
+local.properties
+*.apk
+*.aab
 .DS_Store

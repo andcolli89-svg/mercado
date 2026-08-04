@@ -1,23 +1,12 @@
-import { createServer } from 'node:http';
-import { createApp } from './src/app.js';
-import { config } from './src/config.js';
+'use strict';
 
-const app = createApp();
-const server = createServer(app);
+const { PORT } = require('./src/config');
+const { createServer } = require('./src/app');
+const { startRadarScheduler } = require('./src/services/radarService');
 
-server.listen(config.port, config.host, () => {
-  console.log(`CbOfertas V6 API ${config.version} disponível em http://${config.host}:${config.port}`);
+const server = createServer();
+startRadarScheduler();
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`CbOfertas Backend 6.3.0 disponível na porta ${PORT}`);
 });
-
-const shutdown = (signal) => {
-  console.log(`${signal} recebido. Encerrando servidor...`);
-  server.close((error) => {
-    if (error) {
-      console.error(error);
-      process.exitCode = 1;
-    }
-  });
-};
-
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));

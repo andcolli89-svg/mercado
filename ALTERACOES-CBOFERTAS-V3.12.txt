@@ -1,0 +1,14 @@
+CBOFERTAS V3.12 — RADAR AUTOMÁTICO
+
+- Nova página Radar automático de ofertas.
+- Consulta promoções pelo servidor e ordena por pontuação.
+- Filtros por palavra-chave, categoria, desconto mínimo, preço máximo e FULL.
+- Reconhecimento de ofertas usadas, salvas e ocultadas.
+- Histórico local de preços com indicação do menor valor registrado.
+- Botão Usar oferta preenche o formulário e confirma os dados no anúncio.
+- Cupons inteligentes são aplicados automaticamente após a aprovação.
+- Oferta salva é conferida novamente antes do envio individual ao WhatsApp.
+- Servidor atualizado com a rota /api/radar e cache de consultas.
+- Servidor padrão mantido: https://mercado-yvqn.onrender.com
+
+IMPORTANTE: para o Radar funcionar, publique a pasta backend desta versão no Render.
