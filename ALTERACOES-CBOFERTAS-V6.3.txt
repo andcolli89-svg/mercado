@@ -1,0 +1,10 @@
+CBOFERTAS V6.3 — LOTE WHATSAPP FINAL
+
+- Mantém a função Lote WhatsApp.
+- Separa múltiplos anúncios colados.
+- Busca fotos faltantes.
+- Aplica links afiliados já salvos.
+- Envia para o Piloto Automático em ordem embaralhada e diversificada por categoria.
+- Bloqueia anúncios sem link oficial https://meli.la/.
+- Faz segunda validação antes de ativar a fila no aparelho enviador.
+- Mantém cupons, imagens, agenda, relatórios, Criador/Enviador e automação Android.

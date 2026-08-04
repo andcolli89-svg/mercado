@@ -1,29 +1,17 @@
-CBOFERTAS V5.2.1 — LEIA PRIMEIRO
+CBOFERTAS V6.3
 
-1. Este pacote deve substituir o conteúdo da raiz do repositório GitHub.
-2. Publique novamente a pasta backend no Render.
-3. No Render, use:
-   - Root Directory: backend
-   - Build Command: npm install
-   - Start Command: npm start
-   - Health Check Path: /health
-4. Confirme que /health responde com version 5.2.1.
-5. No GitHub, abra Actions e execute "Validar e Gerar CbOfertas V5.2.1".
-6. Baixe o artefato "CbOfertas-V5.2.1-Completa".
+1. Publique backend/ no Render e gere o APK pelo GitHub Actions.
+2. No celular novo, use o modo Criador e exporte a fila .cbofertas.
+3. No celular antigo, use o modo Enviador, importe a fila e informe o nome EXATO do grupo.
+4. Toque em "Ativar acessibilidade" e habilite "Piloto Automático CbOfertas".
+5. Faça o primeiro teste com "Modo de teste" marcado em um grupo criado somente para testes.
+6. Depois de confirmar o grupo e o fluxo, desmarque o modo teste e ative a fila automática.
 
-O workflow valida o projeto, executa 24 testes, compila o APK e gera o ZIP completo com checksums SHA-256.
+Requisitos do aparelho enviador:
+- WhatsApp Business logado;
+- tela desbloqueada durante a faixa de envio;
+- carregador e Wi-Fi estável;
+- economia de bateria desativada para CbOfertas e WhatsApp;
+- nome do grupo exatamente igual ao exibido no WhatsApp.
 
-VERSÃO ANDROID
-- versionName: 5.2.1
-- versionCode: 521
-
-CORREÇÕES IMPORTANTES
-- preço promocional priorizado;
-- preço original separado do preço atual;
-- cashback e parcelas não são tratados como preço final;
-- links meli.la e links da Shopee resolvidos automaticamente;
-- Radar usa preço promocional;
-- antiga tela do Gerador de Mensagens removida;
-- uma frase engraçada automática antes do título;
-- Biblioteca de Afiliados integrada a Radar, Histórico, Favoritos e compartilhamentos;
-- Histórico com menor preço, maior desconto, consultas e última consulta.
+O módulo não desbloqueia o aparelho e não contorna senha, biometria ou bloqueios do WhatsApp.

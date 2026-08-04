@@ -1,0 +1,13 @@
+RELATÓRIO DE VALIDAÇÃO — CBOFERTAS V5.0
+
+- Sintaxe JavaScript do backend: aprovada.
+- Sintaxe JavaScript do aplicativo: aprovada.
+- Testes do backend: 9 aprovados.
+- Teste de prioridade do parâmetro wid: aprovado.
+- Teste da biblioteca de afiliados: aprovado.
+- Validação estrutural: 16 arquivos essenciais e 128 IDs de interface.
+- Inicialização simulada do web app: 129 elementos.
+- Android: versionCode 500 e versionName 5.0.
+- GitHub Actions: valida, testa, compila e publica CbOfertas-V5.0.apk.
+
+Observação: o APK é compilado pelo GitHub Actions, pois este pacote contém o projeto-fonte completo.

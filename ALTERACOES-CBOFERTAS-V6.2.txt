@@ -1,0 +1,18 @@
+CbOfertas V6.2 — Piloto Automático Completo
+
+1. O gerador manual de mensagens foi removido da interface.
+2. Cada oferta recebe uma frase engraçada automática antes do título.
+3. Foram adicionadas frases específicas para cueca, hidratante, doce de leite, creatina, cadeira, perfume, papel higiênico, fone, air fryer e escova dental, além das categorias gerais existentes.
+4. O arquivo .cbofertas incorpora as imagens como JPEG compactado quando possível.
+5. A importação restaura fila, cupons, configurações e biblioteca de afiliados.
+6. O painel do enviador ganhou verificação pré-voo.
+7. O piloto impede iniciar uma nova automação enquanto outra está ativa; o item é reagendado.
+8. O serviço verifica se aparece “Tentar novamente” após o clique e tenta novamente até três vezes.
+9. O resultado da automação é associado ao item da fila.
+10. Foi adicionado relatório com enviadas, falhas e pendentes, além de exportação .cbresultado.
+11. Alarmes exatos são usados quando o Android permite.
+12. A notificação automática pode abrir a atividade em tela cheia no aparelho dedicado.
+13. Android: versionCode 620 / versionName 6.2.
+14. GitHub Actions gera CbOfertas-V6.2.apk.
+
+Observação: a automação opera pela interface do WhatsApp e deve ser testada no aparelho e na versão real do WhatsApp Business. Mudanças futuras na interface do WhatsApp podem exigir ajustes nos seletores de acessibilidade.

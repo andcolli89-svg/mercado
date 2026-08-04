@@ -16,13 +16,17 @@ final class ScheduleManager {
 
     private ScheduleManager() { }
 
-    static void schedule(Context context, String id, long when, String title, String text, String imageUrl, boolean store) {
+    static void schedule(Context context, String id, long when, String title, String text, String imageUrl,
+                         String groupName, boolean automatic, boolean testMode, boolean store) {
         Intent intent = new Intent(context, ScheduledMessageReceiver.class);
         intent.setAction("com.cbofertas.app.SCHEDULED_MESSAGE");
         intent.putExtra("schedule_id", id);
         intent.putExtra("schedule_title", title);
         intent.putExtra("schedule_text", text);
         intent.putExtra("schedule_image", imageUrl);
+        intent.putExtra("schedule_group", groupName == null ? "" : groupName);
+        intent.putExtra("schedule_automatic", automatic);
+        intent.putExtra("schedule_test_mode", testMode);
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 context,
@@ -34,7 +38,9 @@ final class ScheduleManager {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) throw new IllegalStateException("Serviço de agendamento indisponível.");
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pendingIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pendingIntent);
         } else {
             alarmManager.set(AlarmManager.RTC_WAKEUP, when, pendingIntent);
@@ -48,6 +54,9 @@ final class ScheduleManager {
                 json.put("title", title);
                 json.put("text", text);
                 json.put("image", imageUrl == null ? "" : imageUrl);
+                json.put("group", groupName == null ? "" : groupName);
+                json.put("automatic", automatic);
+                json.put("testMode", testMode);
                 context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(id, json.toString()).apply();
             } catch (Exception error) {
                 cancel(context, id);
@@ -96,6 +105,9 @@ final class ScheduleManager {
                         json.optString("title", "Oferta agendada"),
                         json.optString("text", ""),
                         json.optString("image", ""),
+                        json.optString("group", ""),
+                        json.optBoolean("automatic", false),
+                        json.optBoolean("testMode", true),
                         false
                 );
             } catch (Exception ignored) {

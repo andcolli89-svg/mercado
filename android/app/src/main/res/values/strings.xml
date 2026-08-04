@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">CbOfertas</string>
+    <string name="accessibility_service_description">Seleciona o grupo configurado e confirma o envio de ofertas agendadas no aparelho dedicado. Atua somente no WhatsApp e quando o Piloto Automático está ativado.</string>
+</resources>

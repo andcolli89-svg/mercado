@@ -8,24 +8,19 @@ const {
   apiHeaders
 } = require('../config');
 const { fetchWithTimeout } = require('../lib/http');
-const { fetchApiPrices, fetchCatalogProduct } = require('../api/mercadoLivreApi');
-const { parseAriaMoney, parseMercadoLivrePrices } = require('../parsers/mercadoLivrePriceParser');
-const { resolveProductLink } = require('./linkResolver');
+const { productFromUrl } = require('./productService');
 const {
   clean,
   decodeHtml,
   money,
   numeric,
   itemIdFrom,
-  listingItemIdFrom,
-  catalogProductIdFrom,
   attr,
   stripTags,
   absoluteUrl
 } = require('../lib/format');
 
 const radarCache = new Map();
-const radarPriceCache = new Map();
 
 function radarCategory(title = '') {
   const text = String(title).toLowerCase();
@@ -61,39 +56,19 @@ function radarScore(item) {
 
 function normalizeRadarItem(item = {}) {
   const title = clean(stripTags(item.title || item.name || ''));
-  const link = absoluteUrl(item.link || item.url || item.permalink || '');
-  let itemId = clean(item.id || item.itemId || listingItemIdFrom(link));
-  const catalogProductId = clean(item.catalogProductId || catalogProductIdFrom(link));
-  if (itemId && catalogProductId && itemId.replace('-', '').toUpperCase() === catalogProductId.replace('-', '').toUpperCase()) itemId = '';
   const price = money(item.price || item.salePrice || item.currentPrice);
-  let oldPrice = money(item.oldPrice || item.originalPrice || item.regularPrice);
-  if (numeric(oldPrice) <= numeric(price)) oldPrice = '';
+  const oldPrice = money(item.oldPrice || item.originalPrice || item.regularPrice);
+  const link = absoluteUrl(item.link || item.url || item.permalink || '');
   const image = absoluteUrl(Array.isArray(item.image) ? item.image[0] : (item.image?.url || item.image || ''), link || RADAR_SOURCE_URL);
   const normalized = {
-    id: itemId,
-    itemId,
-    catalogProductId,
-    title,
-    price,
-    oldPrice,
-    link,
-    image,
+    id: clean(item.id || item.itemId || itemIdFrom(link)), title, price, oldPrice, link, image,
     seller: clean(item.seller?.name || item.seller || item.store || ''),
     full: Boolean(item.full || item.fulfillment || /\bfull\b/i.test(String(item.shipping || ''))),
     freeShipping: Boolean(item.freeShipping || item.free_shipping),
-    category: item.category || radarCategory(title),
-    source: item.source || 'ofertas',
-    priceConfidence: Number(item.priceConfidence || 0),
-    reportedDiscount: Math.max(0, Number(item.reportedDiscount || item.discount || 0))
+    category: item.category || radarCategory(title), source: item.source || 'ofertas'
   };
-  const computedDiscount = radarDiscount(oldPrice, price);
-  const providedDiscount = normalized.reportedDiscount;
-  normalized.discount = computedDiscount
-    ? (providedDiscount && Math.abs(providedDiscount - computedDiscount) <= 2 ? providedDiscount : computedDiscount)
-    : 0;
-  normalized.savings = Number.isFinite(numeric(oldPrice)) && Number.isFinite(numeric(price)) && numeric(oldPrice) > numeric(price)
-    ? money(numeric(oldPrice) - numeric(price))
-    : '';
+  normalized.discount = Number(item.discount || radarDiscount(oldPrice, price) || 0);
+  normalized.savings = Number.isFinite(numeric(oldPrice)) && Number.isFinite(numeric(price)) && numeric(oldPrice) > numeric(price) ? money(numeric(oldPrice) - numeric(price)) : '';
   normalized.score = radarScore(normalized);
   return normalized;
 }
@@ -139,144 +114,31 @@ function valueFromTag(block, attributeNames = []) {
   return '';
 }
 
-function moneyFromCardTag(block, tag, index) {
-  const aria = attr(tag, 'aria-label');
-  const ariaValue = parseAriaMoney(aria);
-  if (Number.isFinite(ariaValue)) return ariaValue;
-
-  const segment = block.slice(index, Math.min(block.length, index + 900));
-  const fraction = stripTags(segment.match(/<span\b[^>]*class=["'][^"']*andes-money-amount__fraction[^"']*["'][^>]*>[\s\S]{0,80}?<\/span>/i)?.[0] || '')
-    .match(/[\d.]+/)?.[0];
-  const cents = stripTags(segment.match(/<span\b[^>]*class=["'][^"']*andes-money-amount__cents[^"']*["'][^>]*>[\s\S]{0,40}?<\/span>/i)?.[0] || '')
-    .match(/\d{1,2}/)?.[0];
-  if (fraction) return numeric(cents ? `${fraction},${cents}` : fraction);
-
-  const visible = stripTags(segment.slice(0, 260));
-  const match = visible.match(/R\$\s*([\d.]+(?:,\d{1,2})?)/i);
-  return match ? numeric(match[1]) : NaN;
-}
-
-function collectRadarMoneyCandidates(block) {
-  const candidates = [];
-  const regex = /<(s|span|div)\b[^>]*(?:andes-money-amount|aria-label=["'][^"']*(?:reais?|centavos?|R\$))[^>]*>/gi;
-  let match;
-  while ((match = regex.exec(block))) {
-    const tagName = String(match[1] || '').toLowerCase();
-    const tag = match[0];
-    const value = moneyFromCardTag(block, tag, match.index);
-    if (!Number.isFinite(value) || value <= 1 || value > 1000000) continue;
-
-    const tagText = tag.toLowerCase();
-    const before = stripTags(block.slice(Math.max(0, match.index - 110), match.index)).toLowerCase();
-    const after = stripTags(block.slice(match.index + tag.length, Math.min(block.length, match.index + tag.length + 90))).toLowerCase();
-    const nearBefore = before.slice(-60);
-    const nearAfter = after.slice(0, 45);
-    const context = `${nearBefore} ${nearAfter}`;
-    const old = tagName === 's'
-      || /previous|original|before|tachado|strike|line-through|ui-pdp-price__original-value|andes-money-amount--previous/.test(tagText);
-    const installmentTag = /installment|parcel/.test(tagText) || /(?:parcela|\b\d{1,2}x)(?:\s+de)?\s*$/.test(nearBefore);
-    const cashbackTag = /cashback|meli d[oó]lar|de volta|ganhe|ganhos/.test(context);
-    const rejected = !old && (installmentTag || cashbackTag || /por m[eê]s/.test(context));
-    const currentHint = /current|price__current|price-to-pay|price_to_pay|second-line|poly-price__current/.test(tagText);
-    candidates.push({ value, old, rejected, currentHint, index: match.index, context });
-  }
-  return candidates;
-}
-
-function visibleMoneyCandidates(block) {
-  const result = [];
-  const regex = /R\$\s*([\d.]+(?:,\d{1,2})?)/gi;
-  let match;
-  while ((match = regex.exec(stripTags(block)))) {
-    const value = numeric(match[1]);
-    if (Number.isFinite(value) && value > 1 && value < 1000000) result.push(value);
-  }
-  return result;
-}
-
-function bestDiscountPair(oldCandidates, currentCandidates, discount) {
-  if (!discount) return null;
-  let best = null;
-  for (const oldValue of oldCandidates) {
-    for (const currentValue of currentCandidates) {
-      if (!(oldValue > currentValue * 1.01)) continue;
-      const calculated = Math.round((1 - currentValue / oldValue) * 100);
-      const error = Math.abs(calculated - discount);
-      if (!best || error < best.error || (error === best.error && currentValue < best.current)) {
-        best = { old: oldValue, current: currentValue, error, calculated };
-      }
-    }
-  }
-  return best && best.error <= 4 ? best : null;
-}
-
 function radarItemFromBlock(block) {
   const hrefMatch = block.match(/<a\b[^>]*href=["']([^"']*(?:mercadolivre\.com\.br|meli\.la)[^"']*)["']/i);
   const link = absoluteUrl(hrefMatch?.[1] || '');
-  const itemId = listingItemIdFrom(link);
-  const catalogProductId = catalogProductIdFrom(link);
-  if (!link || (!itemId && !catalogProductId && !/produto\.mercadolivre/i.test(link))) return null;
-
-  let title = valueFromTag(block, ['title', 'aria-label', 'alt']);
+  if (!link || !itemIdFrom(link) && !/\/p\/MLB|produto\.mercadolivre/i.test(link)) return null;
+  let title = valueFromTag(block, ['title','aria-label','alt']);
   if (!title) title = stripTags(block.match(/<(?:h2|h3)\b[^>]*>[\s\S]*?<\/(?:h2|h3)>/i)?.[0] || '');
   title = title.replace(/\s*[-|]\s*Mercado Livre.*$/i, '').trim();
   if (!title || title.length < 4) return null;
-
   const imageTag = block.match(/<img\b[^>]*>/i)?.[0] || '';
   const image = absoluteUrl(attr(imageTag, 'data-src') || attr(imageTag, 'src') || attr(imageTag, 'srcset').split(/\s+/)[0], link);
-  const visible = stripTags(block);
-  const discount = Number(visible.match(/(\d{1,2})%\s*OFF/i)?.[1] || 0);
-  const candidates = collectRadarMoneyCandidates(block);
-  const explicitOld = candidates.filter(entry => entry.old).map(entry => entry.value);
-  const explicitCurrent = candidates.filter(entry => !entry.old && !entry.rejected).map(entry => entry.value);
-  const hintedCurrent = candidates.filter(entry => !entry.old && !entry.rejected && entry.currentHint).map(entry => entry.value);
-
-  let pair = bestDiscountPair(explicitOld, explicitCurrent, discount);
-  if (!pair && discount) {
-    const visibleValues = visibleMoneyCandidates(block);
-    pair = bestDiscountPair(visibleValues, visibleValues, discount);
+  const moneyValues = [];
+  for (const tag of block.match(/<(?:span|div)\b[^>]*(?:aria-label=["'][^"']*(?:real|R\$)|andes-money-amount)[^>]*>/gi) || []) {
+    const label = attr(tag, 'aria-label');
+    const found = label.match(/([\d.]+(?:,\d{1,2})?)/);
+    if (found) moneyValues.push({ value: money(found[1]), old: /previous|original|antes|tachado/i.test(tag) });
   }
-
-  let price = pair?.current;
-  let oldPrice = pair?.old;
-  let priceConfidence = pair ? 98 : 0;
-
-  if (!Number.isFinite(price)) {
-    const pool = hintedCurrent.length ? hintedCurrent : explicitCurrent;
-    if (pool.length) {
-      price = Math.min(...pool);
-      priceConfidence = hintedCurrent.length ? 90 : 78;
-    }
+  let price = moneyValues.find(x => !x.old)?.value || '';
+  let oldPrice = moneyValues.find(x => x.old)?.value || '';
+  if (!price) {
+    const values = [...stripTags(block).matchAll(/R\$\s*([\d.]+(?:,\d{2})?)/gi)].map(m => money(m[1])).filter(Boolean);
+    if (values.length) price = values[values.length - 1];
+    if (values.length > 1 && numeric(values[0]) > numeric(price)) oldPrice = values[0];
   }
-  if (!Number.isFinite(oldPrice) && Number.isFinite(price)) {
-    oldPrice = explicitOld.filter(value => value > price * 1.01).sort((a, b) => a - b)[0];
-  }
-
-  if (!Number.isFinite(price)) {
-    const values = visibleMoneyCandidates(block);
-    if (values.length) {
-      price = discount && values.length > 1 ? Math.min(...values) : values[0];
-      const larger = values.filter(value => value > price * 1.01).sort((a, b) => a - b);
-      if (larger.length) oldPrice = larger[0];
-      priceConfidence = discount ? 74 : 55;
-    }
-  }
-
-  return normalizeRadarItem({
-    id: itemId,
-    itemId,
-    catalogProductId,
-    title,
-    price: money(price),
-    oldPrice: money(oldPrice),
-    link,
-    image,
-    discount,
-    priceConfidence,
-    full: /\bFULL\b/i.test(visible),
-    freeShipping: /frete gr[aá]tis|chegar[aá] gr[aá]tis/i.test(visible),
-    source: 'ofertas-card'
-  });
+  const discountMatch = stripTags(block).match(/(\d{1,2})%\s*OFF/i);
+  return normalizeRadarItem({ title, price, oldPrice, link, image, discount: discountMatch?.[1] || 0, full: /\bFULL\b/i.test(stripTags(block)), freeShipping: /frete gr[aá]tis/i.test(stripTags(block)), source: 'ofertas-card' });
 }
 
 function radarItemsFromCards(html) {
@@ -298,7 +160,7 @@ function dedupeRadarItems(items) {
   const seen = new Set();
   return items.filter(item => {
     const normalized = normalizeRadarItem(item);
-    const key = normalized.id || normalized.catalogProductId || normalized.link.replace(/[?#].*$/, '') || normalized.title.toLowerCase();
+    const key = normalized.id || normalized.link.replace(/[?#].*$/, '') || normalized.title.toLowerCase();
     if (!normalized.title || !normalized.link || !normalized.price || seen.has(key)) return false;
     seen.add(key);
     Object.assign(item, normalized);
@@ -313,7 +175,7 @@ async function radarFromSearchApi(query, limit = 50) {
     if (!response.ok) return [];
     const data = await response.json();
     return (data.results || []).map(item => normalizeRadarItem({
-      id: item.id, catalogProductId: item.catalog_product_id || '', title: item.title, price: item.sale_price?.amount || item.price,
+      id: item.id, title: item.title, price: item.sale_price?.amount || item.price,
       oldPrice: item.sale_price?.regular_amount || item.original_price, link: item.permalink,
       image: item.secure_thumbnail || item.thumbnail, seller: item.seller?.nickname,
       full: item.shipping?.logistic_type === 'fulfillment', freeShipping: item.shipping?.free_shipping,
@@ -340,128 +202,45 @@ async function radarFromOffersPage() {
   return dedupeRadarItems([...radarItemsFromJsonLd(html), ...radarItemsFromCards(html)]);
 }
 
-function radarPriceSuspicious(item = {}) {
-  const current = numeric(item.price);
-  const oldValue = numeric(item.oldPrice);
-  const shownDiscount = Number(item.reportedDiscount || item.discount || 0);
-  const calculated = radarDiscount(item.oldPrice, item.price);
-  return !Number.isFinite(current)
-    || (shownDiscount > 0 && (!Number.isFinite(oldValue) || oldValue <= current || Math.abs(shownDiscount - calculated) > 4))
-    || Number(item.priceConfidence || 0) < 75;
-}
 
-function firstOldPriceAbove(current, values = []) {
-  for (const value of values) {
-    const amount = numeric(value);
-    if (Number.isFinite(amount) && amount > current * 1.01) return money(amount);
-  }
-  return '';
-}
-
-async function resolveRadarLivePrice(item) {
-  const key = item.id || item.catalogProductId || item.link;
-  const cached = radarPriceCache.get(key);
-  if (cached && Date.now() - cached.at < 5 * 60 * 1000) return cached.value;
-
-  let catalog = null;
-  let itemId = item.id || '';
-  if (item.catalogProductId) {
-    catalog = await fetchCatalogProduct(item.catalogProductId);
-    if (!itemId && catalog?.itemId) itemId = catalog.itemId;
-  }
-
-  const apiPrices = itemId ? await fetchApiPrices(itemId) : null;
-  let pagePrices = null;
-  const shouldReadPage = Boolean(item.link) && (radarPriceSuspicious(item) || Boolean(item.catalogProductId) || !apiPrices?.price);
-  if (shouldReadPage) {
-    try {
-      const resolved = await resolveProductLink(item.link, 14);
-      if (resolved.html) {
-        pagePrices = parseMercadoLivrePrices(resolved.html, {
-          apiPrice: apiPrices?.price || catalog?.price || item.price,
-          apiOldPrice: apiPrices?.oldPrice || catalog?.oldPrice || item.oldPrice
-        });
-      }
-    } catch { /* API e preço do card continuam como fallback */ }
-  }
-
-  const existing = numeric(item.price);
-  const pageCurrent = numeric(pagePrices?.price);
-  const apiCurrent = numeric(apiPrices?.price);
-  const catalogCurrent = numeric(catalog?.price);
-  let current = NaN;
-  let source = '';
-  let confidence = Number(item.priceConfidence || 0);
-
-  if (pagePrices?.pageDetected && Number(pagePrices.confidence || 0) >= 85 && Number.isFinite(pageCurrent)) {
-    current = pageCurrent;
-    source = 'page-price-to-pay';
-    confidence = Number(pagePrices.confidence || 0);
-  } else if (confidence >= 90 && Number.isFinite(existing)) {
-    current = existing;
-    source = 'radar-card';
-  } else if (Number.isFinite(apiCurrent)) {
-    current = apiCurrent;
-    source = apiPrices?.source || 'sale-price';
-    confidence = Math.max(confidence, 88);
-  } else if (Number.isFinite(catalogCurrent)) {
-    current = catalogCurrent;
-    source = 'catalog-buy-box';
-    confidence = Math.max(confidence, 82);
-  } else if (Number.isFinite(existing)) {
-    current = existing;
-    source = 'radar-card-fallback';
-  }
-
-  if (!Number.isFinite(current)) return null;
-  const oldPrice = firstOldPriceAbove(current, [
-    pagePrices?.oldPrice,
-    apiPrices?.oldPrice,
-    catalog?.oldPrice,
-    item.oldPrice,
-    Number.isFinite(existing) && existing > current ? existing : ''
-  ]);
-  const value = {
-    itemId,
-    catalogProductId: catalog?.catalogProductId || item.catalogProductId || '',
-    price: money(current),
-    oldPrice,
-    priceConfidence: confidence,
-    source
-  };
-  radarPriceCache.set(key, { at: Date.now(), value });
-  return value;
-}
-
-async function enrichPromotionalPrices(items, maxItems = 18) {
-  const candidates = items
-    .map((item, index) => ({ item, index, priority: radarPriceSuspicious(item) ? 2 : ((item.reportedDiscount || item.discount) ? 1 : 0) }))
-    .sort((a, b) => b.priority - a.priority || a.index - b.index)
-    .slice(0, Math.max(0, maxItems))
-    .map(entry => entry.item);
-  if (!candidates.length) return items;
-
-  const queue = [...candidates];
-  const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
-    while (queue.length) {
-      const item = queue.shift();
-      const live = await resolveRadarLivePrice(item);
-      if (!live?.price) continue;
-      const normalized = normalizeRadarItem({
-        ...item,
-        id: live.itemId || item.id,
-        itemId: live.itemId || item.itemId,
-        catalogProductId: live.catalogProductId || item.catalogProductId,
-        price: live.price,
-        oldPrice: live.oldPrice,
-        priceConfidence: live.priceConfidence,
-        source: `${item.source}+${live.source}`
-      });
-      Object.assign(item, normalized);
+async function mapWithConcurrency(items, limit, worker) {
+  const output = new Array(items.length);
+  let cursor = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      try { output[index] = await worker(items[index], index); }
+      catch { output[index] = items[index]; }
     }
   });
-  await Promise.all(workers);
-  return items;
+  await Promise.all(runners);
+  return output;
+}
+
+async function verifyRadarPrices(items = []) {
+  return mapWithConcurrency(items, 4, async item => {
+    if (!item?.link) return item;
+    try {
+      const live = await productFromUrl(item.link);
+      if (!live?.price) return { ...item, priceVerified: false };
+      return normalizeRadarItem({
+        ...item,
+        id: live.id || item.id,
+        title: live.title || item.title,
+        price: live.price,
+        oldPrice: live.oldPrice || item.oldPrice,
+        link: live.permalink || item.link,
+        image: live.imageProxy || live.image || item.image,
+        seller: live.seller || item.seller,
+        full: live.full,
+        freeShipping: live.freeShipping,
+        priceVerified: true,
+        source: `${item.source || 'radar'}+verificado`
+      });
+    } catch {
+      return { ...item, priceVerified: false };
+    }
+  });
 }
 
 async function getRadarOffers(options = {}) {
@@ -479,11 +258,20 @@ async function getRadarOffers(options = {}) {
   let source = items.length ? 'Pesquisa do Mercado Livre' : 'Ofertas do Mercado Livre';
   if (query && !items.length) { items = await radarFromSearchPage(query); if (items.length) source = 'Pesquisa pública do Mercado Livre'; }
   if (!items.length) items = await radarFromOffersPage();
-  items = await enrichPromotionalPrices(dedupeRadarItems(items), Math.min(24, limit));
   const normalizedQuery = query.toLowerCase();
   items = dedupeRadarItems(items)
     .filter(item => !normalizedQuery || item.title.toLowerCase().includes(normalizedQuery))
     .filter(item => !category || item.category === category)
+    .slice(0, Math.max(limit, 36));
+
+  // Confere o anúncio real antes de mostrar preço e desconto no Radar.
+  items = await verifyRadarPrices(items);
+  items = dedupeRadarItems(items)
+    .filter(item => {
+      if (item.priceVerified !== false) return true;
+      const calculated = radarDiscount(item.oldPrice, item.price);
+      return calculated > 0 && Math.abs(calculated - Number(item.discount || calculated)) <= 2;
+    })
     .filter(item => !minDiscount || item.discount >= minDiscount)
     .filter(item => !maxPrice || numeric(item.price) <= maxPrice)
     .filter(item => !onlyFull || item.full)
@@ -520,7 +308,5 @@ function startRadarScheduler() {
 module.exports = {
   getRadarOffers,
   normalizeRadarItem,
-  startRadarScheduler,
-  radarItemFromBlock,
-  enrichPromotionalPrices
+  startRadarScheduler
 };

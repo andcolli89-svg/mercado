@@ -7,7 +7,7 @@
   <title>CbOfertas</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=520">
+  <link rel="stylesheet" href="style.css?v=630">
 </head>
 <body>
   <div id="menuOverlay" class="menu-overlay hidden"></div>
@@ -22,6 +22,8 @@
     <button class="menu-link" data-page="history" type="button">◷ <span>Histórico e agendamentos</span></button>
     <button class="menu-link" data-page="favorites" type="button">★ <span>Favoritos</span></button>
     <button class="menu-link" data-page="coupons" type="button">🎟️ <span>Cupons inteligentes</span></button>
+    <button class="menu-link" data-page="batch" type="button">📥 <span>Lote WhatsApp</span></button>
+    <button class="menu-link" data-page="automation" type="button">🤖 <span>Piloto Automático</span></button>
     <button class="menu-link" data-page="settings" type="button">⚙️ <span>Configurações</span></button>
     <div class="side-menu-separator"></div>
     <button id="menuNewItemBtn" class="menu-link" type="button">＋ <span>Nova oferta</span></button>
@@ -68,7 +70,7 @@
           <p id="fetchStatus" class="status" aria-live="polite"></p>
           <div class="affiliate-link-box">
             <button id="affiliateLinkBtn" class="btn affiliate-button" type="button" disabled>💰 Gerar link de afiliado</button>
-            <small>Use o link oficial de afiliado do Mercado Livre ou da Shopee e compartilhe-o com a <b>CbOfertas</b>. A associação será reutilizada automaticamente.</small>
+            <small>O Mercado Livre gera o rastreamento da sua conta. Abra o produto, toque em <b>Compartilhar</b> na faixa <b>Ganhos</b> e escolha <b>CbOfertas</b>.</small>
           </div>
           <p id="affiliateStatus" class="status affiliate-status" aria-live="polite"></p>
         </section>
@@ -125,16 +127,25 @@
           </div>
         </section>
 
-        <div class="hidden" aria-hidden="true">
-          <input id="smartPhrase" tabindex="-1">
-          <div id="preview"></div>
-          <textarea id="finalText" tabindex="-1"></textarea>
-          <span id="charCounter"></span>
-        </div>
+        <section class="step-card automatic-message-step">
+          <div class="step-heading">
+            <span class="step-number">3</span>
+            <div><h2>Mensagem automática</h2><p>A CbOfertas escolhe uma frase engraçada conforme o produto e coloca antes do título.</p></div>
+          </div>
+          <input id="smartPhrase" type="hidden">
+          <div id="preview" class="whatsapp-preview hidden"></div>
+          <div class="message-editor automatic-message-editor">
+            <textarea id="finalText" rows="9" maxlength="1200" aria-label="Mensagem automática pronta" readonly></textarea>
+            <div class="message-side-actions">
+              <button id="copySideBtn" type="button" title="Copiar mensagem">▣</button>
+            </div>
+          </div>
+          <div class="message-counter"><span>Frase e mensagem geradas automaticamente</span><strong id="charCounter">0/1200</strong></div>
+        </section>
 
         <section class="step-card share-step">
           <div class="step-heading">
-            <span class="step-number">3</span>
+            <span class="step-number">4</span>
             <div><h2>Compartilhar sua oferta</h2><p>Escolha como deseja publicar</p></div>
           </div>
           <div class="share-actions">
@@ -191,13 +202,7 @@
     </section>
 
     <section id="historyPage" class="page-view hidden">
-      <section class="page-intro"><span>◷</span><div><h1>Histórico inteligente</h1><p>Acompanhe preços, descontos, consultas e publicações.</p></div></section>
-      <section class="history-insights">
-        <article><small>Menor preço</small><strong id="historyLowestPrice">—</strong></article>
-        <article><small>Maior desconto</small><strong id="historyBestDiscount">—</strong></article>
-        <article><small>Consultas</small><strong id="historyConsultations">0</strong></article>
-        <article><small>Última consulta</small><strong id="historyLastConsultation">—</strong></article>
-      </section>
+      <section class="page-intro"><span>◷</span><div><h1>Histórico de ofertas</h1><p>Edite, agende ou envie cada publicação separadamente.</p></div></section>
       <section class="card publication-card">
         <div class="section-title publication-title">
           <span>📚</span><div><h2>Itens salvos</h2><p>Cada produto pode ter sua própria data e horário.</p></div><strong id="publicationCount" class="publication-count">0</strong>
@@ -246,7 +251,8 @@
           <label id="couponTargetLabel" class="coupon-target-label">Produto específico / palavras-chave<input id="couponTargetInput" placeholder="Ex.: Air Fryer, tênis Adidas ou link do produto" autocomplete="off"><small>Obrigatório apenas para cupom específico. Separe várias opções por vírgula.</small></label>
           <label>Valor mínimo da oferta<input id="couponMinPriceInput" inputmode="decimal" placeholder="Ex.: 199,90"></label>
           <label>Desconto mínimo (%)<input id="couponMinDiscountInput" type="number" min="0" max="95" inputmode="numeric" placeholder="Ex.: 20"></label>
-          <label>Validade<input id="couponExpiresInput" type="date"></label>
+          <label>Validade rápida<select id="couponValidityPreset"><option value="">Sem validade</option><option value="0.5">30 minutos</option><option value="1">1 hora</option><option value="3">3 horas</option><option value="6">6 horas</option><option value="12">12 horas</option><option value="24">1 dia</option><option value="72">3 dias</option><option value="custom">Data e hora</option></select></label>
+          <label id="couponCustomExpiryLabel" class="hidden">Expira em<input id="couponExpiresAtInput" type="datetime-local"></label><input id="couponExpiresInput" type="hidden">
           <label>Prioridade<select id="couponPriorityInput"><option value="1">Normal</option><option value="2">Alta</option><option value="3">Máxima</option></select></label>
           <button id="saveCouponCodeBtn" class="btn primary" type="button">＋ Adicionar cupom</button>
           <button id="cancelCouponEditBtn" class="btn outline hidden" type="button">Cancelar alteração</button>
@@ -282,10 +288,85 @@
       </section>
     </section>
 
+
+
+    <section id="batchPage" class="page-view hidden">
+      <section class="page-intro batch-intro"><span>📥</span><div><h1>Lote WhatsApp</h1><p>Cole vários anúncios, separe e envie somente os afiliados confirmados para o Piloto Automático.</p></div></section>
+      <section class="card batch-card">
+        <label class="batch-input-label">Cole aqui os anúncios copiados do WhatsApp
+          <textarea id="batchInput" rows="11" placeholder="Texto do anúncio...&#10;Cupom...&#10;https://meli.la/..."></textarea>
+        </label>
+        <button id="batchSeparateBtn" class="btn primary full" type="button">📥 Separar anúncios</button>
+        <p id="batchStatus" class="status" aria-live="polite"></p>
+      </section>
+      <section class="card batch-results-card">
+        <div class="batch-heading"><div><h2>⚡ Anúncios separados</h2><p id="batchSummary">Nenhum lote separado.</p></div><span id="batchReadyBadge" class="batch-ready-badge">0 prontos</span></div>
+        <div class="actions two-buttons">
+          <button id="batchPrepareBtn" class="btn secondary" type="button">🖼 Buscar fotos faltantes</button>
+          <button id="batchApplyAffiliateBtn" class="btn outline" type="button">🔗 Aplicar afiliados salvos</button>
+        </div>
+        <div id="batchItemsList" class="batch-items-list"></div>
+        <button id="batchSendPilotBtn" class="btn whatsapp full" type="button">🔀 Enviar afiliados para o Piloto — embaralhado</button>
+        <small class="setting-help">Anúncios com link comum, sem link ou link inválido ficam bloqueados e não entram na fila.</small>
+        <p id="batchPilotStatus" class="status" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <section id="automationPage" class="page-view hidden">
+      <section class="page-intro"><span>🤖</span><div><h1>Piloto Automático</h1><p>Prepare a fila no celular novo e importe no aparelho enviador.</p></div></section>
+      <section class="card v6-mode-card">
+        <h2>Modo deste aparelho</h2>
+        <div class="v6-mode-grid"><button id="creatorModeBtn" class="btn primary" type="button">📱 Criador</button><button id="senderModeBtn" class="btn outline" type="button">📤 Enviador</button></div>
+        <p id="deviceModeStatus" class="status"></p>
+      </section>
+      <section class="card">
+        <h2>Fila do dia</h2>
+        <div class="v6-stats"><div><b id="v6QueueCount">0</b><small>ofertas</small></div><div><b id="v6ReadyCount">0</b><small>prontas</small></div><div><b id="v6NextTime">—</b><small>próximo envio</small></div></div>
+        <div class="v6-config-grid">
+          <label>Início<input id="v6StartTime" type="time" value="08:00"></label>
+          <label>Fim<input id="v6EndTime" type="time" value="21:00"></label>
+          <label>Ofertas por rodada<input id="v6BatchSize" type="number" min="1" max="5" value="3"></label>
+          <label>Intervalo entre rodadas (min)<input id="v6RoundInterval" type="number" min="15" max="180" value="30"></label>
+          <label>Intervalo interno (min)<input id="v6ItemInterval" type="number" min="1" max="10" value="2"></label>
+          <label>Máximo diário<input id="v6DailyLimit" type="number" min="1" max="100" value="36"></label>
+        </div>
+        <div class="actions two-buttons"><button id="buildDailyQueueBtn" class="btn secondary" type="button">🗓 Montar horários</button><button id="exportQueueBtn" class="btn primary" type="button">⬆ Exportar fila</button></div>
+        <label class="btn outline full import-button">⬇ Importar fila<input id="importQueueInput" type="file" accept=".cbofertas,application/json" hidden></label>
+        <p id="v6QueueStatus" class="status"></p>
+        <div id="v6QueueList" class="v6-queue-list"></div>
+      </section>
+      <section class="card sender-control-card">
+        <h2>Central de envio automático</h2>
+        <p>Configure o nome exato do grupo. O módulo atua somente no WhatsApp e somente quando houver uma oferta agendada pela CbOfertas.</p>
+        <label>Nome exato do grupo<input id="automationGroupName" type="text" placeholder="Ex.: Ofertas do Fabio"></label>
+        <label class="check-line"><input id="automationEnabled" type="checkbox"><span>Ativar cliques automáticos no aparelho enviador</span></label>
+        <label class="check-line"><input id="automationTestMode" type="checkbox" checked><span>Modo de teste: prepara tudo, mas não toca em Enviar</span></label>
+        <div class="actions two-buttons">
+          <button id="openAccessibilityBtn" class="btn outline" type="button">⚙ Ativar acessibilidade</button>
+          <button id="testAutomationBtn" class="btn secondary" type="button">🧪 Testar primeira oferta</button>
+        </div>
+        <button id="activateSenderBtn" class="btn whatsapp full" type="button">▶ Ativar fila automática</button>
+        <button id="pauseSenderBtn" class="btn danger full" type="button">⏸ Pausar agendamentos</button>
+        <p id="accessibilityStatus" class="status"></p>
+        <p id="senderStatus" class="status"></p>
+        <small class="setting-help">Use primeiro o modo de teste em um grupo criado só para testes. O aparelho deve permanecer desbloqueado, conectado ao carregador e com o WhatsApp Business logado.</small>
+      </section>
+      <section class="card v62-preflight-card">
+        <h2>Verificação antes de iniciar</h2>
+        <div id="v62PreflightList" class="v62-check-list"></div>
+        <button id="v62RunPreflightBtn" class="btn outline full" type="button">✓ Verificar aparelho e fila</button>
+      </section>
+      <section class="card v62-report-card">
+        <h2>Relatório do piloto</h2>
+        <div class="v6-stats"><div><b id="v62SentCount">0</b><small>enviadas</small></div><div><b id="v62FailedCount">0</b><small>falharam</small></div><div><b id="v62PendingCount">0</b><small>pendentes</small></div></div>
+        <div id="v62ReportList" class="v6-queue-list"></div>
+        <div class="actions two-buttons"><button id="v62RefreshReportBtn" class="btn outline" type="button">↻ Atualizar</button><button id="v62ExportReportBtn" class="btn secondary" type="button">⬆ Exportar relatório</button></div>
+      </section>
+    </section>
     <section id="settingsPage" class="page-view hidden">
       <section class="page-intro"><span>⚙️</span><div><h1>Configurações</h1><p>O servidor oficial já vem preenchido e pronto para uso.</p></div></section>
       <section class="card server-card">
-        <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar anúncios do Mercado Livre e da Shopee.</p></div></div>
+        <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar os anúncios do Mercado Livre.</p></div></div>
         <label>Endereço do servidor<input id="apiServer" type="url" value="https://mercado-yvqn.onrender.com"></label>
         <div class="actions two-buttons">
           <button id="saveServerBtn" class="btn secondary" type="button">Salvar servidor</button>
@@ -294,8 +375,8 @@
         <p id="serverStatus" class="status"></p>
       </section>
       <section class="card setting-card affiliate-setting-card">
-        <div class="setting-title"><span>💰</span><div><h2>Links de afiliado</h2><p>A CbOfertas recebe links oficiais de afiliado do Mercado Livre e da Shopee e os aplica automaticamente à oferta.</p></div></div>
-        <ol class="affiliate-steps"><li>Abra ou busque o produto na CbOfertas.</li><li>Toque em <b>Gerar link de afiliado</b>.</li><li>Na loja, gere ou compartilhe o link oficial da sua conta.</li><li>Escolha <b>CbOfertas</b> na lista de aplicativos.</li></ol>
+        <div class="setting-title"><span>💰</span><div><h2>Links de afiliado</h2><p>O CbOfertas recebe o link oficial criado pelo Mercado Livre e o aplica automaticamente à oferta.</p></div></div>
+        <ol class="affiliate-steps"><li>Abra ou busque o produto no CbOfertas.</li><li>Toque em <b>Gerar link de afiliado</b>.</li><li>No Mercado Livre, toque em <b>Compartilhar</b> na faixa Ganhos.</li><li>Escolha <b>CbOfertas</b> na lista de aplicativos.</li></ol>
         <small class="setting-help">Não é necessário informar senha, token ou código de afiliado ao CbOfertas.</small>
       </section>
       <section class="card setting-card">
@@ -308,17 +389,7 @@
         <label class="check-option radar-setting-toggle"><input id="settingsRadarAuto" type="checkbox" checked><span>Atualizar automaticamente ao abrir</span></label>
         <small class="setting-help">As ofertas repetidas são reconhecidas pelo link e podem ficar ocultas depois de usadas.</small>
       </section>
-      <section class="card affiliate-library-card">
-        <div class="section-title"><span>🔗</span><div><h2>Biblioteca de Afiliados</h2><p>Links meli.la recebidos pelo compartilhamento são vinculados ao MLB e reutilizados no Radar, Histórico, Favoritos e WhatsApp.</p></div><strong id="affiliateLibraryCount" class="publication-count">0</strong></div>
-        <div class="affiliate-library-toolbar">
-          <input id="affiliateLibrarySearch" placeholder="Pesquisar MLB ou link meli.la">
-          <button id="exportAffiliateLibraryBtn" class="btn outline compact" type="button">Copiar JSON</button>
-          <button id="clearAffiliateLibraryBtn" class="btn outline-danger compact" type="button">Limpar</button>
-        </div>
-        <div id="affiliateLibraryList" class="affiliate-library-list"></div>
-      </section>
-
-      <section class="card about-card"><b>CbOfertas V5.2.1</b><p>Preço promocional validado, links meli.la, Biblioteca de Afiliados, Radar inteligente, histórico de preços, cupons e favoritos.</p></section>
+      <section class="card about-card"><b>CbOfertas V6.3</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
     </section>
   </main>
 
@@ -328,9 +399,11 @@
     <button id="showHistoryPageBtn" class="bottom-tab" data-page="history" type="button"><span>◷</span><b>Histórico</b></button>
     <button id="showFavoritesPageBtn" class="bottom-tab" data-page="favorites" type="button"><span>★</span><b>Favoritos</b></button>
     <button id="showCouponsPageBtn" class="bottom-tab" data-page="coupons" type="button"><span>🎟</span><b>Cupons</b></button>
+    <button id="showBatchPageBtn" class="bottom-tab" data-page="batch" type="button"><span>📥</span><b>Lote</b></button>
+    <button id="showAutomationPageBtn" class="bottom-tab" data-page="automation" type="button"><span>🤖</span><b>Piloto</b></button>
     <button id="showSettingsPageBtn" class="bottom-tab" data-page="settings" type="button"><span>⚙</span><b>Configurações</b></button>
   </nav>
 
-  <script src="app.js?v=520"></script>
+  <script src="app.js?v=630"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const state = {
+  style: 'divertido',
   image: '',
   full: false,
   previewIndex: 0,
@@ -120,414 +121,109 @@ const el = {
   favoritesList: $('#favoritesList'),
   favoritesEmpty: $('#favoritesEmpty'),
   favoritesStatus: $('#favoritesStatus'),
-  clearFavoritesBtn: $('#clearFavoritesBtn'),
-  affiliateLibraryCount: $('#affiliateLibraryCount'),
-  affiliateLibrarySearch: $('#affiliateLibrarySearch'),
-  affiliateLibraryList: $('#affiliateLibraryList'),
-  clearAffiliateLibraryBtn: $('#clearAffiliateLibraryBtn'),
-  exportAffiliateLibraryBtn: $('#exportAffiliateLibraryBtn'),
-  historyLowestPrice: $('#historyLowestPrice'),
-  historyBestDiscount: $('#historyBestDiscount'),
-  historyConsultations: $('#historyConsultations'),
-  historyLastConsultation: $('#historyLastConsultation')
+  clearFavoritesBtn: $('#clearFavoritesBtn')
 };
 
 const funnyPhrases = {
-  "roupas_intimas": [
-    "Um novo lar para seu piupiu.",
-    "O boleto viu esse cueca nova e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse cueca nova.",
-    "Esse cueca nova entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse cueca nova.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse cueca nova está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse cueca nova resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse cueca nova.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  calcados: [
+    'Esse calçado é tão bonito que até o chinelo velho começou a atualizar o currículo! 👟🤣',
+    'Seu pé já colocou no carrinho. Agora só falta você parar de fingir que está pensando! 😂',
+    'Passo firme, preço leve e o boleto andando de fininho! 👟😄',
+    'Cuidado: depois desse tênis, até ir na padaria vira desfile! 🥖👟🤣',
+    'O sapato antigo viu esta oferta e pediu aposentadoria por tempo de serviço! 😂',
+    'Confortável no pé e educado com o bolso — raridade maior que meia sem par! 🧦🤣',
+    'Esse preço está tão baixo que o cadarço precisou se abaixar para enxergar! 👟😂'
   ],
-  "hidratacao": [
-    "Vamos hidratar essa pele seca, amigo.",
-    "O boleto viu esse hidratante e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse hidratante.",
-    "Esse hidratante entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse hidratante.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse hidratante está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse hidratante resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse hidratante.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  roupas: [
+    'O guarda-roupa pediu reforço e prometeu parar de dizer “não tenho nada para vestir”! 👕🤣',
+    'Look novo sem o cartão precisar fazer terapia depois! 👗😂',
+    'Essa roupa veste tão bem que até a câmera frontal vai colaborar! 📸🤣',
+    'O espelho já curtiu; falta só você clicar no link! 👚😄',
+    'Bonita, barata e não pede senha do Wi-Fi — praticamente perfeita! 😂',
+    'Seu guarda-roupa abriu espaço sozinho quando viu esse preço! 👕🤣',
+    'O boleto tentou reclamar, mas ficou sem argumento diante dessa oferta! 😄'
   ],
-  "doces": [
-    "Minha diabetes que aguente...",
-    "O boleto viu esse doce e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse doce.",
-    "Esse doce entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse doce.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse doce está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse doce resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse doce.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  cozinha: [
+    'Essa oferta não cozinha sozinha, mas já deixa a preguiça sem desculpa! 🍳🤣',
+    'Até a panela bateu palma quando viu esse preço! 🍲😂',
+    'A dieta começa segunda; hoje a cozinha ganhou brinquedo novo! 😄',
+    'Preço tão bom que até o arroz soltinho ficou emocionado! 🍚🤣',
+    'Sua cozinha vai ficar chique e o miojo vai achar que virou gourmet! 🍜😂',
+    'A louça não vai se lavar, mas pelo menos vai ficar com inveja! 🍽️🤣',
+    'Esse item é o chef que faltava — e não pede salário! 👨‍🍳😄'
   ],
-  "suplementos": [
-    "O shape não vem sozinho não.",
-    "O boleto viu esse suplemento e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse suplemento.",
-    "Esse suplemento entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse suplemento.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse suplemento está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse suplemento resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse suplemento.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  casa: [
+    'A casa pediu esse mimo e o bolso, num raro momento de união, concordou! 🏠🤣',
+    'Sua sala vai ficar tão bonita que as visitas vão achar que erraram de endereço! 🛋️😂',
+    'Decoração nova sem precisar vender o sofá antigo — progresso! 😄',
+    'Até a poeira ficou nervosa quando viu essa novidade chegando! 🧹🤣',
+    'A casa vai ficar chique e o boleto vai continuar morando no cantinho dele! 🏡😂',
+    'Preço tão bom que até a tomada ficou chocada! 🔌🤣',
+    'Seu lar merece; a bagunça talvez não, mas ela não manda em nada! 😄'
   ],
-  "cadeiras": [
-    "Sua coluna agradece.",
-    "O boleto viu esse cadeira e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse cadeira.",
-    "Esse cadeira entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse cadeira.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse cadeira está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse cadeira resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse cadeira.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  tecnologia: [
+    'Seu aparelho antigo fingiu que travou para não ver esta oferta! 📱🤣',
+    'Tecnologia nova e o bolso ainda com bateria — milagre confirmado! 🔋😂',
+    'Esse preço carregou mais rápido que celular com 1% de bateria! ⚡🤣',
+    'O Wi-Fi ficou mais rápido só de ouvir falar desta oferta! 📶😄',
+    'Seu celular velho já está apagando as fotos de vergonha! 📱😂',
+    'Tão moderno que até você vai parecer que entende de tecnologia! 🤓🤣',
+    'O cartão perguntou “tem certeza?” e o preço respondeu “relaxa”! 💳😄'
   ],
-  "perfumes": [
-    "Agora só falta tomar banho.",
-    "O boleto viu esse perfume e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse perfume.",
-    "Esse perfume entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse perfume.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse perfume está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse perfume resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse perfume.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  beleza: [
+    'O espelho já aprovou e nem pediu filtro! ✨🤣',
+    'Autocuidado em dia e boleto sem olheiras — combinação rara! 💄😂',
+    'Esse produto não resolve a vida, mas pelo menos deixa ela cheirosa! 🌸🤣',
+    'Preço tão bonito que nem precisa de maquiagem! 😄',
+    'O glow vem no produto; o susto não vem na fatura! ✨😂',
+    'Até a nécessaire abriu espaço e disse “pode entrar”! 💅🤣',
+    'Beleza por fora, paz financeira por dentro! 🧴😄'
   ],
-  "higiene_oral": [
-    "Seu bafo pediu socorro.",
-    "O boleto viu esse escova de dentes e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse escova de dentes.",
-    "Esse escova de dentes entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse escova de dentes.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse escova de dentes está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse escova de dentes resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse escova de dentes.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  fitness: [
+    'Agora só falta colocar a motivação no carrinho também! 💪🤣',
+    'Queimar calorias sim; queimar dinheiro, hoje não! 🏃😂',
+    'O projeto fitness ganhou equipamento. A disposição chega em outro frete! 😄',
+    'Preço leve — diferente daquele último exercício de perna! 🏋️🤣',
+    'Seu sofá não gostou nada desta oferta! 🛋️😂',
+    'Comprar é a parte fácil; usar segunda-feira a gente conversa! 😅',
+    'Até o boleto perdeu peso com esse desconto! 💪🤣'
   ],
-  "cozinha": [
-    "Chega de comer ovo grudado.",
-    "O boleto viu esse item de cozinha e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse item de cozinha.",
-    "Esse item de cozinha entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse item de cozinha.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse item de cozinha está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse item de cozinha resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse item de cozinha.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  infantil: [
+    'A criançada vai amar e o bolso, desta vez, não vai fazer birra! 🧸🤣',
+    'Diversão garantida; silêncio não incluso no pacote! 😂',
+    'O brinquedo já está animado. Os pais ainda estão calculando onde guardar! 🎈🤣',
+    'Preço de criança comportada — aparece raramente! 😄',
+    'Até o desenho animado perdeu a atenção para esta oferta! 📺😂',
+    'Vai render sorriso, bagunça e provavelmente peças debaixo do sofá! 🧩🤣',
+    'O pequeno pediu. O desconto fez a defesa dele! 🧒😄'
   ],
-  "higiene_pessoal": [
-    "Seu bumbum merece esse investimento.",
-    "O boleto viu esse papel higiênico e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse papel higiênico.",
-    "Esse papel higiênico entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse papel higiênico.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse papel higiênico está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse papel higiênico resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse papel higiênico.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  pet: [
+    'Seu pet não sabe ler o preço, mas já está cobrando a entrega! 🐾🤣',
+    'O focinho aprovou e o bolso abanou o rabo! 🐶😂',
+    'Mimo para o pet, porque claramente ele é o verdadeiro dono da casa! 🐱🤣',
+    'Seu cachorro disse que precisa. A fonte é: vozes da cabeça dele! 😄',
+    'O gato vai fingir indiferença e usar escondido de madrugada! 🐈😂',
+    'Preço tão bom que até o peixe fez cara de surpresa! 🐟🤣',
+    'Seu pet merece — afinal, ele trabalha duro dormindo o dia inteiro! 🐾😄'
   ],
-  "games": [
-    "Seu K/D agradece.",
-    "O boleto viu esse controle e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse controle.",
-    "Esse controle entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse controle.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse controle está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse controle resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse controle.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  automotivo: [
+    'Seu carro pediu esse presente e prometeu parar de acender luz misteriosa no painel! 🚗🤣',
+    'Oferta que acelera a vontade e freia o gasto! 🏎️😂',
+    'O carro agradece; o mecânico talvez fique com ciúmes! 🔧🤣',
+    'Preço tão baixo que passou no radar sem levar multa! 🚘😄',
+    'Seu veículo vai ficar tão feliz que talvez até pare de fazer aquele barulho estranho! 😂',
+    'Mais carinho para o carro do que para muita planta de apartamento! 🌱🤣',
+    'O tanque continua caro, mas pelo menos isto aqui ajuda a compensar! ⛽😄'
   ],
-  "audio": [
-    "Agora dá pra ignorar todo mundo em alta qualidade.",
-    "O boleto viu esse fone e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse fone.",
-    "Esse fone entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse fone.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse fone está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse fone resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse fone.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "air_fryer": [
-    "Mais uma tentativa de fingir que vai fazer dieta.",
-    "O boleto viu esse Air Fryer e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse Air Fryer.",
-    "Esse Air Fryer entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse Air Fryer.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse Air Fryer está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse Air Fryer resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse Air Fryer.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "calcados": [
-    "Seu pé já colocou no carrinho.",
-    "O boleto viu esse calçado e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse calçado.",
-    "Esse calçado entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse calçado.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse calçado está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse calçado resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse calçado.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "roupas": [
-    "Seu guarda-roupa abriu espaço sozinho.",
-    "O boleto viu esse look novo e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse look novo.",
-    "Esse look novo entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse look novo.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse look novo está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse look novo resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse look novo.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "casa": [
-    "Sua casa pediu esse mimo.",
-    "O boleto viu esse item para casa e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse item para casa.",
-    "Esse item para casa entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse item para casa.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse item para casa está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse item para casa resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse item para casa.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "tecnologia": [
-    "Seu aparelho antigo fingiu que travou.",
-    "O boleto viu esse tecnologia nova e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse tecnologia nova.",
-    "Esse tecnologia nova entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse tecnologia nova.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse tecnologia nova está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse tecnologia nova resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse tecnologia nova.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "beleza": [
-    "O espelho já aprovou.",
-    "O boleto viu esse produto de beleza e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse produto de beleza.",
-    "Esse produto de beleza entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse produto de beleza.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse produto de beleza está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse produto de beleza resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse produto de beleza.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "fitness": [
-    "Agora só falta colocar a motivação no carrinho.",
-    "O boleto viu esse equipamento fitness e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse equipamento fitness.",
-    "Esse equipamento fitness entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse equipamento fitness.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse equipamento fitness está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse equipamento fitness resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse equipamento fitness.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "infantil": [
-    "Diversão garantida; silêncio não incluso.",
-    "O boleto viu esse brinquedo e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse brinquedo.",
-    "Esse brinquedo entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse brinquedo.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse brinquedo está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse brinquedo resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse brinquedo.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "pet": [
-    "Seu pet já autorizou a compra.",
-    "O boleto viu esse mimo pet e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse mimo pet.",
-    "Esse mimo pet entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse mimo pet.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse mimo pet está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse mimo pet resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse mimo pet.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "automotivo": [
-    "Seu carro merece esse upgrade.",
-    "O boleto viu esse acessório automotivo e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse acessório automotivo.",
-    "Esse acessório automotivo entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse acessório automotivo.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse acessório automotivo está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse acessório automotivo resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse acessório automotivo.",
-    "A promoção chegou forte e o juízo saiu discretamente."
-  ],
-  "default": [
-    "Não é fofoca: esse preço realmente caiu.",
-    "O boleto viu esse achadinho e decidiu não criar confusão.",
-    "Seu autocontrole pediu férias depois de ver esse achadinho.",
-    "Esse achadinho entrou no carrinho antes de você terminar de pensar.",
-    "Preço baixo assim deixa qualquer desculpa sem argumento.",
-    "O cartão respirou fundo, mas aprovou esse achadinho.",
-    "Seu “não vou comprar nada hoje” acaba aqui.",
-    "Esse achadinho está mais tentador que promoção com frete grátis.",
-    "A oferta caiu e sua resistência caiu junto.",
-    "Até o boleto ficou simpático com esse preço.",
-    "Esse achadinho resolveu aparecer justamente quando você ia economizar.",
-    "Compra consciente: você viu, gostou e inventou uma necessidade.",
-    "O desconto fez todo o trabalho; agora falta só o clique.",
-    "Esse preço está pedindo para ser compartilhado no grupo.",
-    "Seu eu do futuro vai agradecer por esse achadinho.",
-    "A promoção chegou forte e o juízo saiu discretamente."
+  default: [
+    'O carrinho olhou para esta oferta e já começou a fazer pressão psicológica! 🛒🤣',
+    'O boleto respirou fundo, viu o preço e decidiu não criar confusão! 😂',
+    'Oferta boa assim até o cartão perde a timidez e sai da carteira sozinho! 💳🤣',
+    'Não é fofoca: esse preço realmente caiu! 😄',
+    'Seu “eu não vou comprar nada hoje” durou menos que bateria em 1%! 🔋😂',
+    'O desconto chegou tão forte que derrubou até a desculpa para não comprar! 🤣',
+    'Preço pequeno, vontade gigante e autocontrole em manutenção! 😄',
+    'Atenção: esta oferta pode causar clique involuntário no botão comprar! 😂'
   ]
 };
 
@@ -545,8 +241,7 @@ const RADAR_HIDDEN_STORAGE_KEY = 'cbofertas-radar-hidden-v312';
 const RADAR_PRICE_HISTORY_STORAGE_KEY = 'cbofertas-radar-price-history-v312';
 const RADAR_LAST_LOAD_STORAGE_KEY = 'cbofertas-radar-last-load-v312';
 const FAVORITES_STORAGE_KEY = 'cbofertas-favorites-v400';
-const AFFILIATE_LIBRARY_STORAGE_KEY = 'cbofertas-affiliate-library-v520';
-const PRODUCT_STATS_STORAGE_KEY = 'cbofertas-product-stats-v520';
+const AFFILIATE_LIBRARY_STORAGE_KEY = 'cbofertas-affiliate-library-v500';
 
 const COUPON_BLAST_STORAGE_KEY = 'cbofertas-coupon-blast';
 const COUPON_CATEGORY_LABELS = {
@@ -664,13 +359,15 @@ function compressImageFile(file, maxWidth = 1000, quality = 0.72) {
 }
 
 function showPage(page = 'offers') {
-  const validPage = ['offers', 'radar', 'history', 'favorites', 'coupons', 'settings'].includes(page) ? page : 'offers';
+  const validPage = ['offers', 'radar', 'history', 'favorites', 'coupons', 'batch', 'automation', 'settings'].includes(page) ? page : 'offers';
   const views = {
     offers: el.offersPage,
     radar: el.radarPage,
     history: el.historyPage,
     favorites: el.favoritesPage,
     coupons: el.couponsPage,
+    batch: document.querySelector('#batchPage'),
+    automation: document.querySelector('#automationPage'),
     settings: el.settingsPage
   };
   Object.entries(views).forEach(([name, node]) => node?.classList.toggle('hidden', name !== validPage));
@@ -679,7 +376,6 @@ function showPage(page = 'offers') {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (validPage === 'radar' && !state.radarItems.length && radarPreferences().autoOpen) loadRadarOffers(false);
   if (validPage === 'favorites') renderFavorites();
-renderAffiliateLibrary();
 }
 
 function focusCouponBlastCard(message = '') {
@@ -718,19 +414,19 @@ function apiBase() {
   return normalizeServer(localStorage.getItem('cbofertas-api') || DEFAULT_API_SERVER);
 }
 
-function isSupportedProductLink(value = '') {
+function isMercadoLivreProductLink(value = '') {
   try {
     const url = new URL(String(value).trim());
     const host = url.hostname.toLowerCase();
     return ['http:', 'https:'].includes(url.protocol)
-      && (host === 'meli.la' || host.endsWith('.meli.la') || host.includes('mercadolivre.com') || host.includes('mercadolibre.com') || host === 'shope.ee' || host.endsWith('.shope.ee') || host.includes('shopee.com.br'));
+      && (host === 'meli.la' || host.endsWith('.meli.la') || host.includes('mercadolivre.com') || host.includes('mercadolibre.com'));
   } catch {
     return false;
   }
 }
 
 function isAffiliateLink(value = '') {
-  try { const host = new URL(String(value).trim()).hostname.toLowerCase(); return /(^|\.)(meli\.la|shope\.ee)$/i.test(host) || host === 's.shopee.com.br'; } catch { return false; }
+  try { return /(^|\.)meli\.la$/i.test(new URL(String(value).trim()).hostname); } catch { return false; }
 }
 
 function extractItemId(value = '') {
@@ -738,9 +434,7 @@ function extractItemId(value = '') {
   const wid = raw.match(/[?&#]wid=MLB-?(\d{6,})/i);
   if (wid) return `MLB${wid[1]}`;
   const item = raw.match(/\bMLB-?(\d{6,})\b/i);
-  if (item) return `MLB${item[1]}`;
-  const shopee = raw.match(/(?:\/product\/|[-/]i\.)(\d{3,})[/.](\d{3,})/i);
-  return shopee ? `SHP${shopee[1]}_${shopee[2]}` : '';
+  return item ? `MLB${item[1]}` : '';
 }
 
 function getAffiliateLibrary() {
@@ -748,17 +442,14 @@ function getAffiliateLibrary() {
   return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
 }
 
-function saveAffiliateAssociation(itemId, affiliateLink, catalogProductId = '', title = '') {
+function saveAffiliateAssociation(itemId, affiliateLink, catalogProductId = '') {
   const id = String(itemId || '').replace('-', '').toUpperCase();
   if (!id || !isAffiliateLink(affiliateLink)) return false;
   const library = getAffiliateLibrary();
-  const previous = library[id] || {};
-  const record = { itemId: id, affiliateLink: String(affiliateLink).trim(), catalogProductId: String(catalogProductId || previous.catalogProductId || ''), title: String(title || previous.title || '').trim(), updatedAt: Date.now() };
+  const record = { itemId: id, affiliateLink: String(affiliateLink).trim(), catalogProductId: String(catalogProductId || ''), updatedAt: Date.now() };
   library[id] = record;
   if (record.catalogProductId) library[record.catalogProductId] = record;
   localStorage.setItem(AFFILIATE_LIBRARY_STORAGE_KEY, JSON.stringify(library));
-  syncAffiliateLinkAcrossStorage(id, record.affiliateLink, record.catalogProductId);
-  renderAffiliateLibrary();
   return true;
 }
 
@@ -782,114 +473,30 @@ function applySavedAffiliate(item = {}) {
   return item;
 }
 
-function affiliateRecords() {
-  const records = Object.values(getAffiliateLibrary()).filter(record => record?.itemId && record?.affiliateLink);
-  const unique = new Map();
-  records.forEach(record => unique.set(record.itemId, record));
-  return [...unique.values()].sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
-}
-
-function syncAffiliateLinkAcrossStorage(itemId, affiliateLink, catalogProductId = '') {
-  const keys = new Set([itemId, catalogProductId].filter(Boolean).map(value => String(value).replace('-', '').toUpperCase()));
-  const matches = item => keys.has(String(item.itemId || item.id || '').replace('-', '').toUpperCase())
-    || keys.has(String(item.catalogProductId || '').replace('-', '').toUpperCase())
-    || keys.has(extractItemId(item.link));
-  for (const storageKey of ['cbofertas-publications', FAVORITES_STORAGE_KEY]) {
-    const fallback = [];
-    const items = safeJson(localStorage.getItem(storageKey) || '[]', fallback);
-    if (!Array.isArray(items)) continue;
-    let changed = false;
-    items.forEach(item => {
-      if (matches(item) && item.link !== affiliateLink) { item.link = affiliateLink; item.affiliateConfirmed = true; changed = true; }
-    });
-    if (changed) localStorage.setItem(storageKey, JSON.stringify(items));
-  }
-}
-
-function renderAffiliateLibrary() {
-  if (!el.affiliateLibraryList) return;
-  const query = String(el.affiliateLibrarySearch?.value || '').trim().toLowerCase();
-  const all = affiliateRecords();
-  const records = all.filter(record => !query || `${record.itemId} ${record.catalogProductId || ''} ${record.title || ''} ${record.affiliateLink}`.toLowerCase().includes(query));
-  if (el.affiliateLibraryCount) el.affiliateLibraryCount.textContent = String(all.length);
-  if (el.clearAffiliateLibraryBtn) el.clearAffiliateLibraryBtn.disabled = all.length === 0;
-  if (el.exportAffiliateLibraryBtn) el.exportAffiliateLibraryBtn.disabled = all.length === 0;
-  el.affiliateLibraryList.innerHTML = records.length ? records.map(record => `<article class="affiliate-library-item" data-id="${escapeHtml(record.itemId)}">
-    <div><b>${escapeHtml(record.title || record.itemId)}</b>${record.title ? `<small>${escapeHtml(record.itemId)}</small>` : ''}${record.catalogProductId ? `<small>Catálogo: ${escapeHtml(record.catalogProductId)}</small>` : ''}<a href="${escapeHtml(record.affiliateLink)}">${escapeHtml(record.affiliateLink)}</a><small>Atualizado em ${new Date(record.updatedAt || Date.now()).toLocaleString('pt-BR')}</small></div>
-    <button type="button" data-action="remove" title="Remover associação">✕</button>
-  </article>`).join('') : '<div class="empty compact-empty">Nenhum link afiliado salvo. Compartilhe um link meli.la ou Shopee com a CbOfertas para cadastrar automaticamente.</div>';
-}
-
-function productStatsKey(item = {}) {
-  return String(item.itemId || item.id || extractItemId(item.link) || item.catalogProductId || item.title || '').trim().toUpperCase();
-}
-
-function getProductStats() {
-  const saved = safeJson(localStorage.getItem(PRODUCT_STATS_STORAGE_KEY) || '{}', {});
-  return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
-}
-
-function productStatsFor(item = {}) {
-  return getProductStats()[productStatsKey(item)] || item.stats || null;
-}
-
-function recordProductConsultation(item = {}) {
-  const key = productStatsKey(item);
-  const price = parseMoney(item.offerPrice || item.price || item.currentPrice || item.pixPrice);
-  if (!key || !Number.isFinite(price)) return null;
-  const stats = getProductStats();
-  const previous = stats[key] || {};
-  const oldPrice = parseMoney(item.oldPrice || item.originalPrice);
-  const discount = Number.isFinite(oldPrice) && oldPrice > price ? Math.round((1 - price / oldPrice) * 100) : Number(item.discount || 0);
-  const next = {
-    key,
-    lowestPrice: Number.isFinite(Number(previous.lowestPrice)) ? Math.min(Number(previous.lowestPrice), price) : price,
-    highestDiscount: Math.max(Number(previous.highestDiscount || 0), discount || 0),
-    consultations: Number(previous.consultations || 0) + 1,
-    lastConsultation: Date.now()
-  };
-  stats[key] = next;
-  localStorage.setItem(PRODUCT_STATS_STORAGE_KEY, JSON.stringify(stats));
-  return next;
-}
-
-function renderHistorySummary(items = getPublications()) {
-  const stats = items.map(productStatsFor).filter(Boolean);
-  const lowest = stats.map(item => Number(item.lowestPrice)).filter(Number.isFinite);
-  const discounts = stats.map(item => Number(item.highestDiscount)).filter(Number.isFinite);
-  const consultations = stats.reduce((total, item) => total + Number(item.consultations || 0), 0);
-  const last = Math.max(0, ...stats.map(item => Number(item.lastConsultation || 0)));
-  if (el.historyLowestPrice) el.historyLowestPrice.textContent = lowest.length ? formatMoney(Math.min(...lowest)) : '—';
-  if (el.historyBestDiscount) el.historyBestDiscount.textContent = discounts.length ? `${Math.max(...discounts)}%` : '—';
-  if (el.historyConsultations) el.historyConsultations.textContent = String(consultations);
-  if (el.historyLastConsultation) el.historyLastConsultation.textContent = last ? new Date(last).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
-}
-
 function updateAffiliateUi() {
   if (!el.affiliateLinkBtn) return;
   const link = String(el.link?.value || '').trim();
   const ready = Boolean(state.affiliateLinkReceived && state.receivedAffiliateLink === link);
-  el.affiliateLinkBtn.disabled = state.editorCollapsed || !isSupportedProductLink(link);
+  el.affiliateLinkBtn.disabled = state.editorCollapsed || !isMercadoLivreProductLink(link);
   el.affiliateLinkBtn.classList.toggle('ready', ready);
   el.affiliateLinkBtn.textContent = ready ? '✅ Link de afiliado aplicado' : '💰 Gerar link de afiliado';
 }
 
 function openAffiliateGenerator() {
   const link = String(el.link?.value || '').trim();
-  if (!isSupportedProductLink(link)) {
-    setStatus(el.affiliateStatus, 'Cole ou selecione primeiro um produto do Mercado Livre ou Shopee.', 'error');
+  if (!isMercadoLivreProductLink(link)) {
+    setStatus(el.affiliateStatus, 'Cole ou selecione primeiro um produto do Mercado Livre.', 'error');
     return;
   }
-  const isShopee = /shopee\.com\.br|shope\.ee/i.test(link);
-  setStatus(el.affiliateStatus, isShopee ? 'Na Shopee, gere ou compartilhe seu link de afiliado e escolha CbOfertas.' : 'No Mercado Livre, toque em Compartilhar na faixa Ganhos e escolha CbOfertas.', 'success');
+  setStatus(el.affiliateStatus, 'No Mercado Livre, toque em Compartilhar na faixa Ganhos e escolha CbOfertas.', 'success');
   if (window.Android?.openExternalLink) window.Android.openExternalLink(link);
   else window.open(link, '_blank');
 }
 
 window.CbOfertasReceiveSharedLink = async (sharedLink) => {
   const link = String(sharedLink || '').trim();
-  if (!isSupportedProductLink(link)) {
-    setStatus(el.affiliateStatus, 'O compartilhamento recebido não contém um link válido do Mercado Livre ou Shopee.', 'error');
+  if (!isMercadoLivreProductLink(link)) {
+    setStatus(el.affiliateStatus, 'O compartilhamento recebido não contém um link válido do Mercado Livre.', 'error');
     return;
   }
   state.affiliateLinkReceived = isAffiliateLink(link);
@@ -900,7 +507,7 @@ window.CbOfertasReceiveSharedLink = async (sharedLink) => {
   showPage('offers');
   renderCurrent();
   setStatus(el.affiliateStatus, state.affiliateLinkReceived ? 'Link oficial recebido. Identificando o anúncio e salvando na biblioteca...' : 'Link do produto recebido.', 'success');
-  setStatus(el.topActionStatus, 'Link de produto recebido pelo compartilhamento.', 'success');
+  setStatus(el.topActionStatus, 'Link recebido do compartilhamento do Mercado Livre.', 'success');
   await fetchProduct();
 };
 
@@ -930,6 +537,8 @@ function normalizeCoupon(value = '') {
 }
 
 function couponIsExpired(item = {}) {
+  const exact = Number(item.expiresAtTs || 0);
+  if (exact > 0) return exact < Date.now();
   const expiresAt = String(item.expiresAt || '').trim();
   if (!expiresAt) return false;
   const endOfDay = new Date(`${expiresAt}T23:59:59`).getTime();
@@ -957,6 +566,7 @@ function couponRecordDefaults(item = {}) {
     minPrice: String(item?.minPrice || '').trim(),
     minDiscount: Math.max(0, Math.min(95, Number(item?.minDiscount || 0))),
     expiresAt: String(item?.expiresAt || '').trim(),
+    expiresAtTs: Number(item?.expiresAtTs || 0),
     priority: Math.max(1, Math.min(3, Number(item?.priority || 1))),
     createdAt: Number(item?.createdAt) || Date.now()
   };
@@ -1233,14 +843,19 @@ function saveCouponCode() {
   const couponTarget = String(el.couponTargetInput?.value || '').trim();
   const minPrice = String(el.couponMinPriceInput?.value || '').trim();
   const minDiscount = Math.max(0, Math.min(95, Number(el.couponMinDiscountInput?.value || 0)));
-  const expiresAt = String(el.couponExpiresInput?.value || '').trim();
+  const preset = String(document.querySelector('#couponValidityPreset')?.value || '');
+  const customValue = String(document.querySelector('#couponExpiresAtInput')?.value || '');
+  let expiresAtTs = 0;
+  if (preset === 'custom' && customValue) expiresAtTs = new Date(customValue).getTime();
+  else if (preset && Number.isFinite(Number(preset))) expiresAtTs = Date.now() + Number(preset) * 60 * 60 * 1000;
+  const expiresAt = expiresAtTs ? new Date(expiresAtTs).toISOString().slice(0,10) : '';
   const priority = Math.max(1, Math.min(3, Number(el.couponPriorityInput?.value || 1)));
 
   if (!code) return setStatus(el.couponLibraryStatus, 'Digite o código do cupom.', 'error');
   if (couponCategory === 'especifico' && !couponTarget) return setStatus(el.couponLibraryStatus, 'Informe o produto, palavras-chave ou link para o cupom específico.', 'error');
   if (minPrice && !Number.isFinite(parseMoney(minPrice))) return setStatus(el.couponLibraryStatus, 'Informe um valor mínimo válido.', 'error');
 
-  const ruleData = { category: couponCategory, target: couponTarget, minPrice, minDiscount, expiresAt, priority };
+  const ruleData = { category: couponCategory, target: couponTarget, minPrice, minDiscount, expiresAt, expiresAtTs, priority };
   const items = getSavedCoupons();
   const duplicate = items.find((item) => item.code === code && item.id !== state.editingCouponId);
   if (duplicate) {
@@ -1346,24 +961,13 @@ function formatMoney(value) {
 }
 
 function category(title = '') {
-  if (/cueca|samba.?can[cç][aã]o|calcinha|suti[aã]|lingerie|roupa [ií]ntima/i.test(title)) return 'roupas_intimas';
-  if (/creme hidratante|hidratante|lo[cç][aã]o corporal|body lotion/i.test(title)) return 'hidratacao';
-  if (/doce de leite|chocolate|bombom|pa[cç]oca|brigadeiro|doce|barra de cereal/i.test(title)) return 'doces';
-  if (/creatina|whey|suplemento|pr[eé]-treino|bcaa|glutamina|hipercal[oó]rico/i.test(title)) return 'suplementos';
-  if (/cadeira|poltrona|assento gamer|presidente python/i.test(title)) return 'cadeiras';
-  if (/perfume|col[oô]nia|eau de|body splash/i.test(title)) return 'perfumes';
-  if (/escova de dentes|pasta de dente|creme dental|fio dental|enxaguante|higiene oral/i.test(title)) return 'higiene_oral';
-  if (/papel higi[eê]nico|len[cç]o umedecido|sabonete [ií]ntimo/i.test(title)) return 'higiene_pessoal';
-  if (/controle.*(?:ps5|playstation|xbox)|dual.?sense|gamepad|joystick|console|videogame/i.test(title)) return 'games';
-  if (/fone|headset|earbud|airpods|caixa de som|soundbar/i.test(title)) return 'audio';
-  if (/air\s*fryer|fritadeira sem [oó]leo/i.test(title)) return 'air_fryer';
   if (/t[eê]nis|sapato|sand[aá]lia|chinelo|bota|sapatilha|mocassim/i.test(title)) return 'calcados';
-  if (/camiseta|camisa|vestido|cal[cç]a|bermuda|short|moletom|jaqueta|blusa|roupa|saia/i.test(title)) return 'roupas';
-  if (/panela|cafeteira|liquidificador|batedeira|micro-ondas|forno|cooktop|cozinha|talher|frigideira/i.test(title)) return 'cozinha';
+  if (/camiseta|camisa|vestido|cal[cç]a|bermuda|short|moletom|jaqueta|blusa|roupa|saia|cueca|suti[aã]/i.test(title)) return 'roupas';
+  if (/air\s*fryer|panela|cafeteira|liquidificador|batedeira|micro-ondas|forno|cooktop|cozinha|talher|frigideira/i.test(title)) return 'cozinha';
   if (/sof[aá]|colch[aã]o|aspirador|geladeira|lavadora|ventilador|casa|decora[cç][aã]o|lumin[aá]ria|tapete/i.test(title)) return 'casa';
-  if (/celular|smartphone|iphone|galaxy|xiaomi|tv|notebook|computador|smartwatch|tablet|monitor|teclado|mouse/i.test(title)) return 'tecnologia';
-  if (/maquiagem|shampoo|condicionador|beleza|batom|secador|prancha|protetor solar/i.test(title)) return 'beleza';
-  if (/halter|academia|fitness|bicicleta|esteira|esporte|bola|treino/i.test(title)) return 'fitness';
+  if (/celular|smartphone|iphone|galaxy|xiaomi|tv|notebook|computador|fone|smartwatch|tablet|monitor|teclado|mouse/i.test(title)) return 'tecnologia';
+  if (/perfume|maquiagem|creme|shampoo|condicionador|beleza|hidratante|batom|secador|prancha/i.test(title)) return 'beleza';
+  if (/halter|academia|fitness|bicicleta|esteira|suplemento|whey|esporte|bola|treino/i.test(title)) return 'fitness';
   if (/brinquedo|beb[eê]|infantil|crian[cç]a|boneca|carrinho|fralda|ber[cç]o/i.test(title)) return 'infantil';
   if (/pet|cachorro|gato|ra[cç][aã]o|coleira|arranhador|aqu[aá]rio/i.test(title)) return 'pet';
   if (/carro|moto|automotivo|pneu|capacete|farol|bateria|ferramenta|chave de impacto/i.test(title)) return 'automotivo';
@@ -1540,8 +1144,6 @@ async function approveRadarOffer(item) {
   state.receivedAffiliateLink = '';
   const linkedItem = applySavedAffiliate({ ...item });
   el.link.value = linkedItem.link || item.link || '';
-  el.link.dataset.itemId = item.id || item.itemId || '';
-  el.link.dataset.catalogProductId = item.catalogProductId || '';
   el.title.value = item.title || '';
   el.old.value = item.oldPrice || '';
   el.offer.value = item.price || '';
@@ -1586,7 +1188,6 @@ async function verifyPublicationBeforeShare(publication) {
       const accepted = confirm(`O preço mudou antes do envio.\n\nSalvo: ${previousPrice}\nAtual: ${livePrice}\n\nAtualizar a publicação e continuar?`);
       if (!accepted) { setStatus(el.publicationStatus, 'Envio cancelado para você revisar o preço.', 'error'); return null; }
     }
-    recordProductConsultation({ ...live, itemId: live.id || live.source?.itemId, link: publication.link, offerPrice: livePriceRaw, oldPrice: live.oldPrice });
     const updated = { ...publication, title: live.title || publication.title, oldPrice: live.oldPrice || publication.oldPrice, offerPrice: livePriceRaw || publication.offerPrice, seller: String(live.seller || live.store || publication.seller || '').trim(), full: Boolean(live.full), updatedAt: Date.now(), lastVerifiedAt: Date.now() };
     const items = getPublications().map(item => item.id === updated.id ? updated : item);
     savePublications(items);
@@ -1601,7 +1202,8 @@ async function verifyPublicationBeforeShare(publication) {
 
 function intelligentEmoji(title = '') {
   return ({
-    roupas_intimas: '🩲', hidratacao: '🧴', doces: '🍬', suplementos: '💪', cadeiras: '🪑', perfumes: '🌸', higiene_oral: '🪥', higiene_pessoal: '🧻', games: '🎮', audio: '🎧', air_fryer: '🍟', calcados: '👟', roupas: '👕', cozinha: '🍳', casa: '🏠', tecnologia: '📱', beleza: '✨', fitness: '💪', infantil: '🧸', pet: '🐾', automotivo: '🚗', default: '🛍️'
+    calcados: '👟', roupas: '👕', cozinha: '🍳', casa: '🏠', tecnologia: '📱',
+    beleza: '✨', fitness: '💪', infantil: '🧸', pet: '🐾', automotivo: '🚗', default: '🛍️'
   })[category(title)];
 }
 
@@ -1626,6 +1228,16 @@ function generatePhrase(force = false) {
   return phrase;
 }
 
+function headingForStyle(style = state.style) {
+  const headings = {
+    divertido: '🔥😱💸 *OFERTA QUE O BOLETO NÃO VIU CHEGANDO*',
+    premium: '✨👑 *OFERTA PREMIUM DO DIA*',
+    grupo: '👥🔥 *ACHADINHO DO GRUPO*',
+    familia: '🏠💚 *OFERTA PARA A FAMÍLIA*',
+    ofertas: '🔥 *OFERTA IMPERDÍVEL*'
+  };
+  return headings[style] || headings.divertido;
+}
 
 function installmentInterestText(noInterest = el.installmentNoInterest.checked) {
   return noInterest ? 'sem juros' : 'com juros';
@@ -1648,13 +1260,14 @@ function currentInstallments() {
 function captureForm() {
   return {
     id: state.editingId || '',
-    link: affiliateFor({ id: el.link.dataset.itemId, itemId: el.link.dataset.itemId, catalogProductId: el.link.dataset.catalogProductId, link: el.link.value.trim() }) || el.link.value.trim(),
+    link: el.link.value.trim(),
     itemId: String(el.link.dataset.itemId || ''),
     catalogProductId: String(el.link.dataset.catalogProductId || ''),
     affiliateConfirmed: isAffiliateLink(el.link.value.trim()),
     title: el.title.value.trim(),
     image: state.image || '',
     full: state.full,
+    style: state.style,
     oldPrice: el.old.value.trim(),
     offerPrice: el.offer.value.trim(),
     installmentQty: Math.max(0, Math.min(48, Number.parseInt(el.installmentQty.value, 10) || 0)),
@@ -1680,10 +1293,10 @@ function buildTextForData(data, linkItem, totalMessages = 1) {
   const installmentQty = Math.max(0, Math.min(48, Number.parseInt(data.installmentQty, 10) || 0));
   const installmentValue = parseMoney(data.installmentValue);
   const percentage = discountFromData(data);
-  const lines = [];
+  const lines = [headingForStyle(data.style)];
 
-  if (phrase) lines.push(phrase);
-  lines.push(`${intelligentEmoji(title)} *${title}*`);
+  if (phrase) lines.push('', phrase);
+  lines.push('', `${intelligentEmoji(title)} *${title}*`);
   if (oldPrice) lines.push('', `❌ De: ~${oldPrice}~`);
   if (offerPrice) lines.push(`✅ *Por: ${offerPrice}*`);
   if (installmentQty && Number.isFinite(installmentValue)) {
@@ -1714,6 +1327,10 @@ function setImage(url) {
   else el.image.src = state.image;
 }
 
+function setSelectedStyle(style = 'divertido') {
+  state.style = ['divertido', 'premium', 'grupo', 'familia', 'ofertas'].includes(style) ? style : 'divertido';
+  $$('.style-chip').forEach((button) => button.classList.toggle('active', button.dataset.style === state.style));
+}
 
 function renderCurrent() {
   const data = captureForm();
@@ -1755,6 +1372,7 @@ function renderCurrent() {
     : '';
 
   el.preview.innerHTML = `<div class="message-bubble">
+    <span class="offer-title">${escapeHtml(headingForStyle(data.style).replace(/\*/g, ''))}</span>
     ${phrase ? `<span class="smart-phrase">${phrase}</span>` : ''}
     <span class="product-name">${intelligentEmoji(rawTitle)} ${title}</span><br><br>
     ${oldPrice ? `❌ De: <span class="old">${oldPrice}</span><br>` : ''}
@@ -1788,6 +1406,7 @@ function clearForm({ expand = true, status = true } = {}) {
   state.full = false;
   state.affiliateLinkReceived = false;
   state.receivedAffiliateLink = '';
+  setSelectedStyle('divertido');
   el.link.value = '';
   el.link.dataset.itemId = '';
   el.link.dataset.catalogProductId = '';
@@ -1817,6 +1436,7 @@ function applyPublicationToForm(publication) {
   state.full = Boolean(publication.full);
   state.affiliateLinkReceived = false;
   state.receivedAffiliateLink = '';
+  setSelectedStyle(publication.style || 'divertido');
   el.link.value = publication.link || '';
   el.title.value = publication.title || '';
   el.old.value = publication.oldPrice || '';
@@ -1849,7 +1469,7 @@ function normalizeFavorite(item = {}) {
     id: String(item.id || `fav-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
     key: favoriteKey(item),
     title: String(item.title || 'Oferta').trim(),
-    link: affiliateFor(item) || String(item.link || '').trim(),
+    link: String(item.link || '').trim(),
     image: String(item.image || '').trim(),
     full: Boolean(item.full),
     oldPrice: String(item.oldPrice || '').trim(),
@@ -1939,6 +1559,7 @@ function applyFavoriteToForm(favorite) {
   state.full = Boolean(item.full);
   state.affiliateLinkReceived = false;
   state.receivedAffiliateLink = '';
+  setSelectedStyle(item.style || 'divertido');
   el.link.value = item.link || '';
   el.title.value = item.title || '';
   el.old.value = item.oldPrice || '';
@@ -2003,7 +1624,7 @@ function publicationId() {
 
 function getPublications() {
   const items = safeJson(localStorage.getItem('cbofertas-publications') || '[]', []);
-  return Array.isArray(items) ? items.map(item => ({ ...item, link: affiliateFor(item) || item.link })) : [];
+  return Array.isArray(items) ? items : [];
 }
 
 function savePublications(items) {
@@ -2018,7 +1639,6 @@ function cancelScheduledIds(ids = []) {
 
 function saveCurrentPublication() {
   const data = captureForm();
-  data.stats = productStatsFor(data) || recordProductConsultation(data);
   rememberSeller(data.seller);
   const validationError = validateCurrent(data);
   if (validationError) {
@@ -2084,7 +1704,6 @@ function renderPublications() {
   el.clearSavedBtn.disabled = !items.length;
 
   if (!items.length) {
-    renderHistorySummary([]);
     el.publicationQueue.innerHTML = '<div class="empty publication-empty">Nenhum item salvo. Cadastre a primeira oferta e toque em <b>Salvar item</b>.</div>';
     return;
   }
@@ -2095,7 +1714,6 @@ function renderPublications() {
     const price = formatMoney(item.offerPrice);
     const scheduled = Array.isArray(item.scheduledIds) && item.scheduledIds.length > 0;
     const favorite = isFavorite(item);
-    const stats = productStatsFor(item) || item.stats || {};
     const image = item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : `<span>${intelligentEmoji(item.title || '')}</span>`;
     return `<article class="publication-item" data-id="${escapeHtml(item.id)}">
       <div class="publication-summary">
@@ -2104,7 +1722,6 @@ function renderPublications() {
           <small>ITEM ${index + 1}</small>
           <b>${escapeHtml(item.title || 'Oferta')}</b>
           <div><strong>${escapeHtml(price || 'Preço não informado')}</strong><span>${messages} mensagem(ns)</span></div>
-          <div class="publication-stats"><span>⬇ ${stats.lowestPrice ? escapeHtml(formatMoney(stats.lowestPrice)) : '—'} menor</span><span>🏷 ${Number(stats.highestDiscount || 0)}% melhor</span><span>🔎 ${Number(stats.consultations || 0)} consulta(s)</span><span>🕒 ${stats.lastConsultation ? escapeHtml(new Date(stats.lastConsultation).toLocaleDateString('pt-BR')) : '—'}</span></div>
         </div>
       </div>
       <div class="publication-schedule-fields">
@@ -2124,7 +1741,6 @@ function renderPublications() {
     </article>`;
   }).join('');
 
-  renderHistorySummary(items);
   setStatus(el.publicationStatus, `${items.length} item(ns) salvo(s), totalizando ${totalMessages} mensagem(ns) separadas.`, 'success');
 }
 
@@ -2334,24 +1950,22 @@ async function fetchProduct() {
 
   el.fetchBtn.disabled = true;
   el.fetchBtn.textContent = '⏳ Buscando';
-  // Mantém os dados que vieram do Radar enquanto a validação ao vivo acontece.
-  // Se a loja estiver redirecionando ou indisponível, a oferta não fica em branco.
+  el.title.value = '';
+  el.old.value = '';
+  el.offer.value = '';
+  el.installmentQty.value = '';
+  el.installmentValue.value = '';
+  if (el.seller) el.seller.value = '';
+  setImage('');
   setStatus(el.fetchStatus, 'Consultando o anúncio...');
 
   try {
     const response = await fetch(`${base}/api/product?url=${encodeURIComponent(link)}`, { cache: 'no-store' });
     const product = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(product.error || 'Falha ao consultar o produto.');
-    el.title.value = '';
-    el.old.value = '';
-    el.offer.value = '';
-    el.installmentQty.value = '';
-    el.installmentValue.value = '';
-    if (el.seller) el.seller.value = '';
-    setImage('');
     const affiliateLink = product.affiliateLink || (isAffiliateLink(link) ? link : affiliateFor(product));
     if (affiliateLink) {
-      saveAffiliateAssociation(product.id || product.source?.itemId, affiliateLink, product.catalogProductId, product.title);
+      saveAffiliateAssociation(product.id || product.source?.itemId, affiliateLink, product.catalogProductId);
       el.link.value = affiliateLink;
       state.affiliateLinkReceived = true;
       state.receivedAffiliateLink = affiliateLink;
@@ -2378,7 +1992,6 @@ async function fetchProduct() {
       ? (product.imageProxy.startsWith('/') ? `${base}${product.imageProxy}` : product.imageProxy)
       : product.image;
     if (imageUrl) setImage(imageUrl);
-    recordProductConsultation({ ...product, itemId: product.id || product.source?.itemId, link: el.link.value, oldPrice: el.old.value, offerPrice: el.offer.value });
     generatePhrase(true);
     state.previewIndex = 0;
     renderCurrent();
@@ -2518,6 +2131,10 @@ $('#pasteLinkBtn').onclick = async () => {
     setStatus(el.fetchStatus, 'Toque e segure no campo para colar o link.', 'error');
   }
 };
+$$('.style-chip').forEach((button) => button.addEventListener('click', () => {
+  setSelectedStyle(button.dataset.style);
+  renderCurrent();
+}));
 $('#imageFile').onchange = (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -2526,7 +2143,7 @@ $('#imageFile').onchange = (event) => {
   reader.readAsDataURL(file);
 };
 
-[el.link, el.title, el.old, el.offer, el.installmentQty, el.installmentValue, el.phrase, el.seller].filter(Boolean)
+[el.link, el.title, el.old, el.offer, el.installmentQty, el.installmentValue, el.phrase, el.seller]
   .forEach((node) => node.addEventListener('input', () => {
     if (node === el.link || node === el.title) state.previewIndex = 0;
     if (node === el.link && String(el.link.value || '').trim() !== state.receivedAffiliateLink) {
@@ -2667,7 +2284,7 @@ el.favoritesList?.addEventListener('click', (event) => {
   const item = getFavorites().find((favorite) => favorite.id === card.dataset.id);
   if (!item) return;
   if (button.dataset.action === 'use') applyFavoriteToForm(item);
-  if (button.dataset.action === 'open' && item.link) window.open(affiliateFor(item) || item.link, '_blank');
+  if (button.dataset.action === 'open' && item.link) window.open(item.link, '_blank');
   if (button.dataset.action === 'remove') toggleFavorite(item, el.favoritesStatus);
 });
 el.clearFavoritesBtn?.addEventListener('click', () => {
@@ -2682,31 +2299,8 @@ el.clearFavoritesBtn?.addEventListener('click', () => {
   setStatus(el.favoritesStatus, 'Lista de favoritos apagada.', 'success');
 });
 
-el.affiliateLibrarySearch?.addEventListener('input', renderAffiliateLibrary);
-el.affiliateLibraryList?.addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-action="remove"]');
-  const id = button?.closest('.affiliate-library-item')?.dataset.id;
-  if (!id) return;
-  const library = getAffiliateLibrary();
-  const record = library[id];
-  Object.keys(library).forEach(key => { if (library[key]?.itemId === id) delete library[key]; });
-  localStorage.setItem(AFFILIATE_LIBRARY_STORAGE_KEY, JSON.stringify(library));
-  renderAffiliateLibrary();
-  setStatus(el.serverStatus, record ? `Associação ${id} removida da biblioteca.` : 'Associação removida.', 'success');
-});
-el.clearAffiliateLibraryBtn?.addEventListener('click', () => {
-  if (!affiliateRecords().length || !confirm('Apagar toda a Biblioteca de Afiliados?')) return;
-  localStorage.removeItem(AFFILIATE_LIBRARY_STORAGE_KEY);
-  renderAffiliateLibrary();
-  setStatus(el.serverStatus, 'Biblioteca de Afiliados apagada.', 'success');
-});
-el.exportAffiliateLibraryBtn?.addEventListener('click', async () => {
-  const text = JSON.stringify(affiliateRecords(), null, 2);
-  try { await navigator.clipboard.writeText(text); setStatus(el.serverStatus, 'Biblioteca copiada em JSON.', 'success'); }
-  catch { setStatus(el.serverStatus, 'Não foi possível copiar a biblioteca.', 'error'); }
-});
-
 $('#quickSaveBtn').onclick = saveCurrentPublication;
+$('#copySideBtn').onclick = () => $('#copyBtn').click();
 $('#settingsNewItemBtn').onclick = () => {
   clearForm({ expand: true, status: false });
   showPage('offers');
@@ -2721,7 +2315,7 @@ $('#menuClearBtn').onclick = () => {
   clearForm({ expand: true, status: true });
   showPage('offers');
 };
-el.finalText?.addEventListener('input', () => {
+el.finalText.addEventListener('input', () => {
   if (el.charCounter) el.charCounter.textContent = `${el.finalText.value.length}/1200`;
 });
 
@@ -2765,3 +2359,192 @@ showPage('offers');
 clearForm({ expand: true, status: false });
 renderPublications();
 setStatus(el.topActionStatus, 'Cole um link para começar. O servidor já está configurado.');
+
+
+// ===== CbOfertas V6: Criador + Enviador, pacote diário e validade rápida =====
+const V6_QUEUE_KEY = 'cbofertas-v6-imported-queue';
+const V6_MODE_KEY = 'cbofertas-v6-device-mode';
+const V6_CONFIG_KEY = 'cbofertas-v6-config';
+function v6Node(id){ return document.getElementById ? document.getElementById(id) : document.querySelector(`#${id}`); }
+function v6Status(id,text,type=''){ const n=v6Node(id); if(n) setStatus(n,text,type); }
+function v6Config(){
+  const saved=safeJson(localStorage.getItem(V6_CONFIG_KEY)||'{}',{});
+  return {start:saved.start||'08:00',end:saved.end||'21:00',batch:Number(saved.batch||3),round:Number(saved.round||30),item:Number(saved.item||2),limit:Number(saved.limit||36),group:String(saved.group||''),automatic:Boolean(saved.automatic),testMode:saved.testMode!==false};
+}
+function applyV6Config(){ const c=v6Config(); [['v6StartTime',c.start],['v6EndTime',c.end],['v6BatchSize',c.batch],['v6RoundInterval',c.round],['v6ItemInterval',c.item],['v6DailyLimit',c.limit],['automationGroupName',c.group]].forEach(([id,v])=>{if(v6Node(id))v6Node(id).value=String(v)}); if(v6Node('automationEnabled'))v6Node('automationEnabled').checked=c.automatic; if(v6Node('automationTestMode'))v6Node('automationTestMode').checked=c.testMode; }
+function saveV6Config(){ const c={start:v6Node('v6StartTime')?.value||'08:00',end:v6Node('v6EndTime')?.value||'21:00',batch:Math.max(1,Number(v6Node('v6BatchSize')?.value||3)),round:Math.max(15,Number(v6Node('v6RoundInterval')?.value||30)),item:Math.max(1,Number(v6Node('v6ItemInterval')?.value||2)),limit:Math.max(1,Number(v6Node('v6DailyLimit')?.value||36)),group:v6Node('automationGroupName')?.value.trim()||'',automatic:Boolean(v6Node('automationEnabled')?.checked),testMode:Boolean(v6Node('automationTestMode')?.checked)}; localStorage.setItem(V6_CONFIG_KEY,JSON.stringify(c)); window.Android?.configureAutomation?.(c.group,c.automatic,c.testMode); return c; }
+function v6OfferMessage(item){ return buildMessagesForData(item)[0] || item.finalText || `${item.phrase||''}\n\n${item.title||''}\n\n${item.link||''}`.trim(); }
+function buildV6Queue(){
+ const cfg=saveV6Config(), pubs=getPublications().slice(0,cfg.limit), today=new Date();
+ const [sh,sm]=cfg.start.split(':').map(Number); let cursor=new Date(today.getFullYear(),today.getMonth(),today.getDate()+1,sh,sm,0,0); let inBatch=0;
+ const queue=pubs.map((p,i)=>{ if(i>0){ inBatch++; cursor=new Date(cursor.getTime()+(inBatch<cfg.batch?cfg.item:cfg.round-(cfg.item*(cfg.batch-1)))*60000); if(inBatch>=cfg.batch) inBatch=0; } return {...p,queueId:`v6-${Date.now()}-${i}`,scheduledAt:cursor.getTime(),status:'pending',message:v6OfferMessage(p)}; });
+ localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(queue)); renderV6Queue(); v6Status('v6QueueStatus',`${queue.length} oferta(s) organizadas para amanhã.`,'success'); return queue;
+}
+function getV6Queue(){ const q=safeJson(localStorage.getItem(V6_QUEUE_KEY)||'[]',[]); return Array.isArray(q)?q:[]; }
+function renderV6Queue(){ const q=getV6Queue(), list=v6Node('v6QueueList'); if(v6Node('v6QueueCount'))v6Node('v6QueueCount').textContent=q.length; if(v6Node('v6ReadyCount'))v6Node('v6ReadyCount').textContent=q.filter(x=>x.message&&x.link).length; const next=q.find(x=>x.status==='pending'); if(v6Node('v6NextTime'))v6Node('v6NextTime').textContent=next?new Date(next.scheduledAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—'; if(list)list.innerHTML=q.length?q.map(x=>`<article class="v6-queue-item"><b>${escapeHtml(new Date(x.scheduledAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}))} — ${escapeHtml(x.title||'Oferta')}</b><small>${escapeHtml(x.status||'pending')} • ${x.coupon?`cupom ${escapeHtml(x.coupon)}`:'sem cupom'}</small></article>`).join(''):'<div class="empty">Nenhuma fila importada ou montada.</div>'; }
+async function v62ImageData(image){
+  const src=String(image||'').trim();
+  if(!src)return '';
+  if(src.startsWith('data:image/'))return src;
+  try{
+    const response=await fetch(src,{cache:'force-cache'});
+    if(!response.ok)throw new Error('imagem indisponível');
+    const blob=await response.blob();
+    if(!String(blob.type||'').startsWith('image/'))throw new Error('arquivo não é imagem');
+    return await new Promise((resolve,reject)=>{
+      const reader=new FileReader();reader.onerror=()=>reject(new Error('falha ao ler imagem'));reader.onload=()=>{
+        const img=new Image();img.onerror=()=>reject(new Error('imagem inválida'));img.onload=()=>{
+          const max=1200,scale=Math.min(1,max/img.width,max/img.height),canvas=document.createElement('canvas');
+          canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+          const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+          resolve(canvas.toDataURL('image/jpeg',0.82));
+        };img.src=reader.result;
+      };reader.readAsDataURL(blob);
+    });
+  }catch{return '';}
+}
+async function exportV6Queue(){
+  let q=getV6Queue(); if(!q.length)q=buildV6Queue();
+  if(!q.length)return v6Status('v6QueueStatus','Crie e salve ofertas antes de exportar.','error');
+  v6Status('v6QueueStatus','Preparando imagens e validando o pacote...');
+  const packed=[]; let imageFailures=0;
+  for(let i=0;i<q.length;i++){
+    const item={...q[i]};
+    const embedded=await v62ImageData(item.image||'');
+    if(embedded)item.image=embedded; else if(item.image)imageFailures++;
+    item.imageEmbedded=Boolean(embedded); item.packageIndex=i+1;
+    packed.push(item);
+  }
+  const payload={format:'cbofertas',version:'6.3',createdAt:Date.now(),config:v6Config(),coupons:getSavedCoupons(),affiliateLibrary:getAffiliateLibrary(),queue:packed,integrity:{items:packed.length,embeddedImages:packed.filter(x=>x.imageEmbedded).length,imageFailures}};
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/vnd.cbofertas+json'});
+  const file=new File([blob],`CbOfertas_Fila_${new Date().toISOString().slice(0,10)}.cbofertas`,{type:'application/vnd.cbofertas+json'});
+  try{if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({title:'Fila CbOfertas V6.3',files:[file]});else{const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}v6Status('v6QueueStatus',`${packed.length} ofertas exportadas; ${payload.integrity.embeddedImages} imagens incorporadas${imageFailures?`; ${imageFailures} sem imagem`:''}.`,imageFailures?'error':'success');}catch(e){if(e.name!=='AbortError')v6Status('v6QueueStatus','Não foi possível exportar a fila.','error');}
+}
+async function importV6Queue(file){
+ try{
+  const data=JSON.parse(await file.text());if(data.format!=='cbofertas'||!Array.isArray(data.queue))throw new Error('Arquivo incompatível');
+  const queue=data.queue.map((item,index)=>({...item,queueId:item.queueId||`v62-import-${Date.now()}-${index}`,status:'pending',attempts:0,lastError:''}));
+  localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(queue));
+  if(Array.isArray(data.coupons))saveSavedCoupons(data.coupons);
+  if(data.affiliateLibrary&&typeof data.affiliateLibrary==='object')saveAffiliateLibrary(data.affiliateLibrary);
+  if(data.config)localStorage.setItem(V6_CONFIG_KEY,JSON.stringify(data.config));
+  renderCouponLibrary();applyV6Config();renderV6Queue();renderV62Report();
+  const embedded=queue.filter(x=>String(x.image||'').startsWith('data:image/')).length;
+  v6Status('v6QueueStatus',`${queue.length} oferta(s) importadas; ${embedded} imagem(ns) prontas no aparelho.`,'success');
+ }catch(e){v6Status('v6QueueStatus',e.message||'Arquivo inválido.','error');}
+}
+
+function setV6Mode(mode){localStorage.setItem(V6_MODE_KEY,mode);document.body.dataset.deviceMode=mode;v6Status('deviceModeStatus',mode==='sender'?'Modo Enviador ativo: este aparelho receberá e agendará as filas.':'Modo Criador ativo: monte e exporte as filas.','success');v6Node('creatorModeBtn')?.classList.toggle('primary',mode==='creator');v6Node('senderModeBtn')?.classList.toggle('primary',mode==='sender');}
+function activateV6Sender(){ const q=getV6Queue(),cfg=saveV6Config(); if(!q.length)return v6Status('senderStatus','Importe uma fila antes de ativar.','error'); const invalid=q.filter(x=>!isAffiliateLink(String(x.link||''))); if(invalid.length)return v6Status('senderStatus',`${invalid.length} oferta(s) bloqueada(s): somente links oficiais meli.la podem ser enviados pelo Piloto.`, 'error'); if(cfg.automatic&&!cfg.group)return v6Status('senderStatus','Informe o nome exato do grupo.','error'); if(cfg.automatic&&window.Android?.isAutomationServiceEnabled&&!window.Android.isAutomationServiceEnabled())return v6Status('senderStatus','Ative primeiro o serviço de acessibilidade Piloto Automático.','error'); let ok=0,errors=[]; q.forEach((item,i)=>{if(item.scheduledAt>Date.now()+30000){let r;if(cfg.automatic&&window.Android?.scheduleAutomaticMessage)r=window.Android.scheduleAutomaticMessage(item.queueId||`v6-${i}`,item.scheduledAt,item.title||'CbOfertas',item.message||v6OfferMessage(item),item.image||'',cfg.group,cfg.testMode);else if(window.Android?.scheduleMessage)r=window.Android.scheduleMessage(item.queueId||`v6-${i}`,item.scheduledAt,item.title||'CbOfertas',item.message||v6OfferMessage(item),item.image||'');if(r==='ok')ok++;else errors.push(r||'Agendamento indisponível');}});v6Status('senderStatus',errors.length?`${ok} agendadas; ${errors.length} falharam. ${errors[0]||''}`:`${ok} oferta(s) agendadas ${cfg.automatic?'no piloto automático':'para compartilhamento manual'}.` ,errors.length?'error':'success');}
+function pauseV6Sender(){getV6Queue().forEach(x=>window.Android?.cancelScheduledMessage?.(x.queueId));v6Status('senderStatus','Todos os agendamentos desta fila foram pausados.','success');}
+function initV6(){
+ applyV6Config(); renderV6Queue(); setV6Mode(localStorage.getItem(V6_MODE_KEY)||'creator');
+ v6Node('showAutomationPageBtn')?.addEventListener('click',()=>showPage('automation'));
+ v6Node('creatorModeBtn')?.addEventListener('click',()=>setV6Mode('creator')); v6Node('senderModeBtn')?.addEventListener('click',()=>setV6Mode('sender'));
+ v6Node('buildDailyQueueBtn')?.addEventListener('click',buildV6Queue); v6Node('exportQueueBtn')?.addEventListener('click',exportV6Queue); v6Node('importQueueInput')?.addEventListener('change',e=>e.target.files?.[0]&&importV6Queue(e.target.files[0])); v6Node('activateSenderBtn')?.addEventListener('click',activateV6Sender); v6Node('pauseSenderBtn')?.addEventListener('click',pauseV6Sender);
+ ['automationGroupName','automationEnabled','automationTestMode'].forEach(id=>v6Node(id)?.addEventListener('change',saveV6Config));
+ v6Node('openAccessibilityBtn')?.addEventListener('click',()=>window.Android?.openAutomationSettings?.());
+ v6Node('testAutomationBtn')?.addEventListener('click',()=>{const cfg=saveV6Config(),first=getV6Queue()[0]||getPublications()[0];if(!cfg.group)return v6Status('senderStatus','Informe o nome exato do grupo.','error');if(!first)return v6Status('senderStatus','Crie ou importe pelo menos uma oferta para testar.','error');if(window.Android?.isAutomationServiceEnabled&&!window.Android.isAutomationServiceEnabled())return v6Status('senderStatus','Ative o serviço de acessibilidade antes do teste.','error');window.Android?.testAutomaticShare?.(first.image||'',first.message||v6OfferMessage(first),cfg.group,cfg.testMode);v6Status('senderStatus',cfg.testMode?'Teste iniciado. A mensagem será preparada sem tocar em Enviar.':'Teste automático iniciado.','success');});
+ const enabled=window.Android?.isAutomationServiceEnabled?.(); v6Status('accessibilityStatus',enabled?'✅ Serviço de acessibilidade ativo.':'⚠️ Serviço de acessibilidade desativado.',enabled?'success':'error');
+ const preset=v6Node('couponValidityPreset'),custom=v6Node('couponCustomExpiryLabel'); preset?.addEventListener('change',()=>custom?.classList.toggle('hidden',preset.value!=='custom'));
+}
+
+// ===== V6.2: frases específicas, pré-voo, relatório e pacote autossuficiente =====
+const V62_RESULT_KEY='cbofertas-v62-results';
+const V62_SPECIAL_PHRASES={
+ cueca:['🩲 Um novo lar para seu piupiu!','🩲 Seu guerreiro também merece conforto.','🩲 Chega de deixar o menino morando em condições precárias.','🩲 Uma casa nova para quem enfrenta a batalha todo dia.'],
+ hidratante:['🧴 Vamos hidratar essa pele seca, amigo!','🧴 Hidrate-se: lixa é ferramenta, não tipo de pele.','🧴 Sua pele pediu água e não era no copo.','🧴 Essa pele está pedindo socorro em creme.'],
+ doce_leite:['🥄 Minha diabetes que aguente, não tem como resistir!','🥄 O médico pediu moderação, mas não viu essa promoção.','🥄 Um pote de felicidade e decisões questionáveis.','🥄 A dieta perdeu essa batalha antes mesmo de começar.'],
+ creatina:['💪 O músculo não cresce com pensamento positivo, amigo!','💪 Creatina comprada; shape em processamento.','💪 O projeto monstro começou. A preguiça ainda não foi avisada.','💪 Agora falta levantar o peso, porque o pote sozinho não treina.'],
+ cadeira:['🪑 Sua coluna está pedindo socorro em código Morse!','🪑 Uma cadeira digna para quem finge que está trabalhando.','🪑 Trabalhar sentado no sofrimento já deu, né?','🪑 Sua lombar acabou de colocar essa oferta no carrinho.'],
+ perfume:['🌹 Para ficar cheiroso até quando a personalidade não ajudar.','🌹 Agora só falta tomar banho!','🌹 Cheiro de rico sem precisar ter o saldo de um.','🌹 Chegue causando antes mesmo de falar besteira.'],
+ papel:['🧻 Seu bumbum merece esse investimento.','🧻 Economia é importante, mas conforto também, né?','🧻 Produto essencial para momentos de reflexão.'],
+ fone:['🎧 Agora dá para ignorar todo mundo em alta qualidade.','🎧 Paz, música e zero vontade de ouvir os outros.','🎧 Para escutar suas músicas e fingir que não chamaram.'],
+ airfryer:['🍟 Mais uma tentativa de fingir que vai fazer dieta.','🍟 Crocante por fora, promessa de dieta por dentro.','🍟 A cozinha saudável agradece; a batata também.'],
+ escova:['🪥 Seu bafo pediu socorro.','🪥 O sorriso agradece e as pessoas ao redor também.','🪥 Chega de conversar segurando a respiração.']
+};
+function v62PhraseKey(title=''){const t=simplifyCouponSearch(title);if(/cueca|boxer|slip/.test(t))return'cueca';if(/hidratante|creme corporal|creme de pele|locao/.test(t))return'hidratante';if(/doce de leite/.test(t))return'doce_leite';if(/creatina/.test(t))return'creatina';if(/cadeira|poltrona escritorio/.test(t))return'cadeira';if(/perfume|body splash|colonia/.test(t))return'perfume';if(/papel higienico/.test(t))return'papel';if(/fone|headset|earbuds/.test(t))return'fone';if(/air fryer|airfryer|fritadeira eletrica/.test(t))return'airfryer';if(/escova de dente|escova dental/.test(t))return'escova';return'';}
+const v62OriginalRandomPhrase=randomPhraseForTitle;
+randomPhraseForTitle=function(title=''){const key=v62PhraseKey(title);if(!key)return v62OriginalRandomPhrase(title);const list=V62_SPECIAL_PHRASES[key],history=safeJson(localStorage.getItem(PHRASE_HISTORY_STORAGE_KEY)||'{}',{}),used=Array.isArray(history[key])?history[key]:[];let options=list.filter(x=>!used.includes(x));if(!options.length)options=[...list];const phrase=options[Math.floor(Math.random()*options.length)];history[key]=[...used.filter(x=>x!==phrase),phrase].slice(-list.length);localStorage.setItem(PHRASE_HISTORY_STORAGE_KEY,JSON.stringify(history));return phrase;};
+function v62QueueStats(){const q=getV6Queue();return{sent:q.filter(x=>x.status==='sent'||x.status==='confirmed').length,failed:q.filter(x=>x.status==='failed').length,pending:q.filter(x=>!['sent','confirmed','failed'].includes(x.status)).length};}
+function renderV62Report(){const q=getV6Queue(),stats=v62QueueStats();if(v6Node('v62SentCount'))v6Node('v62SentCount').textContent=stats.sent;if(v6Node('v62FailedCount'))v6Node('v62FailedCount').textContent=stats.failed;if(v6Node('v62PendingCount'))v6Node('v62PendingCount').textContent=stats.pending;const list=v6Node('v62ReportList');if(list)list.innerHTML=q.length?q.map(x=>`<article class="v6-queue-item"><b>${escapeHtml(x.title||'Oferta')}</b><small>${escapeHtml(x.status||'pending')}${x.attempts?` • ${x.attempts} tentativa(s)`:''}${x.lastError?` • ${escapeHtml(x.lastError)}`:''}</small></article>`).join(''):'<div class="empty">Nenhum resultado registrado.</div>';}
+function runV62Preflight(){const cfg=saveV6Config(),q=getV6Queue(),checks=[['Fila carregada',q.length>0],['Nome exato do grupo',Boolean(cfg.group)],['Automação ativada',Boolean(cfg.automatic)],['Acessibilidade ativa',Boolean(window.Android?.isAutomationServiceEnabled?.())],['Ofertas com mensagem',q.length>0&&q.every(x=>Boolean(x.message||v6OfferMessage(x)))],['Links afiliados confirmados',q.length>0&&q.every(x=>isAffiliateLink(String(x.link||'')))],['Imagens incorporadas ou disponíveis',q.length>0&&q.every(x=>!x.image||String(x.image).startsWith('data:image/')||/^https?:/.test(x.image))],['Horários futuros',q.length>0&&q.some(x=>Number(x.scheduledAt)>Date.now()+30000)]];const node=v6Node('v62PreflightList');if(node)node.innerHTML=checks.map(([label,ok])=>`<div class="v62-check ${ok?'ok':'bad'}"><span>${ok?'✅':'⚠️'}</span><b>${escapeHtml(label)}</b></div>`).join('');const all=checks.every(x=>x[1]);v6Status('senderStatus',all?'Aparelho e fila prontos para o piloto automático.':'Existem pendências. Corrija os itens marcados antes de ativar.',all?'success':'error');return all;}
+async function exportV62Report(){const q=getV6Queue(),payload={format:'cbresultado',version:'6.3',createdAt:Date.now(),summary:v62QueueStats(),queue:q.map(({image,...x})=>x)};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),file=new File([blob],`CbOfertas_Relatorio_${new Date().toISOString().slice(0,10)}.cbresultado`,{type:'application/json'});try{if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({title:'Relatório CbOfertas',files:[file]});else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}}catch{}}
+function syncV62AutomationResult(){try{const raw=window.Android?.getAutomationLastResult?.();if(!raw)return;const r=JSON.parse(raw),q=getV6Queue();if(!r.id||!q.length)return;const item=q.find(x=>x.queueId===r.id);if(!item||item.resultAt===r.at)return;item.status=r.status==='sent'?'sent':r.status==='test_ready'?'test_ready':'failed';item.lastError=r.status==='failed'?r.message:'';item.attempts=Number(item.attempts||0)+1;item.resultAt=r.at;localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(q));renderV6Queue();renderV62Report();}catch{}}
+
+
+// ===== V6.3: Lote WhatsApp + fila embaralhada com afiliado obrigatório =====
+const V63_BATCH_KEY='cbofertas-v63-whatsapp-batch';
+function getV63Batch(){const data=safeJson(localStorage.getItem(V63_BATCH_KEY)||'[]',[]);return Array.isArray(data)?data:[];}
+function saveV63Batch(items){localStorage.setItem(V63_BATCH_KEY,JSON.stringify(Array.isArray(items)?items:[]));renderV63Batch();}
+function v63NormalizeBlock(value=''){return String(value||'').replace(/\r/g,'').replace(/\n{3,}/g,'\n\n').trim();}
+function v63ExtractTitle(block=''){
+ const lines=String(block).split('\n').map(x=>x.trim()).filter(Boolean);
+ const ignored=/^(https?:\/\/|de\s+r\$|por\s+r\$|r\$|use\s+o?\s*cupom|cupom|loja oficial|frete|\d+%\s*off)/i;
+ return (lines.find(x=>!ignored.test(x)&&x.length>4)||lines[0]||'Oferta').replace(/^[-•*\s]+/,'').slice(0,180);
+}
+function v63ParseBatch(raw=''){
+ const text=v63NormalizeBlock(raw), regex=/https?:\/\/(?:[\w.-]+\.)?(?:meli\.la|mercadolivre\.com\.br|mercadolibre\.com)[^\s<>()]*/gi;
+ const matches=[...text.matchAll(regex)]; if(!matches.length)return[];
+ return matches.map((m,i)=>{
+   const start=i===0?0:(matches[i-1].index+matches[i-1][0].length);
+   const end=i+1<matches.length?matches[i+1].index:text.length;
+   let block=v63NormalizeBlock(text.slice(start,end));
+   const link=m[0].replace(/[),.;]+$/,'');
+   if(!block.includes(link))block=`${block}\n${link}`.trim();
+   return {batchId:`batch-${Date.now()}-${i}`,title:v63ExtractTitle(block),message:block,finalText:block,link,image:'',seller:'',coupon:'',status:isAffiliateLink(link)?'affiliate_ready':'blocked_link',affiliateConfirmed:isAffiliateLink(link),createdAt:Date.now()};
+ });
+}
+function v63BatchStats(items=getV63Batch()){return{total:items.length,ready:items.filter(x=>isAffiliateLink(x.link)).length,blocked:items.filter(x=>!isAffiliateLink(x.link)).length,photos:items.filter(x=>Boolean(x.image)).length};}
+function renderV63Batch(){
+ const items=getV63Batch(),stats=v63BatchStats(items),list=v6Node('batchItemsList');
+ if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${stats.ready} afiliado(s) pronto(s) • ${stats.blocked} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
+ if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${stats.ready} prontos`;
+ if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><div class="batch-thumb">${x.image?`<img src="${escapeHtml(x.image)}" alt="">`:'<span>🛍️</span>'}</div><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><code>${escapeHtml(x.link||'Sem link')}</code></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Separar anúncios.</div>';
+}
+async function prepareV63BatchPhotos(){
+ const items=getV63Batch();if(!items.length)return v6Status('batchStatus','Separe os anúncios primeiro.','error');
+ v6Status('batchStatus','Buscando fotos e dados dos anúncios...');let ok=0;
+ for(const item of items){
+   if(item.image||!item.link)continue;
+   try{const data=await liveProductData(item.link);if(data){item.image=data.imageProxy?`${apiBase()}${data.imageProxy}`:(data.image||'');item.title=data.title||item.title;item.id=data.id||item.id;item.catalogProductId=data.catalogProductId||item.catalogProductId;item.seller=data.seller||'';if(item.image)ok++;}}
+   catch{}
+ }
+ saveV63Batch(items);v6Status('batchStatus',`${ok} foto(s) encontrada(s). Os anúncios sem foto continuam visíveis, mas podem ser revisados antes da exportação.`,ok?'success':'error');
+}
+function applyV63SavedAffiliates(){
+ const items=getV63Batch();let applied=0;
+ items.forEach(item=>{const saved=affiliateFor(item);if(saved&&isAffiliateLink(saved)&&item.link!==saved){item.link=saved;item.affiliateConfirmed=true;item.status='affiliate_ready';item.message=String(item.message||'').replace(/https?:\/\/[^\s<>()]+/g,saved);item.finalText=item.message;applied++;}});
+ saveV63Batch(items);v6Status('batchStatus',applied?`${applied} link(s) afiliado(s) aplicado(s) pela biblioteca.`:'Nenhum afiliado salvo compatível foi encontrado.',applied?'success':'error');
+}
+function v63SmartShuffle(items){
+ const source=[...items],result=[],lastCats=[];
+ while(source.length){
+   const candidates=source.map((x,i)=>({x,i,cat:category(x.title||x.message||'')}));
+   let pool=candidates.filter(c=>!lastCats.slice(-2).includes(c.cat));if(!pool.length)pool=candidates;
+   const pick=pool[Math.floor(Math.random()*pool.length)];result.push(pick.x);lastCats.push(pick.cat);source.splice(pick.i,1);
+ }
+ return result;
+}
+function sendV63BatchToPilot(){
+ const all=getV63Batch(),eligible=all.filter(x=>isAffiliateLink(String(x.link||''))),blocked=all.length-eligible.length;
+ if(!eligible.length)return v6Status('batchPilotStatus',`Nenhum anúncio enviado: ${blocked||all.length} item(ns) sem link afiliado confirmado.`, 'error');
+ const cfg=saveV6Config(),shuffled=v63SmartShuffle(eligible).slice(0,cfg.limit),today=new Date(),[sh,sm]=cfg.start.split(':').map(Number);
+ let cursor=new Date(today.getFullYear(),today.getMonth(),today.getDate()+1,sh,sm,0,0),inBatch=0;
+ const queue=shuffled.map((item,i)=>{if(i>0){inBatch++;cursor=new Date(cursor.getTime()+(inBatch<cfg.batch?cfg.item:cfg.round-(cfg.item*(cfg.batch-1)))*60000);if(inBatch>=cfg.batch)inBatch=0;}return{...item,queueId:`v63-${Date.now()}-${i}`,scheduledAt:cursor.getTime(),status:'pending',message:item.message||item.finalText,affiliateConfirmed:true,source:'whatsapp_batch'};});
+ localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(queue));renderV6Queue();renderV62Report();showPage('automation');
+ v6Status('v6QueueStatus',`${queue.length} anúncio(s) afiliado(s) enviados ao Piloto em ordem embaralhada.${blocked?` ${blocked} bloqueado(s) sem afiliado.`:''}`,'success');
+}
+function initV63Batch(){
+ v6Node('showBatchPageBtn')?.addEventListener('click',()=>showPage('batch'));
+ v6Node('batchSeparateBtn')?.addEventListener('click',()=>{const items=v63ParseBatch(v6Node('batchInput')?.value||'');saveV63Batch(items);v6Status('batchStatus',items.length?`${items.length} anúncio(s) separado(s).`:'Nenhum link de anúncio foi encontrado.',items.length?'success':'error');});
+ v6Node('batchPrepareBtn')?.addEventListener('click',prepareV63BatchPhotos);
+ v6Node('batchApplyAffiliateBtn')?.addEventListener('click',applyV63SavedAffiliates);
+ v6Node('batchSendPilotBtn')?.addEventListener('click',sendV63BatchToPilot);
+ renderV63Batch();
+}
+
+initV6();
+initV63Batch();
+
+setTimeout(()=>{v6Node('v62RunPreflightBtn')?.addEventListener('click',runV62Preflight);v6Node('v62RefreshReportBtn')?.addEventListener('click',()=>{syncV62AutomationResult();renderV62Report();});v6Node('v62ExportReportBtn')?.addEventListener('click',exportV62Report);renderV62Report();setInterval(syncV62AutomationResult,5000);},0);

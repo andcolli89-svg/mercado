@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -123,7 +124,7 @@ public class MainActivity extends Activity {
                 String scheme = uri.getScheme();
                 if ("http".equals(scheme) || "https".equals(scheme)) {
                     String host = uri.getHost();
-                    if (host != null && (host.contains("mercadolivre") || host.contains("meli.la") || host.contains("shopee") || host.contains("shope.ee") || host.contains("whatsapp") || host.contains("wa.me"))) {
+                    if (host != null && (host.contains("mercadolivre") || host.contains("meli.la") || host.contains("whatsapp") || host.contains("wa.me"))) {
                         startActivity(new Intent(Intent.ACTION_VIEW, uri));
                         return true;
                     }
@@ -204,19 +205,19 @@ public class MainActivity extends Activity {
             if ((shared == null || shared.toString().trim().isEmpty()) && intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
                 shared = intent.getClipData().getItemAt(0).coerceToText(this);
             }
-            String link = firstSupportedProductLink(shared == null ? "" : shared.toString());
+            String link = firstMercadoLivreLink(shared == null ? "" : shared.toString());
             intent.removeExtra(Intent.EXTRA_TEXT);
             intent.setAction(Intent.ACTION_MAIN);
             if (link != null) {
                 if (!pageReady) pendingSharedProductLink = link;
                 else deliverSharedProductLink(link);
             } else {
-                Toast.makeText(this, "O compartilhamento não contém um link de produto do Mercado Livre ou Shopee.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "O compartilhamento não contém um link de produto do Mercado Livre.", Toast.LENGTH_LONG).show();
             }
         }
     }
 
-    private String firstSupportedProductLink(String text) {
+    private String firstMercadoLivreLink(String text) {
         Matcher matcher = Pattern.compile("https?://[^\\s<>\"']+", Pattern.CASE_INSENSITIVE).matcher(text == null ? "" : text);
         while (matcher.find()) {
             String candidate = matcher.group().replaceAll("[),.;!?]+$", "");
@@ -226,7 +227,7 @@ public class MainActivity extends Activity {
                 if (host == null) continue;
                 String normalized = host.toLowerCase();
                 if (normalized.equals("meli.la") || normalized.endsWith(".meli.la") ||
-                        normalized.contains("mercadolivre.com") || normalized.contains("mercadolibre.com") || normalized.contains("shopee.com.br") || normalized.equals("shope.ee") || normalized.endsWith(".shope.ee")) {
+                        normalized.contains("mercadolivre.com") || normalized.contains("mercadolibre.com")) {
                     return candidate;
                 }
             } catch (Exception ignored) { }
@@ -243,20 +244,60 @@ public class MainActivity extends Activity {
     private void deliverScheduledShare(Intent intent) {
         String text = intent.getStringExtra("scheduled_text");
         String image = intent.getStringExtra("scheduled_image");
+        String group = intent.getStringExtra("scheduled_group");
+        boolean automatic = intent.getBooleanExtra("scheduled_automatic", false);
+        boolean testMode = intent.getBooleanExtra("scheduled_test_mode", true);
+        String scheduleId = intent.getStringExtra("scheduled_id");
         intent.removeExtra("scheduled_share");
         intent.removeExtra("scheduled_text");
         intent.removeExtra("scheduled_image");
+        intent.removeExtra("scheduled_group");
+        intent.removeExtra("scheduled_automatic");
+        intent.removeExtra("scheduled_test_mode");
         final String finalText = text == null ? "" : text;
         final String finalImage = image == null ? "" : image;
-        new Handler(Looper.getMainLooper()).postDelayed(() -> new AndroidBridge().shareToWhatsAppBusiness(finalImage, finalText, ""), 350);
+        final String finalGroup = group == null ? "" : group;
+        if (automatic && !finalGroup.trim().isEmpty()) {
+            new Handler(Looper.getMainLooper()).postDelayed(
+                    () -> startAutomatedWhatsAppShare(scheduleId, finalImage, finalText, finalGroup, testMode),
+                    350
+            );
+        } else {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> new AndroidBridge().shareToWhatsAppBusiness(finalImage, finalText, finalGroup), 350);
+        }
+    }
+
+    private void startAutomatedWhatsAppShare(String id, String imageUrl, String text, String groupName, boolean testMode) {
+        if (!WhatsAppAutomationService.isEnabled(this)) {
+            Toast.makeText(this, "Ative o serviço Piloto Automático nas configurações de acessibilidade.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        new Thread(() -> {
+            PreparedImage prepared = prepareImage(imageUrl);
+            try {
+                JSONObject job = new JSONObject();
+                job.put("id", id == null ? "" : id);
+                job.put("group", groupName == null ? "" : groupName.trim());
+                job.put("stage", "pick_group");
+                job.put("testMode", testMode);
+                job.put("createdAt", System.currentTimeMillis());
+                getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE).edit()
+                        .putString(WhatsAppAutomationService.KEY_JOB, job.toString())
+                        .apply();
+            } catch (Exception error) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Não foi possível preparar a automação.", Toast.LENGTH_LONG).show());
+                return;
+            }
+            runOnUiThread(() -> openWhatsAppBusiness(prepared.uri, prepared.mimeType, text, groupName));
+        }).start();
     }
 
     public class AndroidBridge {
         @JavascriptInterface
         public void openExternalLink(String value) {
             final String link = value == null ? "" : value.trim();
-            if (firstSupportedProductLink(link) == null) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Link do Mercado Livre ou Shopee inválido.", Toast.LENGTH_LONG).show());
+            if (firstMercadoLivreLink(link) == null) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Link do Mercado Livre inválido.", Toast.LENGTH_LONG).show());
                 return;
             }
             runOnUiThread(() -> {
@@ -326,11 +367,64 @@ public class MainActivity extends Activity {
             try {
                 if (id == null || id.trim().isEmpty()) return "Identificador inválido.";
                 if (when <= System.currentTimeMillis() + 30000L) return "Escolha um horário futuro.";
-                ScheduleManager.schedule(MainActivity.this, id, when, title, text, imageUrl, true);
+                ScheduleManager.schedule(MainActivity.this, id, when, title, text, imageUrl, "", false, true, true);
                 return "ok";
             } catch (Exception error) {
                 return error.getMessage() == null ? "Não foi possível agendar." : error.getMessage();
             }
+        }
+
+        @JavascriptInterface
+        public String scheduleAutomaticMessage(String id, long when, String title, String text, String imageUrl, String groupName, boolean testMode) {
+            try {
+                if (id == null || id.trim().isEmpty()) return "Identificador inválido.";
+                if (when <= System.currentTimeMillis() + 30000L) return "Escolha um horário futuro.";
+                String safeGroup = groupName == null ? "" : groupName.trim();
+                if (safeGroup.isEmpty()) return "Informe o nome exato do grupo.";
+                if (!WhatsAppAutomationService.isEnabled(MainActivity.this)) return "Ative o Piloto Automático nas configurações de acessibilidade.";
+                ScheduleManager.schedule(MainActivity.this, id, when, title, text, imageUrl, safeGroup, true, testMode, true);
+                return "ok";
+            } catch (Exception error) {
+                return error.getMessage() == null ? "Não foi possível agendar automaticamente." : error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
+        public void configureAutomation(String groupName, boolean enabled, boolean testMode) {
+            String safeGroup = groupName == null ? "" : groupName.trim();
+            getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE).edit()
+                    .putString(WhatsAppAutomationService.KEY_GROUP, safeGroup)
+                    .putBoolean(WhatsAppAutomationService.KEY_ENABLED, enabled)
+                    .putBoolean(WhatsAppAutomationService.KEY_TEST_MODE, testMode)
+                    .apply();
+        }
+
+        @JavascriptInterface
+        public boolean isAutomationServiceEnabled() {
+            return WhatsAppAutomationService.isEnabled(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public String getAutomationLastResult() {
+            return getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE)
+                    .getString(WhatsAppAutomationService.KEY_LAST_RESULT, "");
+        }
+
+        @JavascriptInterface
+        public void openAutomationSettings() {
+            runOnUiThread(() -> {
+                try {
+                    Intent settings = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                    startActivity(settings);
+                } catch (Exception error) {
+                    Toast.makeText(MainActivity.this, "Abra Configurações > Acessibilidade e ative Piloto Automático CbOfertas.", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void testAutomaticShare(String imageUrl, String text, String groupName, boolean testMode) {
+            runOnUiThread(() -> startAutomatedWhatsAppShare("test-" + System.currentTimeMillis(), imageUrl, text, groupName, testMode));
         }
 
         @JavascriptInterface
