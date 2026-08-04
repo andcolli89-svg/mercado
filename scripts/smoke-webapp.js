@@ -105,3 +105,5 @@ if (typeof windowObject.CbOfertasReceiveSharedLink !== 'function') {
 }
 
 console.log(`Web app V6.3 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);
+
+process.exit(0);
