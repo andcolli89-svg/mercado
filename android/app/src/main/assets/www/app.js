@@ -378,6 +378,16 @@ function showPage(page = 'offers') {
   if (validPage === 'favorites') renderFavorites();
 }
 
+
+// Navegação global resiliente: mantém todas as abas funcionando mesmo que
+// algum módulo opcional apresente erro durante a inicialização.
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-page]');
+  if (!button) return;
+  event.preventDefault();
+  showPage(button.dataset.page || 'offers');
+});
+
 function focusCouponBlastCard(message = '') {
   showPage('coupons');
   el.couponBlastCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2068,12 +2078,12 @@ el.couponBlastImageFile.onchange = async (event) => {
   node.addEventListener('change', () => saveCouponBlastConfig(false));
 });
 
-el.showOffersPageBtn.onclick = () => showPage('offers');
-el.showRadarPageBtn.onclick = () => showPage('radar');
-el.showHistoryPageBtn.onclick = () => showPage('history');
-el.showFavoritesPageBtn.onclick = () => showPage('favorites');
-el.showCouponsPageBtn.onclick = () => showPage('coupons');
-el.showSettingsPageBtn.onclick = () => showPage('settings');
+el.showOffersPageBtn?.addEventListener('click', () => showPage('offers'));
+el.showRadarPageBtn?.addEventListener('click', () => showPage('radar'));
+el.showHistoryPageBtn?.addEventListener('click', () => showPage('history'));
+el.showFavoritesPageBtn?.addEventListener('click', () => showPage('favorites'));
+el.showCouponsPageBtn?.addEventListener('click', () => showPage('coupons'));
+el.showSettingsPageBtn?.addEventListener('click', () => showPage('settings'));
 $$('[data-page]').forEach((button) => {
   if (!button.classList.contains('bottom-tab')) button.addEventListener('click', () => showPage(button.dataset.page));
 });

@@ -1,0 +1,13 @@
+CbOfertas V6.3.6 — Navegação corrigida
+
+Correções:
+- Início, Histórico, Cupons, Lote, Piloto e Configurações abrem normalmente.
+- Navegação global independente dos módulos opcionais.
+- Os botões de aba continuam funcionando mesmo que outro recurso apresente erro.
+- Radar e Favoritos permanecem removidos.
+- Mantidas as correções do lote persistente, exclusão individual e busca de fotos.
+
+Validação:
+- JavaScript aprovado.
+- Backend: 22 testes aprovados, 0 falhas.
+- Integridade do ZIP aprovada.
