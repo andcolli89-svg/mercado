@@ -1,0 +1,7 @@
+CbOfertas V7.2.0
+
+- Corrige FileProvider para a pasta cache/exports.
+- Exportar fila abre diretamente o WhatsApp Business.
+- Arquivo .cbofertas fica anexado e a exportação permanece salva no aplicativo.
+- Se o WhatsApp Business não estiver instalado, abre o seletor normal.
+- Piloto tenta toque por coordenadas quando o cartão do contato/grupo não é clicável pela acessibilidade.

@@ -2,6 +2,9 @@ package com.cbofertas.app;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.graphics.Rect;
+import android.graphics.Path;
+import android.accessibilityservice.GestureDescription;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -88,10 +91,12 @@ public class WhatsAppAutomationService extends AccessibilityService {
             if ("pick_group".equals(stage)) {
                 AccessibilityNodeInfo groupNode = findExactText(root, group);
                 if (groupNode != null) {
-                    if (clickNodeOrParent(groupNode)) {
+                    boolean clicked = clickNodeOrParent(groupNode);
+                    if (!clicked) clicked = clickNodeByCoordinates(groupNode);
+                    if (clicked) {
                         updateStage(job, "confirm_destination");
                         lastActionAt = System.currentTimeMillis();
-                        handler.postDelayed(this::processCurrentScreen, 900L);
+                        handler.postDelayed(this::processCurrentScreen, 1200L);
                         return;
                     }
                 }
@@ -224,6 +229,24 @@ public class WhatsAppAutomationService extends AccessibilityService {
             current = current.getParent();
         }
         return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+    }
+
+    private boolean clickNodeByCoordinates(AccessibilityNodeInfo node) {
+        if (node == null) return false;
+        Rect bounds = new Rect();
+        node.getBoundsInScreen(bounds);
+        AccessibilityNodeInfo parent = node.getParent();
+        for (int i = 0; i < 5 && (bounds.isEmpty() || bounds.width() < 20 || bounds.height() < 20) && parent != null; i++) {
+            parent.getBoundsInScreen(bounds);
+            parent = parent.getParent();
+        }
+        if (bounds.isEmpty()) return false;
+        Path path = new Path();
+        path.moveTo(bounds.exactCenterX(), bounds.exactCenterY());
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 140))
+                .build();
+        return dispatchGesture(gesture, null, null);
     }
 
     private void updateStage(JSONObject job, String stage) {

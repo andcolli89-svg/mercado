@@ -611,9 +611,22 @@ public class MainActivity extends Activity {
                         Intent share = new Intent(Intent.ACTION_SEND);
                         share.setType(safeMime);
                         share.putExtra(Intent.EXTRA_STREAM, uri);
+                        share.putExtra(Intent.EXTRA_TEXT, "Fila CbOfertas exportada em " + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(new java.util.Date()));
                         share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         share.setClipData(ClipData.newRawUri("CbOfertas", uri));
-                        startActivity(Intent.createChooser(share, "Exportar fila CbOfertas"));
+                        share.setPackage("com.whatsapp.w4b");
+                        grantUriPermission("com.whatsapp.w4b", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        try {
+                            startActivity(share);
+                        } catch (Exception businessError) {
+                            Toast.makeText(MainActivity.this, "WhatsApp Business não encontrado. Abrindo opções de compartilhamento.", Toast.LENGTH_LONG).show();
+                            Intent fallback = new Intent(Intent.ACTION_SEND);
+                            fallback.setType(safeMime);
+                            fallback.putExtra(Intent.EXTRA_STREAM, uri);
+                            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            fallback.setClipData(ClipData.newRawUri("CbOfertas", uri));
+                            startActivity(Intent.createChooser(fallback, "Exportar fila CbOfertas"));
+                        }
                     });
                 } catch (Exception error) {
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Não foi possível exportar a fila: " + error.getMessage(), Toast.LENGTH_LONG).show());
