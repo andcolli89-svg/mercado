@@ -15,8 +15,10 @@ import android.widget.Toast;
 
 import org.json.JSONObject;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Automação supervisionada do WhatsApp Business para um aparelho dedicado.
@@ -89,16 +91,16 @@ public class WhatsAppAutomationService extends AccessibilityService {
             if (root == null) return;
 
             if ("pick_group".equals(stage)) {
-                AccessibilityNodeInfo groupNode = findExactText(root, group);
+                AccessibilityNodeInfo groupNode = findDestinationNode(root, group);
                 if (groupNode != null) {
                     boolean clicked = clickNodeOrParent(groupNode);
-                    if (!clicked) clicked = clickNodeByCoordinates(groupNode);
                     if (clicked) {
                         updateStage(job, "confirm_destination");
                         lastActionAt = System.currentTimeMillis();
                         handler.postDelayed(this::processCurrentScreen, 1200L);
                         return;
                     }
+                    if (clickDestinationByCoordinates(groupNode, job)) return;
                 }
                 // Em algumas versões o compartilhamento abre direto em uma conversa já escolhida.
                 if (screenContains(root, group) && hasSendControl(root)) {
@@ -111,11 +113,15 @@ public class WhatsAppAutomationService extends AccessibilityService {
             if ("confirm_destination".equals(stage)) {
                 AccessibilityNodeInfo next = findByDescriptions(root,
                         "Avançar", "Próximo", "Next", "Enviar para", "Continuar");
-                if (next != null && clickNodeOrParent(next)) {
-                    updateStage(job, "send");
-                    lastActionAt = System.currentTimeMillis();
-                    handler.postDelayed(this::processCurrentScreen, 1000L);
-                    return;
+                if (next != null) {
+                    boolean clicked = clickNodeOrParent(next);
+                    if (!clicked) clicked = clickNodeByCoordinates(next);
+                    if (clicked) {
+                        updateStage(job, "send");
+                        lastActionAt = System.currentTimeMillis();
+                        handler.postDelayed(this::processCurrentScreen, 1000L);
+                        return;
+                    }
                 }
                 // Algumas versões já entram na tela final sem botão intermediário.
                 if (screenContains(root, group) && hasSendControl(root)) {
@@ -135,7 +141,9 @@ public class WhatsAppAutomationService extends AccessibilityService {
                     Toast.makeText(this, "Modo teste: confira a mensagem e envie manualmente.", Toast.LENGTH_LONG).show();
                     return;
                 }
-                if (clickNodeOrParent(send)) {
+                boolean sentClick = clickNodeOrParent(send);
+                if (!sentClick) sentClick = clickNodeByCoordinates(send);
+                if (sentClick) {
                     lastActionAt = System.currentTimeMillis();
                     updateStage(job, "verify");
                     handler.postDelayed(this::processCurrentScreen, 2500L);
@@ -187,6 +195,30 @@ public class WhatsAppAutomationService extends AccessibilityService {
         return null;
     }
 
+    private AccessibilityNodeInfo findDestinationNode(AccessibilityNodeInfo root, String wanted) {
+        String target = normalizeText(wanted);
+        List<AccessibilityNodeInfo> all = new ArrayList<>();
+        collect(root, all);
+        AccessibilityNodeInfo partial = null;
+        for (AccessibilityNodeInfo node : all) {
+            String text = node.getText() == null ? "" : node.getText().toString();
+            String desc = node.getContentDescription() == null ? "" : node.getContentDescription().toString();
+            String normalizedText = normalizeText(text);
+            String normalizedDesc = normalizeText(desc);
+            if (target.equals(normalizedText) || target.equals(normalizedDesc)) return node;
+            if (partial == null && ((!normalizedText.isEmpty() && normalizedText.contains(target)) ||
+                    (!normalizedDesc.isEmpty() && normalizedDesc.contains(target)))) partial = node;
+        }
+        return partial;
+    }
+
+    private String normalizeText(String value) {
+        String normalized = Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return normalized.replaceAll("[^\\p{L}\\p{N}\\s#]+", " ")
+                .replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT);
+    }
+
     private AccessibilityNodeInfo findExactText(AccessibilityNodeInfo root, String wanted) {
         List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(wanted);
         if (nodes == null) return null;
@@ -198,7 +230,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
     }
 
     private boolean screenContains(AccessibilityNodeInfo root, String wanted) {
-        return findExactText(root, wanted) != null;
+        return findDestinationNode(root, wanted) != null;
     }
 
     private AccessibilityNodeInfo findByDescriptions(AccessibilityNodeInfo root, String... values) {
@@ -222,7 +254,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
 
     private boolean clickNodeOrParent(AccessibilityNodeInfo node) {
         AccessibilityNodeInfo current = node;
-        for (int i = 0; i < 6 && current != null; i++) {
+        for (int i = 0; i < 10 && current != null; i++) {
             if (current.isClickable() && current.isEnabled()) {
                 return current.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
@@ -231,15 +263,45 @@ public class WhatsAppAutomationService extends AccessibilityService {
         return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
     }
 
+    private boolean clickDestinationByCoordinates(AccessibilityNodeInfo node, JSONObject job) {
+        if (node == null) return false;
+        Rect bounds = bestRowBounds(node);
+        if (bounds.isEmpty()) return false;
+        Path path = new Path();
+        path.moveTo(bounds.exactCenterX(), bounds.exactCenterY());
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 160))
+                .build();
+        return dispatchGesture(gesture, new GestureResultCallback() {
+            @Override public void onCompleted(GestureDescription gestureDescription) {
+                updateStage(job, "confirm_destination");
+                lastActionAt = System.currentTimeMillis();
+                handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 1200L);
+            }
+            @Override public void onCancelled(GestureDescription gestureDescription) {
+                handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 800L);
+            }
+        }, null);
+    }
+
+    private Rect bestRowBounds(AccessibilityNodeInfo node) {
+        Rect best = new Rect();
+        AccessibilityNodeInfo current = node;
+        for (int i = 0; i < 8 && current != null; i++) {
+            Rect candidate = new Rect();
+            current.getBoundsInScreen(candidate);
+            if (!candidate.isEmpty() && candidate.height() >= 45 && candidate.height() <= 260 && candidate.width() > best.width()) {
+                best.set(candidate);
+            }
+            current = current.getParent();
+        }
+        if (best.isEmpty()) node.getBoundsInScreen(best);
+        return best;
+    }
+
     private boolean clickNodeByCoordinates(AccessibilityNodeInfo node) {
         if (node == null) return false;
-        Rect bounds = new Rect();
-        node.getBoundsInScreen(bounds);
-        AccessibilityNodeInfo parent = node.getParent();
-        for (int i = 0; i < 5 && (bounds.isEmpty() || bounds.width() < 20 || bounds.height() < 20) && parent != null; i++) {
-            parent.getBoundsInScreen(bounds);
-            parent = parent.getParent();
-        }
+        Rect bounds = bestRowBounds(node);
         if (bounds.isEmpty()) return false;
         Path path = new Path();
         path.moveTo(bounds.exactCenterX(), bounds.exactCenterY());

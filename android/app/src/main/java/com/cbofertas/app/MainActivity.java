@@ -112,19 +112,35 @@ public class MainActivity extends Activity {
                 }
                 MainActivity.this.fileChooserCallback = filePathCallback;
 
-                Intent picker;
-                try {
-                    picker = fileChooserParams != null ? fileChooserParams.createIntent() : new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                } catch (Exception error) {
-                    picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                }
-                picker.setAction(Intent.ACTION_OPEN_DOCUMENT);
+                Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 picker.addCategory(Intent.CATEGORY_OPENABLE);
-                picker.setType("image/*");
-                picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                String[] acceptTypes = fileChooserParams == null ? null : fileChooserParams.getAcceptTypes();
+                boolean queueImport = false;
+                if (acceptTypes != null) {
+                    for (String accept : acceptTypes) {
+                        String normalized = accept == null ? "" : accept.toLowerCase(java.util.Locale.ROOT);
+                        if (normalized.contains("cbofertas") || normalized.contains("application/json") || normalized.contains(".json")) {
+                            queueImport = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (queueImport) {
+                    picker.setType("application/json");
+                    picker.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                            "application/json",
+                            "application/octet-stream",
+                            "text/plain"
+                    });
+                } else {
+                    picker.setType("image/*");
+                }
+                picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
 
                 try {
-                    startActivityForResult(Intent.createChooser(picker, "Escolher foto"), FILE_CHOOSER_REQUEST);
+                    startActivityForResult(Intent.createChooser(picker, queueImport ? "Selecionar fila CbOfertas" : "Escolher foto"), FILE_CHOOSER_REQUEST);
                     return true;
                 } catch (Exception error) {
                     MainActivity.this.fileChooserCallback.onReceiveValue(null);
@@ -178,8 +194,16 @@ public class MainActivity extends Activity {
         if (fileChooserCallback == null) return;
 
         Uri[] results = null;
-        if (resultCode == Activity.RESULT_OK) {
-            results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+        if (resultCode == Activity.RESULT_OK && data != null) {
+            Uri selected = data.getData();
+            if (selected != null) {
+                try {
+                    getContentResolver().takePersistableUriPermission(selected, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception ignored) { }
+                results = new Uri[]{selected};
+            } else {
+                results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            }
         }
         fileChooserCallback.onReceiveValue(results);
         fileChooserCallback = null;

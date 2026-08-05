@@ -1,0 +1,9 @@
+CbOfertas V7.3
+
+- Importação aceita .cbofertas, JSON e texto pelo seletor Android.
+- O arquivo selecionado é devolvido diretamente ao WebView.
+- FileProvider libera cache/exports e files/exports.
+- Piloto localiza destino ignorando acentos e emojis.
+- Clique normal, pai clicável e gesto por coordenadas no cartão inteiro.
+- O estágio só avança depois de o gesto de seleção terminar.
+- Botões Avançar e Enviar também têm toque por coordenadas como reserva.
