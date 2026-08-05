@@ -77,7 +77,10 @@ public class WhatsAppAutomationService extends AccessibilityService {
             String group = job.optString("group", prefs.getString(KEY_GROUP, "")).trim();
             String stage = job.optString("stage", "pick_group");
             boolean testMode = job.optBoolean("testMode", prefs.getBoolean(KEY_TEST_MODE, true));
-            if (group.isEmpty()) return failJob("Nome do grupo não configurado.");
+            if (group.isEmpty()) {
+                failJob("Nome do grupo não configurado.");
+                return;
+            }
 
             AccessibilityNodeInfo root = getRootInActiveWindow();
             if (root == null) return;

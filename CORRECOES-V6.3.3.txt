@@ -1,0 +1,26 @@
+CBOFERTAS V6.3.3 — CORREÇÕES DO LOTE
+
+1. Remove automaticamente cabeçalhos copiados do WhatsApp:
+   - data e horário;
+   - número de telefone ou nome do remetente;
+   - prefixos como [4/8 18:52] +55 ...:
+
+2. Corrige a separação:
+   - cada oferta termina no próprio link;
+   - o título da mensagem seguinte não entra na oferta anterior.
+
+3. Adiciona em cada anúncio:
+   - botão “Trocar link afiliado”;
+   - validação obrigatória do link meli.la;
+   - atualização do link dentro da mensagem.
+
+4. Mantém:
+   - botão geral “Aplicar afiliados salvos”;
+   - bloqueio de envio sem afiliado;
+   - busca de fotos de links curtos meli.la;
+   - fila embaralhada para o Piloto Automático.
+
+Validação:
+- JavaScript: aprovado.
+- Estrutura do projeto: aprovada.
+- Backend: 22 testes aprovados, 0 falhas.

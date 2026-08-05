@@ -2478,8 +2478,15 @@ const V63_BATCH_KEY='cbofertas-v63-whatsapp-batch';
 function getV63Batch(){const data=safeJson(localStorage.getItem(V63_BATCH_KEY)||'[]',[]);return Array.isArray(data)?data:[];}
 function saveV63Batch(items){localStorage.setItem(V63_BATCH_KEY,JSON.stringify(Array.isArray(items)?items:[]));renderV63Batch();}
 function v63NormalizeBlock(value=''){return String(value||'').replace(/\r/g,'').replace(/\n{3,}/g,'\n\n').trim();}
+function v63StripWhatsAppHeader(value=''){
+ return String(value||'')
+  .replace(/^\s*\[?\d{1,2}\/\d{1,2}(?:\/\d{2,4})?[,\s]+\d{1,2}:\d{2}\]?\s*(?:-\s*)?(?:\+?\d[\d\s().-]{7,}\s*:\s*)?/gmi,'')
+  .replace(/^\s*\+?\d[\d\s().-]{7,}\s*:\s*/gmi,'')
+  .replace(/^\s*\d+\.\s*(?=\[?\d{1,2}\/\d{1,2})/gmi,'')
+  .trim();
+}
 function v63ExtractTitle(block=''){
- const lines=String(block).split('\n').map(x=>x.trim()).filter(Boolean);
+ const lines=v63StripWhatsAppHeader(block).split('\n').map(x=>x.trim()).filter(Boolean);
  const ignored=/^(https?:\/\/|de\s+r\$|por\s+r\$|r\$|use\s+o?\s*cupom|cupom|loja oficial|frete|\d+%\s*off)/i;
  return (lines.find(x=>!ignored.test(x)&&x.length>4)||lines[0]||'Oferta').replace(/^[-•*\s]+/,'').slice(0,180);
 }
@@ -2488,19 +2495,35 @@ function v63ParseBatch(raw=''){
  const matches=[...text.matchAll(regex)]; if(!matches.length)return[];
  return matches.map((m,i)=>{
    const start=i===0?0:(matches[i-1].index+matches[i-1][0].length);
-   const end=i+1<matches.length?matches[i+1].index:text.length;
-   let block=v63NormalizeBlock(text.slice(start,end));
+   const end=m.index+m[0].length;
+   let block=v63StripWhatsAppHeader(v63NormalizeBlock(text.slice(start,end)));
    const link=m[0].replace(/[),.;]+$/,'');
    if(!block.includes(link))block=`${block}\n${link}`.trim();
    return {batchId:`batch-${Date.now()}-${i}`,title:v63ExtractTitle(block),message:block,finalText:block,link,image:'',seller:'',coupon:'',status:isAffiliateLink(link)?'affiliate_ready':'blocked_link',affiliateConfirmed:isAffiliateLink(link),createdAt:Date.now()};
  });
+}
+function v63ReplaceAffiliateLink(batchId,newLink){
+ const link=String(newLink||'').trim();
+ if(!isAffiliateLink(link))return v6Status('batchStatus','Cole um link afiliado válido do Mercado Livre, como https://meli.la/...','error');
+ const items=getV63Batch(),item=items.find(x=>x.batchId===batchId);if(!item)return;
+ const previous=String(item.link||'');
+ let message=String(item.message||item.finalText||'');
+ if(previous&&message.includes(previous))message=message.split(previous).join(link);
+ else message=message.replace(/https?:\/\/(?:[\w.-]+\.)?(?:meli\.la|mercadolivre\.com\.br|mercadolibre\.com)[^\s<>()]*/gi,link);
+ item.link=link;item.message=message;item.finalText=message;item.affiliateConfirmed=true;item.status='affiliate_ready';
+ saveV63Batch(items);v6Status('batchStatus','Link afiliado atualizado neste anúncio.','success');
+}
+function v63AskAffiliateLink(batchId){
+ const item=getV63Batch().find(x=>x.batchId===batchId);if(!item)return;
+ const value=window.prompt('Cole o novo link afiliado deste anúncio:',item.link||'https://meli.la/');
+ if(value!==null)v63ReplaceAffiliateLink(batchId,value);
 }
 function v63BatchStats(items=getV63Batch()){return{total:items.length,ready:items.filter(x=>isAffiliateLink(x.link)).length,blocked:items.filter(x=>!isAffiliateLink(x.link)).length,photos:items.filter(x=>Boolean(x.image)).length};}
 function renderV63Batch(){
  const items=getV63Batch(),stats=v63BatchStats(items),list=v6Node('batchItemsList');
  if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${stats.ready} afiliado(s) pronto(s) • ${stats.blocked} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
  if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${stats.ready} prontos`;
- if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><div class="batch-thumb">${x.image?`<img src="${escapeHtml(x.image)}" alt="">`:'<span>🛍️</span>'}</div><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><code>${escapeHtml(x.link||'Sem link')}</code></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Separar anúncios.</div>';
+ if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><div class="batch-thumb">${x.image?`<img src="${escapeHtml(x.image)}" alt="">`:'<span>🛍️</span>'}</div><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><code>${escapeHtml(x.link||'Sem link')}</code><button class="batch-affiliate-btn" type="button" data-batch-affiliate="${escapeHtml(x.batchId)}">🔗 Trocar link afiliado</button></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Separar anúncios.</div>';
 }
 async function prepareV63BatchPhotos(){
  const items=getV63Batch();if(!items.length)return v6Status('batchStatus','Separe os anúncios primeiro.','error');
@@ -2541,6 +2564,7 @@ function initV63Batch(){
  v6Node('batchPrepareBtn')?.addEventListener('click',prepareV63BatchPhotos);
  v6Node('batchApplyAffiliateBtn')?.addEventListener('click',applyV63SavedAffiliates);
  v6Node('batchSendPilotBtn')?.addEventListener('click',sendV63BatchToPilot);
+ v6Node('batchItemsList')?.addEventListener('click',event=>{const button=event.target.closest('[data-batch-affiliate]');if(button)v63AskAffiliateLink(button.dataset.batchAffiliate);});
  renderV63Batch();
 }
 

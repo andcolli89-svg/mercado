@@ -182,3 +182,5 @@ body.dark .favorite-thumb{background:#fff}
 .batch-thumb{width:74px;height:74px;border-radius:10px;background:var(--green-soft);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}.batch-thumb img{width:100%;height:100%;object-fit:cover}
 .batch-item-main{min-width:0;display:flex;flex-direction:column;gap:5px}.batch-item-main b{font-size:15px}.batch-item-main small{font-weight:800}.batch-item-main code{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--green)}
 @media(max-width:720px){.batch-item{grid-template-columns:58px 1fr}.batch-thumb{width:58px;height:58px}.bottom-nav{overflow-x:auto;justify-content:flex-start}.bottom-tab{min-width:72px}}
+
+.batch-affiliate-btn{align-self:flex-start;border:1px solid var(--green);background:transparent;color:var(--green);border-radius:10px;padding:7px 10px;font-weight:900;font-size:13px}

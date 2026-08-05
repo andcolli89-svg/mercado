@@ -105,3 +105,6 @@ if (typeof windowObject.CbOfertasReceiveSharedLink !== 'function') {
 }
 
 console.log(`Web app V6.3 inicializado em ambiente de teste com ${elements.size} elementos simulados.`);
+
+// Encerra o teste mesmo quando o app registra temporizadores.
+process.exit(0);

@@ -5,6 +5,42 @@ const { ALLOWED_PRODUCT_HOST, BROWSER_HEADERS: HEADERS, apiHeaders } = require('
 const { fetchWithTimeout } = require('../lib/http');
 const { clean, decodeHtml, money, numeric, itemIdFrom, attr, meta } = require('../lib/format');
 
+function redirectFromHtml(html = '', baseUrl = '') {
+  const decoded = decodeHtml(String(html));
+  const candidates = [
+    decoded.match(/<meta\b[^>]*http-equiv=["']?refresh["']?[^>]*content=["'][^"']*url\s*=\s*([^"'>\s]+)/i)?.[1],
+    decoded.match(/(?:window\.)?location(?:\.href|\.replace|\.assign)?\s*(?:=|\()\s*["']([^"']+)["']/i)?.[1]
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    try { return new URL(candidate.replace(/\\\//g, '/').replace(/[);]+$/, ''), baseUrl).href; }
+    catch { }
+  }
+  return '';
+}
+
+async function resolveSharedProductLink(source, maxHops = 14) {
+  let current = source;
+  const visited = new Set();
+  for (let hop = 0; hop < maxHops; hop += 1) {
+    const key = current.replace(/#.*$/, '');
+    if (visited.has(key)) throw new Error('O link compartilhado entrou em um redirecionamento repetido.');
+    visited.add(key);
+
+    const response = await fetchWithTimeout(current, { headers: HEADERS, redirect: 'manual' });
+    const html = await response.text().catch(() => '');
+    const location = response.headers?.get?.('location') || '';
+    const htmlRedirect = redirectFromHtml(html, current);
+    if ([301, 302, 303, 307, 308].includes(Number(response.status)) || htmlRedirect) {
+      const target = location || htmlRedirect;
+      if (!target) break;
+      current = new URL(target, current).href;
+      continue;
+    }
+    return { response, finalUrl: response.url || current, html };
+  }
+  throw new Error('Não foi possível concluir o redirecionamento do link compartilhado.');
+}
+
 async function fetchSeller(sellerId) {
   if (!sellerId) return '';
   try {
@@ -322,10 +358,15 @@ async function productFromUrl(source) {
   const affiliateLink = /(^|\.)meli\.la$/i.test(input.hostname) ? input.href : '';
   const requestedItemId = itemIdFrom(input.href);
 
-  const landing = await fetchWithTimeout(input.href, { headers: HEADERS });
+  // Links meli.la podem usar uma ou várias respostas 301/302/303/307/308,
+  // meta refresh ou JavaScript. O resolvedor acompanha a cadeia completa,
+  // preserva cookies e entrega a página final do anúncio para extrair a foto.
+  const resolved = await resolveSharedProductLink(input.href, 14);
+  const landing = resolved.response;
+  if (!landing) throw new Error('Não foi possível abrir o link compartilhado do Mercado Livre.');
   if (!landing.ok) throw new Error(`O Mercado Livre respondeu com código ${landing.status}.`);
-  const finalUrl = landing.url;
-  const html = await landing.text();
+  const finalUrl = resolved.finalUrl || landing.url || input.href;
+  const html = resolved.html || '';
   const id = requestedItemId || itemIdFrom(finalUrl) || itemIdFrom(html);
   const [api, apiPrices] = await Promise.all([fetchApiItem(id), fetchApiPrices(id)]);
   const structured = jsonLd(html);
