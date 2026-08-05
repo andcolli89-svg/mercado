@@ -4,7 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   extractPriceCandidates,
-  moneyFromAriaLabel
+  moneyFromAriaLabel,
+  extractPrimaryImage
 } = require('../src/services/productService');
 const { normalizeRadarItem } = require('../src/services/radarService');
 const {
@@ -118,4 +119,15 @@ test('link de catálogo sem wid não se transforma em anúncio diferente', () =>
   assert.equal(itemIdFrom(catalog), 'MLB55027309');
   const selected = `${catalog}#position=1&wid=MLB4812130742`;
   assert.equal(itemIdFrom(selected), 'MLB4812130742');
+});
+
+
+test('imagem principal usa og:image do HTML real do Mercado Livre', () => {
+  const html = '<meta property="og:image" content="https://http2.mlstatic.com/D_NQ_NP_682372-MLA103217659554_012026-O.webp">';
+  assert.equal(extractPrimaryImage(html, '', ''), 'https://http2.mlstatic.com/D_NQ_NP_682372-MLA103217659554_012026-O.webp');
+});
+
+test('imagem principal monta URL a partir de pictures.id', () => {
+  const html = '{"pictures":{"pictures":[{"id":"682372-MLA103217659554_012026"}]}}';
+  assert.equal(extractPrimaryImage(html, '', ''), 'https://http2.mlstatic.com/D_NQ_NP_682372-MLA103217659554_012026-O.webp');
 });

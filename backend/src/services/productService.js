@@ -18,22 +18,53 @@ function redirectFromHtml(html = '', baseUrl = '') {
   return '';
 }
 
+function redirectKey(value = '') {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    // Parâmetros de rastreamento podem mudar a cada salto sem mudar o destino real.
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|matt_|tracking|source|ref|redirect|go|nonce|callback)/i.test(key)) url.searchParams.delete(key);
+    }
+    return url.href.replace(/\/$/, '');
+  } catch {
+    return String(value || '').replace(/#.*$/, '').replace(/\/$/, '');
+  }
+}
+
+function looksLikeProductPage(html = '') {
+  const source = String(html || '');
+  return /ui-pdp|poly-component|application\/ld\+json[\s\S]{0,4000}?["']Product["']|property=["']og:type["'][^>]*content=["']product|\bMLB\d{6,}/i.test(source);
+}
+
 async function resolveSharedProductLink(source, maxHops = 14) {
   let current = source;
   const visited = new Set();
   for (let hop = 0; hop < maxHops; hop += 1) {
-    const key = current.replace(/#.*$/, '');
-    if (visited.has(key)) throw new Error('O link compartilhado entrou em um redirecionamento repetido.');
+    const key = redirectKey(current);
+    if (visited.has(key)) {
+      throw new Error('O link compartilhado entrou em um redirecionamento repetido antes de chegar ao anúncio.');
+    }
     visited.add(key);
 
     const response = await fetchWithTimeout(current, { headers: HEADERS, redirect: 'manual' });
     const html = await response.text().catch(() => '');
     const location = response.headers?.get?.('location') || '';
-    const htmlRedirect = redirectFromHtml(html, current);
-    if ([301, 302, 303, 307, 308].includes(Number(response.status)) || htmlRedirect) {
+    const httpRedirect = [301, 302, 303, 307, 308].includes(Number(response.status));
+
+    // Páginas reais do Mercado Livre contêm scripts com location.href usados pela
+    // própria interface. Eles não são redirecionamentos da página e antes criavam
+    // um ciclo falso ao buscar a foto de links meli.la.
+    const htmlRedirect = !looksLikeProductPage(html) ? redirectFromHtml(html, current) : '';
+
+    if (httpRedirect || htmlRedirect) {
       const target = location || htmlRedirect;
       if (!target) break;
-      current = new URL(target, current).href;
+      const next = new URL(target, current).href;
+      if (redirectKey(next) === key && response.ok) {
+        return { response, finalUrl: response.url || current, html };
+      }
+      current = next;
       continue;
     }
     return { response, finalUrl: response.url || current, html };
@@ -344,6 +375,44 @@ function extractInstallments(html, text, selectedPrice) {
   return { count: String(chosen.count), amount: money(chosen.amount), interest: chosen.interest || '' };
 }
 
+function mlStaticImageFromId(id = '') {
+  const cleanId = clean(id).replace(/^D_NQ_(?:NP|NQ)_/i, '').replace(/-(?:O|F|V)\.(?:webp|jpe?g|png)$/i, '');
+  if (!/^[A-Z0-9_-]{12,}$/i.test(cleanId) || !/-ML[AB]\d/i.test(cleanId)) return '';
+  return `https://http2.mlstatic.com/D_NQ_NP_${cleanId}-O.webp`;
+}
+
+function extractPrimaryImage(html = '', structuredImage = '', apiImage = '') {
+  const directCandidates = [
+    meta(html, 'og:image'),
+    meta(html, 'twitter:image'),
+    structuredImage,
+    apiImage
+  ].map(value => decodeHtml(clean(value)).replace(/\\\//g, '/')).filter(Boolean);
+
+  for (const candidate of directCandidates) {
+    try {
+      const parsed = new URL(candidate);
+      if (['http:', 'https:'].includes(parsed.protocol)) return parsed.href;
+    } catch { /* tenta o ID da imagem */ }
+  }
+
+  const idPatterns = [
+    /"pictures"\s*:\s*\{[\s\S]{0,3000}?"pictures"\s*:\s*\[[\s\S]{0,1000}?"id"\s*:\s*"([^"]+)"/i,
+    /"pictures"\s*:\s*\[[\s\S]{0,1000}?"id"\s*:\s*"([^"]+)"/i,
+    /"secure_thumbnail"\s*:\s*"([^"]+)"/i,
+    /"thumbnail"\s*:\s*"([^"]+)"/i
+  ];
+
+  for (const pattern of idPatterns) {
+    const value = decodeHtml(html.match(pattern)?.[1] || '').replace(/\\\//g, '/');
+    if (!value) continue;
+    if (/^https?:\/\//i.test(value)) return value;
+    const built = mlStaticImageFromId(value);
+    if (built) return built;
+  }
+  return '';
+}
+
 async function productFromUrl(source) {
   let input;
   try {
@@ -374,7 +443,7 @@ async function productFromUrl(source) {
   const prices = extractPriceCandidates(html, text, apiPrices?.price || api?.price || structured.price);
   const seller = extractSeller(html, text) || structured.seller || api?.seller || '';
   const title = api?.title || structured.title || meta(html, 'og:title').replace(/\s*\|\s*Mercado Livre.*$/i, '').trim();
-  const image = api?.image || structured.image || meta(html, 'og:image');
+  const image = extractPrimaryImage(html, structured.image, api?.image);
 
   if (!title) throw new Error('Não foi possível identificar o produto. Abra o anúncio e copie novamente o link de Compartilhar.');
   // O anúncio específico identificado por wid vence a página de catálogo.
@@ -410,4 +479,4 @@ async function productFromUrl(source) {
   };
 }
 
-module.exports = { productFromUrl, fetchApiItem, fetchApiPrices, extractPriceCandidates, moneyFromAriaLabel };
+module.exports = { productFromUrl, fetchApiItem, fetchApiPrices, extractPriceCandidates, moneyFromAriaLabel, extractPrimaryImage, mlStaticImageFromId };
