@@ -338,6 +338,34 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void shareTextFile(String fileName, String mimeType, String content) {
+            final String safeName = (fileName == null || fileName.trim().isEmpty()) ? "CbOfertas_Fila.cbofertas" : fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            final String safeMime = (mimeType == null || mimeType.trim().isEmpty()) ? "application/json" : mimeType;
+            final String safeContent = content == null ? "" : content;
+            new Thread(() -> {
+                try {
+                    File directory = new File(getCacheDir(), "exports");
+                    if (!directory.exists() && !directory.mkdirs()) throw new Exception("Não foi possível criar a pasta de exportação.");
+                    File file = new File(directory, safeName);
+                    try (FileOutputStream output = new FileOutputStream(file)) {
+                        output.write(safeContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    Uri uri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", file);
+                    runOnUiThread(() -> {
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType(safeMime);
+                        share.putExtra(Intent.EXTRA_STREAM, uri);
+                        share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        share.setClipData(ClipData.newRawUri("CbOfertas", uri));
+                        startActivity(Intent.createChooser(share, "Exportar fila CbOfertas"));
+                    });
+                } catch (Exception error) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Não foi possível exportar a fila: " + error.getMessage(), Toast.LENGTH_LONG).show());
+                }
+            }).start();
+        }
+
+        @JavascriptInterface
         public void shareImageAndText(String imageUrl, String text) {
             new Thread(() -> {
                 PreparedImage prepared = prepareImage(imageUrl);

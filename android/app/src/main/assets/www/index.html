@@ -291,6 +291,11 @@
         <div class="actions two-buttons"><button id="buildDailyQueueBtn" class="btn secondary" type="button">🗓 Montar horários</button><button id="exportQueueBtn" class="btn primary" type="button">⬆ Exportar fila</button></div>
         <label class="btn outline full import-button">⬇ Importar fila<input id="importQueueInput" type="file" accept=".cbofertas,application/json" hidden></label>
         <p id="v6QueueStatus" class="status"></p>
+        <section class="saved-exports-card">
+          <div class="section-title"><span>🗃️</span><div><h2>Exportações salvas</h2><p>Reutilize anúncios antigos, retire cupons vencidos e aplique cupons ativos novamente.</p></div></div>
+          <div class="actions two-buttons"><button id="exportPendingBtn" class="btn outline" type="button">Exportar pendentes</button><button id="clearExportHistoryBtn" class="btn outline-danger" type="button">Limpar exportações</button></div>
+          <div id="savedExportsList" class="saved-exports-list"></div>
+        </section>
         <div id="v6QueueList" class="v6-queue-list"></div>
       </section>
       <section class="card sender-control-card">

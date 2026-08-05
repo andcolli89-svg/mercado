@@ -187,3 +187,10 @@ body.dark .favorite-thumb{background:#fff}
 .batch-thumb{border:0;cursor:pointer}.batch-thumb:disabled{cursor:default}.batch-thumb.image-error::after{content:'🛍️';font-size:28px}.batch-link{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--green);font-family:monospace;text-decoration:underline}.batch-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px}.batch-actions button{border:1px solid var(--green);background:transparent;color:var(--green);border-radius:10px;padding:8px 10px;font-weight:800;font-size:12px}.batch-actions button:nth-child(3){background:var(--green-soft)}
 
 .batch-actions .danger{border-color:#c62828;color:#b71c1c;background:#fff5f5}.batch-actions .danger:active{background:#fde0e0}
+
+/* V6.3.8 — marcação de anúncios copiados no Lote */
+.batch-item.batch-copied{border:2px solid #21a957;background:linear-gradient(180deg,#f1fff5,#fff)}
+.batch-copied-badge{display:inline-flex;align-items:center;width:max-content;max-width:100%;padding:7px 11px;border-radius:999px;background:#dff8e7;color:#087331;font-size:.82rem;line-height:1.2}
+.batch-actions .batch-copy-ad{background:#07983d;color:#fff;border-color:#07983d}
+
+.saved-exports-card{margin-top:18px}.saved-exports-list{display:grid;gap:12px;margin-top:12px}.saved-export-item{padding:14px;border:1px solid #d9e8d5;border-radius:16px;background:var(--card,#fff)}.saved-export-item small{display:block;margin:6px 0 10px}.saved-export-item .actions{display:flex;flex-wrap:wrap;gap:8px}

@@ -2373,6 +2373,7 @@ setStatus(el.topActionStatus, 'Cole um link para começar. O servidor já está 
 
 // ===== CbOfertas V6: Criador + Enviador, pacote diário e validade rápida =====
 const V6_QUEUE_KEY = 'cbofertas-v6-imported-queue';
+const V6_EXPORTS_KEY = 'cbofertas-v6-saved-exports';
 const V6_MODE_KEY = 'cbofertas-v6-device-mode';
 const V6_CONFIG_KEY = 'cbofertas-v6-config';
 function v6Node(id){ return document.getElementById ? document.getElementById(id) : document.querySelector(`#${id}`); }
@@ -2413,22 +2414,25 @@ async function v62ImageData(image){
     });
   }catch{return '';}
 }
-async function exportV6Queue(){
+function getV6SavedExports(){try{return JSON.parse(localStorage.getItem(V6_EXPORTS_KEY)||'[]')}catch{return []}}
+function saveV6SavedExports(items){localStorage.setItem(V6_EXPORTS_KEY,JSON.stringify(items.slice(0,30)));renderV6SavedExports()}
+function recordV6Use(item,action='exported'){const now=Date.now(),history=Array.isArray(item.useHistory)?item.useHistory:[];return {...item,lastUsedAt:now,useCount:Number(item.useCount||0)+1,useHistory:[...history,{at:now,action,coupon:item.coupon||''}]}}
+function stripCouponFromMessage(text=''){return String(text).split('\n').filter(line=>!/(cupom|use o cupom|c[oó]digo)/i.test(line)).join('\n').replace(/\n{3,}/g,'\n\n').trim()}
+function removeCouponsFromItems(items){return items.map(x=>({...x,coupon:'',message:stripCouponFromMessage(x.message||'')}))}
+function reapplyActiveCoupons(items){const active=getSavedCoupons().filter(c=>!c.expiresAt||Number(c.expiresAt)>Date.now());return items.map(item=>{const coupon=active.find(c=>!c.category||String(item.category||item.title||'').toLowerCase().includes(String(c.category).toLowerCase()))||active[0];if(!coupon)return item;const code=coupon.code||coupon.name||'';return {...item,coupon:code,message:stripCouponFromMessage(item.message||'')+(code?`\n\n🎟️ Use o cupom: *${code}*`: '')}})}
+function renderV6SavedExports(){const box=v6Node('savedExportsList');if(!box)return;const exports=getV6SavedExports();box.innerHTML=exports.length?exports.map((e,i)=>`<article class="saved-export-item"><b>${escapeHtml(e.name||'Exportação')} • ${new Date(e.createdAt).toLocaleString('pt-BR')}</b><small>${e.queue.length} anúncio(s) • último uso ${e.lastUsedAt?new Date(e.lastUsedAt).toLocaleString('pt-BR'):'—'}</small><div class="actions"><button class="btn compact" data-export-action="restore" data-export-index="${i}">Reutilizar</button><button class="btn compact outline" data-export-action="nocoupon" data-export-index="${i}">Remover cupons</button><button class="btn compact outline" data-export-action="recoupon" data-export-index="${i}">Aplicar cupons ativos</button><button class="btn compact outline-danger" data-export-action="delete" data-export-index="${i}">Excluir</button></div></article>`).join(''):'<div class="empty">Nenhuma exportação salva.</div>'}
+async function exportV6Queue(filter='all'){
   let q=getV6Queue(); if(!q.length)q=buildV6Queue();
-  if(!q.length)return v6Status('v6QueueStatus','Crie e salve ofertas antes de exportar.','error');
-  v6Status('v6QueueStatus','Preparando imagens e validando o pacote...');
-  const packed=[]; let imageFailures=0;
-  for(let i=0;i<q.length;i++){
-    const item={...q[i]};
-    const embedded=await v62ImageData(item.image||'');
-    if(embedded)item.image=embedded; else if(item.image)imageFailures++;
-    item.imageEmbedded=Boolean(embedded); item.packageIndex=i+1;
-    packed.push(item);
-  }
-  const payload={format:'cbofertas',version:'6.3',createdAt:Date.now(),config:v6Config(),coupons:getSavedCoupons(),affiliateLibrary:getAffiliateLibrary(),queue:packed,integrity:{items:packed.length,embeddedImages:packed.filter(x=>x.imageEmbedded).length,imageFailures}};
-  const blob=new Blob([JSON.stringify(payload)],{type:'application/vnd.cbofertas+json'});
-  const file=new File([blob],`CbOfertas_Fila_${new Date().toISOString().slice(0,10)}.cbofertas`,{type:'application/vnd.cbofertas+json'});
-  try{if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({title:'Fila CbOfertas V6.3',files:[file]});else{const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}v6Status('v6QueueStatus',`${packed.length} ofertas exportadas; ${payload.integrity.embeddedImages} imagens incorporadas${imageFailures?`; ${imageFailures} sem imagem`:''}.`,imageFailures?'error':'success');}catch(e){if(e.name!=='AbortError')v6Status('v6QueueStatus','Não foi possível exportar a fila.','error');}
+  if(filter==='pending')q=q.filter(x=>x.status!=='sent');
+  if(!q.length)return v6Status('v6QueueStatus','Não há ofertas para exportar.','error');
+  v6Status('v6QueueStatus','Preparando fotos e salvando a exportação...');
+  const packed=[];let imageFailures=0;
+  for(let i=0;i<q.length;i++){let item=recordV6Use({...q[i]},'exported');let embedded='';const candidates=[item.imageProxy,item.image,item.originalImage].filter(Boolean);for(const src of candidates){embedded=await v62ImageData(src);if(embedded)break}if(embedded)item.image=embedded;else if(candidates.length)imageFailures++;item.imageEmbedded=Boolean(embedded);item.packageIndex=i+1;packed.push(item)}
+  const payload={format:'cbofertas',version:'6.4',createdAt:Date.now(),config:v6Config(),coupons:getSavedCoupons(),affiliateLibrary:getAffiliateLibrary(),queue:packed,integrity:{items:packed.length,embeddedImages:packed.filter(x=>x.imageEmbedded).length,imageFailures}};
+  const name=`CbOfertas_Fila_${new Date().toISOString().replace(/[:.]/g,'-')}.cbofertas`;
+  const saved=getV6SavedExports();saved.unshift({id:`exp-${Date.now()}`,name,createdAt:payload.createdAt,lastUsedAt:payload.createdAt,queue:packed});saveV6SavedExports(saved);
+  const content=JSON.stringify(payload);
+  try{if(window.Android?.shareTextFile){window.Android.shareTextFile(name,'application/vnd.cbofertas+json',content)}else{const blob=new Blob([content],{type:'application/vnd.cbofertas+json'}),file=new File([blob],name,{type:'application/vnd.cbofertas+json'});if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({title:'Fila CbOfertas V6.4',files:[file]});else{const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}}v6Status('v6QueueStatus',`${packed.length} ofertas exportadas e salvas; ${payload.integrity.embeddedImages} fotos incorporadas${imageFailures?`; ${imageFailures} sem foto`:''}.`,imageFailures?'error':'success')}catch(e){if(e.name!=='AbortError')v6Status('v6QueueStatus','Não foi possível exportar a fila.','error')}
 }
 async function importV6Queue(file){
  try{
@@ -2438,7 +2442,7 @@ async function importV6Queue(file){
   if(Array.isArray(data.coupons))saveSavedCoupons(data.coupons);
   if(data.affiliateLibrary&&typeof data.affiliateLibrary==='object')saveAffiliateLibrary(data.affiliateLibrary);
   if(data.config)localStorage.setItem(V6_CONFIG_KEY,JSON.stringify(data.config));
-  renderCouponLibrary();applyV6Config();renderV6Queue();renderV62Report();
+  renderCouponLibrary();applyV6Config();renderV6Queue();renderV6SavedExports();renderV62Report();
   const embedded=queue.filter(x=>String(x.image||'').startsWith('data:image/')).length;
   v6Status('v6QueueStatus',`${queue.length} oferta(s) importadas; ${embedded} imagem(ns) prontas no aparelho.`,'success');
  }catch(e){v6Status('v6QueueStatus',e.message||'Arquivo inválido.','error');}
@@ -2451,7 +2455,7 @@ function initV6(){
  applyV6Config(); renderV6Queue(); setV6Mode(localStorage.getItem(V6_MODE_KEY)||'creator');
  v6Node('showAutomationPageBtn')?.addEventListener('click',()=>showPage('automation'));
  v6Node('creatorModeBtn')?.addEventListener('click',()=>setV6Mode('creator')); v6Node('senderModeBtn')?.addEventListener('click',()=>setV6Mode('sender'));
- v6Node('buildDailyQueueBtn')?.addEventListener('click',buildV6Queue); v6Node('exportQueueBtn')?.addEventListener('click',exportV6Queue); v6Node('importQueueInput')?.addEventListener('change',e=>e.target.files?.[0]&&importV6Queue(e.target.files[0])); v6Node('activateSenderBtn')?.addEventListener('click',activateV6Sender); v6Node('pauseSenderBtn')?.addEventListener('click',pauseV6Sender);
+ v6Node('buildDailyQueueBtn')?.addEventListener('click',buildV6Queue); v6Node('exportQueueBtn')?.addEventListener('click',()=>exportV6Queue('all')); v6Node('exportPendingBtn')?.addEventListener('click',()=>exportV6Queue('pending')); v6Node('clearExportHistoryBtn')?.addEventListener('click',()=>{if(confirm('Apagar todas as exportações salvas?'))saveV6SavedExports([])}); v6Node('savedExportsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-export-action]');if(!b)return;const list=getV6SavedExports(),i=Number(b.dataset.exportIndex),exp=list[i];if(!exp)return;const a=b.dataset.exportAction;if(a==='delete'){list.splice(i,1);saveV6SavedExports(list)}else if(a==='nocoupon'){exp.queue=removeCouponsFromItems(exp.queue);saveV6SavedExports(list)}else if(a==='recoupon'){exp.queue=reapplyActiveCoupons(exp.queue);saveV6SavedExports(list)}else if(a==='restore'){localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(exp.queue.map(x=>({...x,status:'pending',scheduledAt:0}))));exp.lastUsedAt=Date.now();saveV6SavedExports(list);renderV6Queue();v6Status('v6QueueStatus','Exportação restaurada. Monte os horários novamente.','success')}}); v6Node('importQueueInput')?.addEventListener('change',e=>e.target.files?.[0]&&importV6Queue(e.target.files[0])); v6Node('activateSenderBtn')?.addEventListener('click',activateV6Sender); v6Node('pauseSenderBtn')?.addEventListener('click',pauseV6Sender);
  ['automationGroupName','automationEnabled','automationTestMode'].forEach(id=>v6Node(id)?.addEventListener('change',saveV6Config));
  v6Node('openAccessibilityBtn')?.addEventListener('click',()=>window.Android?.openAutomationSettings?.());
  v6Node('testAutomationBtn')?.addEventListener('click',()=>{const cfg=saveV6Config(),first=getV6Queue()[0]||getPublications()[0];if(!cfg.group)return v6Status('senderStatus','Informe o nome exato do grupo.','error');if(!first)return v6Status('senderStatus','Crie ou importe pelo menos uma oferta para testar.','error');if(window.Android?.isAutomationServiceEnabled&&!window.Android.isAutomationServiceEnabled())return v6Status('senderStatus','Ative o serviço de acessibilidade antes do teste.','error');window.Android?.testAutomaticShare?.(first.image||'',first.message||v6OfferMessage(first),cfg.group,cfg.testMode);v6Status('senderStatus',cfg.testMode?'Teste iniciado. A mensagem será preparada sem tocar em Enviar.':'Teste automático iniciado.','success');});
@@ -2543,12 +2547,31 @@ function v63OpenExternal(value=''){
  const link=String(value||'').trim();if(!link)return;
  if(window.Android?.openExternalLink)window.Android.openExternalLink(link);else window.open(link,'_blank','noopener');
 }
+async function v63WriteClipboard(value=''){
+ const text=String(value||'');
+ if(!text)return false;
+ try{
+  if(window.Android?.copyText){window.Android.copyText(text);return true;}
+  await navigator.clipboard.writeText(text);return true;
+ }catch{window.prompt('Copie o conteúdo:',text);return true;}
+}
 async function v63CopyLink(value=''){
  const link=String(value||'').trim();if(!link)return v6Status('batchStatus','Este anúncio ainda não possui link.','error');
- try{
-  if(window.Android?.copyText){window.Android.copyText(link);v6Status('batchStatus','Link copiado. Agora gere o afiliado no Mercado Livre.','success');return;}
-  await navigator.clipboard.writeText(link);v6Status('batchStatus','Link copiado.','success');
- }catch{window.prompt('Copie o link:',link);}
+ await v63WriteClipboard(link);
+ v6Status('batchStatus','Link copiado. Agora gere o afiliado no Mercado Livre.','success');
+}
+async function v63CopyAdvertisement(batchId){
+ const items=getV63Batch(),item=items.find(x=>x.batchId===batchId);if(!item)return;
+ const text=String(item.message||item.finalText||'').trim();
+ if(!text)return v6Status('batchStatus','Este anúncio não possui texto para copiar.','error');
+ await v63WriteClipboard(text);
+ item.copiedAt=Date.now();item.copyCount=Number(item.copyCount||0)+1;
+ saveV63Batch(items);
+ v6Status('batchStatus',`Anúncio copiado e marcado às ${new Date(item.copiedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`,'success');
+}
+function v63UnmarkCopied(batchId){
+ const items=getV63Batch(),item=items.find(x=>x.batchId===batchId);if(!item)return;
+ item.copiedAt=0;saveV63Batch(items);v6Status('batchStatus','Marca de copiado removida.','success');
 }
 async function v63UseCopiedAffiliate(batchId){
  let value='';
@@ -2563,24 +2586,44 @@ function v63ImageCandidates(data={}){
  if(data.image)values.push(String(data.image));
  return [...new Set(values.filter(Boolean))];
 }
-function v63CanLoadImage(url=''){
- return new Promise(resolve=>{const img=new Image(),timer=setTimeout(()=>resolve(false),9000);img.onload=()=>{clearTimeout(timer);resolve(true)};img.onerror=()=>{clearTimeout(timer);resolve(false)};img.src=url+(url.includes('?')?'&':'?')+`cb=${Date.now()}`;});
+function v63BlobToDataUrl(blob){
+ return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Não foi possível ler a foto.'));reader.readAsDataURL(blob);});
+}
+async function v63DownloadImage(url=''){
+ if(!url)return '';
+ const response=await fetch(url,{cache:'no-store'});
+ if(!response.ok)throw new Error(`A imagem respondeu com código ${response.status}.`);
+ const type=String(response.headers.get('content-type')||'');
+ if(type&&!type.startsWith('image/'))throw new Error('O servidor não retornou uma imagem válida.');
+ const blob=await response.blob();
+ if(!blob.size)throw new Error('A foto retornou vazia.');
+ return v63BlobToDataUrl(blob);
 }
 async function v63FindPhoto(item){
  if(!item?.link)return false;
  const data=await liveProductData(item.link),candidates=v63ImageCandidates(data);
- // Prioriza o proxy do backend. No WebView, testar a imagem antes de exibir pode
- // falhar por demora do Render ou política do provedor, mesmo quando a URL funciona.
- const selected=candidates[0]||'';
- item.image=selected;item.imageFallback=candidates[1]||'';item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
- return Boolean(selected);
+ item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
+ let lastError=null;
+ for(const candidate of candidates){
+  try{
+   const embedded=await v63DownloadImage(candidate);
+   if(embedded){item.image=embedded;item.imageFallback='';item.photoSource=candidate;item.photoLoadedAt=Date.now();return true;}
+  }catch(error){lastError=error;}
+ }
+ item.image='';item.imageFallback='';item.photoError=lastError?.message||'Foto não localizada.';
+ return false;
 }
 function renderV63Batch(){
  const items=getV63Batch(),stats=v63BatchStats(items),list=v6Node('batchItemsList');
  if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${stats.ready} afiliado(s) pronto(s) • ${stats.blocked} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
  if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${stats.ready} prontos`;
- if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" data-fallback="${escapeHtml(x.imageFallback||'')}" alt="Foto de ${escapeHtml(x.title||'oferta')}" onerror="const f=this.dataset.fallback;if(f&&this.src!==f){this.src=f;this.dataset.fallback='';}else{this.parentElement.classList.add('image-error');this.remove();}">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button type="button" data-batch-copy="${escapeHtml(x.batchId)}">📋 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">🔗 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button><button class="danger" type="button" data-batch-delete="${escapeHtml(x.batchId)}">🗑 Excluir</button></div></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Adicionar anúncios ao lote.</div>';
+ if(list)list.innerHTML=items.length?items.map((x,i)=>{
+  const copied=Number(x.copiedAt||0)>0;
+  const copiedLabel=copied?`✅ Copiado às ${new Date(x.copiedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${Number(x.copyCount||0)>1?` • ${x.copyCount} vezes`:''}`:'';
+  return `<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'} ${copied?'batch-copied':''}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" alt="Foto de ${escapeHtml(x.title||'oferta')}">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small>${copied?`<strong class="batch-copied-badge">${escapeHtml(copiedLabel)}</strong>`:''}<a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button class="batch-copy-ad" type="button" data-batch-copy-ad="${escapeHtml(x.batchId)}">${copied?'📋 Copiar novamente':'📋 Copiar anúncio'}</button>${copied?`<button type="button" data-batch-unmark="${escapeHtml(x.batchId)}">↩ Desmarcar</button>`:''}<button type="button" data-batch-copy="${escapeHtml(x.batchId)}">🔗 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">💰 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button><button class="danger" type="button" data-batch-delete="${escapeHtml(x.batchId)}">🗑 Excluir</button></div></div></article>`;
+ }).join(''):'<div class="empty">Cole anúncios acima e toque em Adicionar anúncios ao lote.</div>';
 }
+
 async function prepareV63BatchPhotos(){
  const items=getV63Batch();if(!items.length)return v6Status('batchStatus','Separe os anúncios primeiro.','error');
  v6Status('batchStatus','Buscando fotos e dados dos anúncios...');let ok=0,failed=0;
@@ -2623,6 +2666,8 @@ function initV63Batch(){
  v6Node('batchSendPilotBtn')?.addEventListener('click',sendV63BatchToPilot);
  v6Node('batchItemsList')?.addEventListener('click',event=>{
   const open=event.target.closest('[data-batch-open-link]');if(open){event.preventDefault();const item=getV63Batch().find(x=>x.batchId===open.dataset.batchOpenLink);if(item)v63OpenExternal(item.link);return;}
+  const copyAd=event.target.closest('[data-batch-copy-ad]');if(copyAd){v63CopyAdvertisement(copyAd.dataset.batchCopyAd);return;}
+  const unmark=event.target.closest('[data-batch-unmark]');if(unmark){v63UnmarkCopied(unmark.dataset.batchUnmark);return;}
   const copy=event.target.closest('[data-batch-copy]');if(copy){const item=getV63Batch().find(x=>x.batchId===copy.dataset.batchCopy);if(item)v63CopyLink(item.link);return;}
   const generate=event.target.closest('[data-batch-generate]');if(generate){const item=getV63Batch().find(x=>x.batchId===generate.dataset.batchGenerate);if(item){v63CopyLink(item.link);v63OpenExternal(item.link);}return;}
   const use=event.target.closest('[data-batch-use-copy]');if(use){v63UseCopiedAffiliate(use.dataset.batchUseCopy);return;}
