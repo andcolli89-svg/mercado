@@ -1,0 +1,19 @@
+CbOfertas V6.3.7 — Estrutura das abas reconstruída
+
+Causa corrigida:
+- Radar e Favoritos haviam sido removidos parcialmente do HTML.
+- Isso deixou Histórico, Cupons, Lote, Piloto e Configurações aninhados entre si.
+- O navegador conseguia alternar apenas entre Início e Cupons.
+
+Correções:
+- Todas as páginas agora são seções independentes dentro de <main>.
+- Início, Histórico, Cupons, Lote, Piloto e Configurações abrem separadamente.
+- Radar e Favoritos permanecem fora da navegação.
+- Elementos invisíveis de compatibilidade foram mantidos para não quebrar o JavaScript antigo.
+- Teste smoke-webapp atualizado para document.addEventListener.
+
+Validação:
+- Estrutura: aprovada.
+- Interface: 177 IDs validados.
+- Inicialização Web: aprovada.
+- Backend: 22 testes aprovados, 0 falhas.

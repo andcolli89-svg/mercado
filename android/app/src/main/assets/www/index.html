@@ -7,7 +7,7 @@
   <title>CbOfertas</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=630">
+  <link rel="stylesheet" href="style.css?v=637">
 </head>
 <body>
   <div id="menuOverlay" class="menu-overlay hidden"></div>
@@ -18,9 +18,7 @@
       <button id="closeMenuBtn" type="button" aria-label="Fechar menu">✕</button>
     </div>
     <button class="menu-link" data-page="offers" type="button">⌂ <span>Início</span></button>
-    <button class="menu-link" data-page="radar" type="button">⚡ <span>Radar automático</span></button>
     <button class="menu-link" data-page="history" type="button">◷ <span>Histórico e agendamentos</span></button>
-    <button class="menu-link" data-page="favorites" type="button">★ <span>Favoritos</span></button>
     <button class="menu-link" data-page="coupons" type="button">🎟️ <span>Cupons inteligentes</span></button>
     <button class="menu-link" data-page="batch" type="button">📥 <span>Lote WhatsApp</span></button>
     <button class="menu-link" data-page="automation" type="button">🤖 <span>Piloto Automático</span></button>
@@ -160,50 +158,16 @@
       </div>
     </section>
 
-      <section class="card radar-control-card">
-        <div class="section-title"><span>🎯</span><div><h2>O que você quer encontrar?</h2><p>O radar consulta as ofertas do Mercado Livre e ordena as oportunidades mais fortes.</p></div></div>
-        <div class="radar-filter-grid">
-          <label class="radar-search-label">Produto ou palavra-chave<input id="radarQuery" placeholder="Ex.: air fryer, celular, tênis"></label>
-          <label>Categoria<select id="radarCategory">
-            <option value="">Todas</option>
-            <option value="tecnologia">Tecnologia</option>
-            <option value="casa">Casa e cozinha</option>
-            <option value="moda">Moda e calçados</option>
-            <option value="beleza">Beleza e saúde</option>
-            <option value="fitness">Esporte e fitness</option>
-            <option value="infantil">Infantil</option>
-            <option value="pet">Pet</option>
-            <option value="automotivo">Automotivo</option>
-          </select></label>
-          <label>Desconto mínimo<input id="radarMinDiscount" type="number" min="0" max="95" inputmode="numeric" value="15" placeholder="15"></label>
-          <label>Preço máximo<input id="radarMaxPrice" inputmode="decimal" placeholder="Sem limite"></label>
-        </div>
-        <div class="radar-options-row">
-          <label class="check-option"><input id="radarOnlyFull" type="checkbox"><span>Somente FULL</span></label>
-          <label class="check-option"><input id="radarHideUsed" type="checkbox" checked><span>Ocultar já usadas</span></label>
-          <label class="check-option"><input id="radarAutoOpen" type="checkbox" checked><span>Atualizar ao abrir</span></label>
-          <button id="searchRadarBtn" class="btn primary" type="button">🔎 Buscar ofertas</button>
-        </div>
-        <p id="radarStatus" class="status" aria-live="polite"></p>
-      </section>
-
-      <section class="radar-summary" aria-label="Resumo do radar">
-        <article><small>Encontradas</small><strong id="radarFoundCount">0</strong></article>
-        <article><small>Novas</small><strong id="radarNewCount">0</strong></article>
-        <article><small>Melhor desconto</small><strong id="radarBestDiscount">0%</strong></article>
-        <article><small>Última atualização</small><strong id="radarLastUpdate">—</strong></article>
-      </section>
-
-      <section id="radarResults" class="radar-results"></section>
-      <section id="radarEmpty" class="card empty radar-empty"><b>Nenhuma oferta carregada ainda.</b><p>Toque em “Buscar ofertas” para o servidor procurar promoções automaticamente.</p></section>
-      <div class="radar-footer-actions"><button id="restoreHiddenRadarBtn" class="btn outline" type="button">Restaurar ofertas ocultadas</button></div>
+    <section id="radarPage" class="page-view hidden" hidden aria-hidden="true">
+      <button id="refreshRadarBtn" type="button"></button>
+      <button id="searchRadarBtn" type="button"></button>
+      <input id="radarQuery"><select id="radarCategory"></select>
+      <input id="radarMinDiscount"><input id="radarMaxPrice">
+      <input id="radarOnlyFull" type="checkbox"><input id="radarHideUsed" type="checkbox"><input id="radarAutoOpen" type="checkbox">
+      <p id="radarStatus"></p><div id="radarResults"></div><div id="radarEmpty"></div>
+      <span id="radarFoundCount"></span><span id="radarNewCount"></span><span id="radarBestDiscount"></span><span id="radarLastUpdate"></span>
+      <button id="restoreHiddenRadarBtn" type="button"></button>
     </section>
-
-
-
-
-    <section id="radarPage" class="page-view hidden">
-      <section class="page-intro radar-intro"><span>⚡</span><div><h1>Radar automático de ofertas</h1><p>Encontre promoções prontas, filtre as melhores e aprove somente o que deseja compartilhar.</p></div><button id="refreshRadarBtn" class="btn primary compact" type="button">↻ Atualizar</button></section>
 
     <section id="historyPage" class="page-view hidden">
       <section class="page-intro"><span>◷</span><div><h1>Histórico de ofertas</h1><p>Edite, agende ou envie cada publicação separadamente.</p></div></section>
@@ -221,21 +185,9 @@
       </section>
       <section class="notice"><b>Envio separado e com confirmação</b><p>Cada produto abre uma mensagem separada. O WhatsApp Business exige que você escolha o grupo e confirme cada envio.</p></section>
     </section>
-      <section class="card favorites-toolbar">
-        <label>Pesquisar favoritos<input id="favoritesSearch" placeholder="Digite o nome do produto"></label>
-        <div class="favorites-summary"><small>Total salvo</small><strong id="favoritesCount">0</strong></div>
-        <button id="clearFavoritesBtn" class="btn outline-danger" type="button">🗑️ Limpar favoritos</button>
-      </section>
-      <section id="favoritesList" class="favorites-list"></section>
-      <section id="favoritesEmpty" class="card empty"><b>Nenhum favorito salvo.</b><p>Use o botão ☆ no formulário, no Radar ou no histórico para guardar um produto.</p></section>
-      <p id="favoritesStatus" class="status" aria-live="polite"></p>
+    <section id="favoritesPage" class="page-view hidden" hidden aria-hidden="true">
+      <input id="favoritesSearch"><span id="favoritesCount"></span><div id="favoritesList"></div><div id="favoritesEmpty"></div><p id="favoritesStatus"></p><button id="clearFavoritesBtn" type="button"></button>
     </section>
-
-
-
-
-    <section id="favoritesPage" class="page-view hidden">
-      <section class="page-intro favorites-intro"><span>★</span><div><h1>Favoritos</h1><p>Guarde produtos interessantes sem misturar com a fila de publicações.</p></div></section>
 
     <section id="couponsPage" class="page-view hidden">
       <section class="page-intro"><span>🎟️</span><div><h1>Cupons</h1><p>Cadastre vários cupons, altere quando precisar e escolha quais usar nas ofertas.</p></div></section>
@@ -408,6 +360,6 @@
     <button id="showSettingsPageBtn" class="bottom-tab" data-page="settings" type="button"><span>⚙</span><b>Configurações</b></button>
   </nav>
 
-  <script src="app.js?v=630"></script>
+  <script src="app.js?v=637"></script>
 </body>
 </html>
