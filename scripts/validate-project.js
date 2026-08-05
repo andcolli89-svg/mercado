@@ -9,7 +9,7 @@ for(const id of ['offersPage','historyPage','couponsPage','batchPage','automatio
 for(const marker of ['CbOfertasReceiveSharedLink','buildV6Queue','exportV6Queue','importV6Queue','scheduleAutomaticMessage','openAutomationSettings','v63ParseBatch','sendV63BatchToPilot','CbV7Database'])if(!app.includes(marker))errors.push(`app.js sem ${marker}`);
 const vn=gradle.match(/versionName\s+'([^']+)'/)?.[1]||'',vc=Number(gradle.match(/versionCode\s+(\d+)/)?.[1]||0);
 if(!/^7\./.test(vn)||vc<700)errors.push(`Versão V7 inválida: ${vn}/${vc}`);
-if(!workflow.includes('npm test')||!workflow.includes('assembleDebug')||!workflow.includes('CbOfertas-V7'))errors.push('Workflow V7 inválido');
+if(!workflow.includes('npm test')||!workflow.includes('assembleDebug')||!workflow.includes('CbOfertas-V7.1'))errors.push('Workflow V7 inválido');
 if(!manifest.includes('android.intent.action.SEND')||!manifest.includes('WhatsAppAutomationService'))errors.push('Manifest incompleto');
 for(const method of ['dbUpsertOffer','dbListOffers','dbRecordUsage','dbSaveExport','resolveProductImage'])if(!main.includes(method))errors.push(`MainActivity sem ${method}`);
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]),set=new Set(ids),dups=[...new Set(ids.filter((x,i)=>ids.indexOf(x)!==i))];if(dups.length)errors.push(`IDs duplicados: ${dups.join(', ')}`);

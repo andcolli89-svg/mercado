@@ -15,6 +15,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
+import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -39,6 +40,8 @@ import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -306,110 +309,207 @@ public class MainActivity extends Activity {
     }
 
 
+    private static boolean looksLikeMercadoLivreProductImage(String value) {
+        if (value == null) return false;
+        String url = value.replace("\\u002F", "/").replace("\\/", "/").replace("&amp;", "&").trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
+        String lower = url.toLowerCase();
+        if (!lower.contains("mlstatic.com")) return false;
+        if (lower.contains("/navigation/") || lower.contains("/frontend-assets/") || lower.contains("logo") || lower.contains("sprite") || lower.contains("icon")) return false;
+        return lower.contains("d_nq_np_") || lower.contains("d_nq_nq_") || lower.matches(".*[0-9]{5,}-mla?[0-9]+_[0-9]{4,}.*");
+    }
+
+    private static String normalizeImageCandidate(String value) {
+        if (value == null) return "";
+        String cleaned = value.replace("\\u002F", "/").replace("\\/", "/").replace("&amp;", "&").trim();
+        if (cleaned.startsWith("//")) cleaned = "https:" + cleaned;
+        return looksLikeMercadoLivreProductImage(cleaned) ? cleaned : "";
+    }
+
     private void resolveImageInsideAndroid(final String requestId, final String sourceUrl) {
         runOnUiThread(() -> {
             final WebView resolver = new WebView(MainActivity.this);
-            WebSettings resolverSettings = resolver.getSettings();
-            resolverSettings.setJavaScriptEnabled(true);
-            resolverSettings.setDomStorageEnabled(true);
-            resolverSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            resolverSettings.setUserAgentString(webView.getSettings().getUserAgentString());
-
-            FrameLayout root = (FrameLayout) webView.getParent();
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(1, 1);
-            resolver.setAlpha(0.01f);
-            root.addView(resolver, params);
-
+            final Set<String> networkCandidates = new LinkedHashSet<>();
             final Handler handler = new Handler(Looper.getMainLooper());
             final boolean[] completed = { false };
+            final boolean[] polling = { false };
+            final String[] currentPageUrl = { sourceUrl };
+            final String[] currentTitle = { "" };
+            final int[] attempt = { 0 };
+
+            WebSettings settings = resolver.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            settings.setDatabaseEnabled(true);
+            settings.setAllowFileAccess(true);
+            settings.setAllowContentAccess(true);
+            settings.setLoadsImagesAutomatically(true);
+            settings.setBlockNetworkImage(false);
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setDefaultTextEncodingName("UTF-8");
+            settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36");
+
+            CookieManager cookies = CookieManager.getInstance();
+            cookies.setAcceptCookie(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) cookies.setAcceptThirdPartyCookies(resolver, true);
+
+            FrameLayout root = (FrameLayout) webView.getParent();
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(1080, 1920);
+            resolver.setAlpha(0.001f);
+            resolver.setFocusable(false);
+            resolver.setClickable(false);
+            resolver.setTranslationX(3000f);
+            root.addView(resolver, params);
+
             final Runnable timeout = () -> {
                 if (completed[0]) return;
                 completed[0] = true;
-                finishLocalImageRequest(resolver, requestId, "", "", "Tempo esgotado ao abrir o anúncio no celular.");
+                String fallback = networkCandidates.isEmpty() ? "" : networkCandidates.iterator().next();
+                if (!fallback.isEmpty()) {
+                    downloadImageAsDataUrl(resolver, requestId, fallback, currentTitle[0], currentPageUrl[0]);
+                } else {
+                    finishLocalImageRequest(resolver, requestId, "", currentTitle[0], "A página abriu, mas nenhuma imagem principal foi encontrada.");
+                }
             };
-            handler.postDelayed(timeout, 25000);
+            handler.postDelayed(timeout, 35000);
+
+            final Runnable[] poll = new Runnable[1];
+            poll[0] = () -> {
+                if (completed[0]) return;
+                attempt[0]++;
+                String script = "(function(){" +
+                        "function clean(v){return String(v||'').replace(/&amp;/g,'&').replace(/\\\\u002F/g,'/').replace(/\\\\\\//g,'/').trim();}" +
+                        "function add(a,v){v=clean(v);if(v&&/^https?:/i.test(v)&&a.indexOf(v)<0)a.push(v);}" +
+                        "var out=[],title='';" +
+                        "var og=document.querySelector('meta[property=\\\"og:image\\\"]');add(out,og&&og.content);" +
+                        "var tw=document.querySelector('meta[name=\\\"twitter:image\\\"],meta[property=\\\"twitter:image\\\"]');add(out,tw&&tw.content);" +
+                        "var ot=document.querySelector('meta[property=\\\"og:title\\\"]');title=clean(ot&&ot.content)||clean(document.title);" +
+                        "var imgs=document.querySelectorAll('.ui-pdp-gallery__figure img,.ui-pdp-image,.ui-pdp-gallery img,picture img,img[data-zoom],img[src*=\\\"mlstatic\\\"]');" +
+                        "for(var i=0;i<imgs.length;i++){var im=imgs[i];add(out,im.currentSrc);add(out,im.src);add(out,im.getAttribute('data-src'));var ss=im.getAttribute('srcset')||'';ss.split(',').forEach(function(x){add(out,x.trim().split(/\\s+/)[0]);});}" +
+                        "var sources=document.querySelectorAll('picture source[srcset]');for(var j=0;j<sources.length;j++){String(sources[j].srcset||'').split(',').forEach(function(x){add(out,x.trim().split(/\\s+/)[0]);});}" +
+                        "try{performance.getEntriesByType('resource').forEach(function(e){if(/mlstatic\\.com/i.test(e.name))add(out,e.name);});}catch(e){}" +
+                        "var html=document.documentElement?document.documentElement.innerHTML:'';" +
+                        "var rx=/https?:\\\\?\\/\\\\?\\/[^\\\"'<>\\s]*mlstatic\\.com[^\\\"'<>\\s]*/ig,m;while((m=rx.exec(html))&&out.length<80)add(out,m[0]);" +
+                        "var ids=html.match(/[0-9]{5,}-ML[AB][0-9]+_[0-9]{4,}/ig)||[];ids.slice(0,20).forEach(function(id){add(out,'https://http2.mlstatic.com/D_NQ_NP_'+id+'-O.webp');});" +
+                        "return JSON.stringify({images:out,title:title,url:location.href,ready:document.readyState});})()";
+
+                resolver.evaluateJavascript(script, raw -> {
+                    if (completed[0]) return;
+                    try {
+                        String decoded = raw == null ? "" : raw;
+                        if (decoded.startsWith("\"") && decoded.endsWith("\"")) decoded = new JSONArray("[" + decoded + "]").getString(0);
+                        JSONObject result = new JSONObject(decoded);
+                        currentTitle[0] = result.optString("title", currentTitle[0]);
+                        currentPageUrl[0] = result.optString("url", currentPageUrl[0]);
+                        JSONArray images = result.optJSONArray("images");
+                        String chosen = "";
+                        if (images != null) {
+                            for (int i = 0; i < images.length(); i++) {
+                                String candidate = normalizeImageCandidate(images.optString(i));
+                                if (candidate.isEmpty()) continue;
+                                networkCandidates.add(candidate);
+                                if (chosen.isEmpty()) chosen = candidate;
+                                if (candidate.contains("D_NQ_NP_")) { chosen = candidate; break; }
+                            }
+                        }
+                        if (!chosen.isEmpty()) {
+                            completed[0] = true;
+                            handler.removeCallbacks(timeout);
+                            downloadImageAsDataUrl(resolver, requestId, chosen, currentTitle[0], currentPageUrl[0]);
+                            return;
+                        }
+                    } catch (Exception ignored) { }
+                    if (attempt[0] < 18) handler.postDelayed(poll[0], 1200);
+                    else timeout.run();
+                });
+            };
 
             resolver.setWebViewClient(new WebViewClient() {
                 @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                    return false;
+                    Uri uri = request.getUrl();
+                    String scheme = uri == null ? "" : String.valueOf(uri.getScheme());
+                    return !("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme));
+                }
+
+                @Override public void onLoadResource(WebView view, String url) {
+                    String candidate = normalizeImageCandidate(url);
+                    if (!candidate.isEmpty()) networkCandidates.add(candidate);
                 }
 
                 @Override public void onPageFinished(WebView view, String url) {
-                    if (completed[0]) return;
-                    Uri current = Uri.parse(url == null ? "" : url);
+                    currentPageUrl[0] = url == null ? currentPageUrl[0] : url;
+                    Uri current = Uri.parse(currentPageUrl[0]);
                     String host = current.getHost() == null ? "" : current.getHost().toLowerCase();
-                    if (host.equals("meli.la")) return;
-
-                    String script = "(function(){" +
-                            "function c(v){return String(v||'').replace(/&amp;/g,'&').trim();}" +
-                            "var image='';var title='';" +
-                            "var og=document.querySelector('meta[property=\\\"og:image\\\"]');" +
-                            "var tw=document.querySelector('meta[name=\\\"twitter:image\\\"],meta[property=\\\"twitter:image\\\"]');" +
-                            "var ot=document.querySelector('meta[property=\\\"og:title\\\"]');" +
-                            "image=c(og&&og.content)||c(tw&&tw.content);title=c(ot&&ot.content)||c(document.title);" +
-                            "if(!image){var scripts=document.scripts||[];for(var i=0;i<scripts.length&&!image;i++){var t=scripts[i].textContent||'';" +
-                            "var m=t.match(/\\\"secure_url\\\"\\s*:\\s*\\\"(https?:[^\\\"]+)/i)||t.match(/\\\"thumbnail\\\"\\s*:\\s*\\\"(https?:[^\\\"]+)/i);" +
-                            "if(m)image=c(m[1]);" +
-                            "if(!image){var p=t.match(/([0-9]{5,}-ML[AB][0-9]+_[0-9]{4,})/i);if(p)image='https://http2.mlstatic.com/D_NQ_NP_'+p[1]+'-O.webp';}" +
-                            "}}" +
-                            "if(!image){var img=document.querySelector('.ui-pdp-gallery__figure img, img[data-zoom], picture img, img[src*=\\\"mlstatic\\\"]');if(img)image=c(img.currentSrc||img.src||img.getAttribute('data-src'));}" +
-                            "return JSON.stringify({image:image,title:title,url:location.href});})()";
-
-                    view.evaluateJavascript(script, value -> {
-                        if (completed[0]) return;
-                        try {
-                            String decoded = value == null ? "" : value;
-                            if (decoded.startsWith("\"") && decoded.endsWith("\"")) {
-                                decoded = new JSONArray("[" + decoded + "]").getString(0);
-                            }
-                            JSONObject result = new JSONObject(decoded);
-                            String image = result.optString("image", "");
-                            String title = result.optString("title", "");
-                            String finalUrl = result.optString("url", url);
-                            if (image.isEmpty()) return;
-                            completed[0] = true;
-                            handler.removeCallbacks(timeout);
-                            downloadImageAsDataUrl(resolver, requestId, image, title, finalUrl);
-                        } catch (Exception ignored) { }
-                    });
+                    if (host.equals("meli.la") || host.endsWith(".meli.la")) return;
+                    if (!polling[0]) {
+                        polling[0] = true;
+                        handler.postDelayed(poll[0], 700);
+                    }
                 }
             });
-            resolver.loadUrl(sourceUrl);
+
+            java.util.HashMap<String, String> headers = new java.util.HashMap<>();
+            headers.put("Accept-Language", "pt-BR,pt;q=0.9,en;q=0.8");
+            headers.put("DNT", "1");
+            resolver.loadUrl(sourceUrl, headers);
         });
+    }
+
+    private List<String> imageDownloadCandidates(String imageUrl) {
+        LinkedHashSet<String> urls = new LinkedHashSet<>();
+        String normalized = normalizeImageCandidate(imageUrl);
+        if (!normalized.isEmpty()) urls.add(normalized);
+        if (!normalized.isEmpty()) {
+            urls.add(normalized.replace("-O.webp", "-F.webp"));
+            urls.add(normalized.replace("-O.webp", "-V.webp"));
+            urls.add(normalized.replace("-F.webp", "-O.webp"));
+            urls.add(normalized.replace("-V.webp", "-O.webp"));
+        }
+        return new ArrayList<>(urls);
     }
 
     private void downloadImageAsDataUrl(final WebView resolver, final String requestId, final String imageUrl, final String title, final String finalUrl) {
         new Thread(() -> {
-            HttpURLConnection connection = null;
-            try {
-                connection = (HttpURLConnection) new URL(imageUrl).openConnection();
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(20000);
-                connection.setInstanceFollowRedirects(true);
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36");
-                connection.setRequestProperty("Referer", "https://www.mercadolivre.com.br/");
-                connection.connect();
-                if (connection.getResponseCode() < 200 || connection.getResponseCode() >= 300) {
-                    throw new Exception("A imagem respondeu com código " + connection.getResponseCode() + ".");
-                }
-                String mime = connection.getContentType();
-                if (mime == null || !mime.startsWith("image/")) mime = "image/jpeg";
-                ByteArrayOutputStream output = new ByteArrayOutputStream();
-                try (InputStream input = connection.getInputStream()) {
-                    byte[] buffer = new byte[8192];
-                    int read;
-                    while ((read = input.read(buffer)) != -1) {
-                        output.write(buffer, 0, read);
-                        if (output.size() > 6 * 1024 * 1024) throw new Exception("A imagem é grande demais.");
+            String lastError = "Não foi possível baixar a imagem.";
+            for (String candidate : imageDownloadCandidates(imageUrl)) {
+                HttpURLConnection connection = null;
+                try {
+                    connection = (HttpURLConnection) new URL(candidate).openConnection();
+                    connection.setConnectTimeout(15000);
+                    connection.setReadTimeout(22000);
+                    connection.setInstanceFollowRedirects(true);
+                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36");
+                    connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                    connection.setRequestProperty("Accept-Language", "pt-BR,pt;q=0.9");
+                    connection.setRequestProperty("Referer", finalUrl == null || finalUrl.isEmpty() ? "https://www.mercadolivre.com.br/" : finalUrl);
+                    String cookie = CookieManager.getInstance().getCookie(finalUrl == null ? "https://www.mercadolivre.com.br/" : finalUrl);
+                    if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);
+                    connection.connect();
+                    int code = connection.getResponseCode();
+                    if (code < 200 || code >= 300) throw new Exception("A imagem respondeu com código " + code + ".");
+                    String mime = connection.getContentType();
+                    if (mime == null || !mime.toLowerCase().startsWith("image/")) throw new Exception("O endereço não retornou uma imagem.");
+                    ByteArrayOutputStream output = new ByteArrayOutputStream();
+                    try (InputStream input = connection.getInputStream()) {
+                        byte[] buffer = new byte[8192]; int read;
+                        while ((read = input.read(buffer)) != -1) {
+                            output.write(buffer, 0, read);
+                            if (output.size() > 8 * 1024 * 1024) throw new Exception("A imagem é grande demais.");
+                        }
                     }
+                    if (output.size() < 500) throw new Exception("A imagem retornou vazia ou inválida.");
+                    String dataUrl = "data:" + mime + ";base64," + Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP);
+                    finishLocalImageRequest(resolver, requestId, dataUrl, title, "");
+                    return;
+                } catch (Exception error) {
+                    lastError = error.getMessage() == null ? lastError : error.getMessage();
+                } finally {
+                    if (connection != null) connection.disconnect();
                 }
-                String dataUrl = "data:" + mime + ";base64," + Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP);
-                finishLocalImageRequest(resolver, requestId, dataUrl, title, "");
-            } catch (Exception error) {
-                finishLocalImageRequest(resolver, requestId, "", title, error.getMessage());
-            } finally {
-                if (connection != null) connection.disconnect();
             }
+            finishLocalImageRequest(resolver, requestId, "", title, lastError);
         }).start();
     }
 

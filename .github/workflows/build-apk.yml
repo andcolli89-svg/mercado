@@ -72,14 +72,14 @@ jobs:
           unzip -l "$APK" | grep -q 'assets/www/index.html'
           unzip -l "$APK" | grep -q 'assets/www/app.js'
           unzip -l "$APK" | grep -q 'assets/www/style.css'
-          cp "$APK" CbOfertas-V7.apk
-          sha256sum CbOfertas-V7.apk > CbOfertas-V7.apk.sha256
+          cp "$APK" CbOfertas-V7.1.apk
+          sha256sum CbOfertas-V7.1.apk > CbOfertas-V7.1.apk.sha256
 
       - name: Publicar artefato
         uses: actions/upload-artifact@v4
         with:
-          name: CbOfertas-V7-APK
+          name: CbOfertas-V7.1-APK
           path: |
-            CbOfertas-V7.apk
-            CbOfertas-V7.apk.sha256
+            CbOfertas-V7.1.apk
+            CbOfertas-V7.1.apk.sha256
           retention-days: 30
