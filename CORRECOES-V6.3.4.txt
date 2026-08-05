@@ -1,0 +1,15 @@
+CbOfertas V6.3.4 — Links e fotos no Lote
+
+Correções:
+- O link de cada anúncio agora é clicável.
+- Botão “Copiar link”.
+- Botão “Gerar link no ML”: copia e abre o anúncio no Mercado Livre.
+- Botão “Usar link copiado”: lê o link afiliado da área de transferência.
+- Botão individual “Buscar foto”.
+- Miniatura clicável para abrir a foto.
+- Busca de imagem com tentativa pelo proxy e pela URL direta.
+- Mantém remoção de telefone/data do WhatsApp e bloqueio sem afiliado.
+
+Validações:
+- JavaScript validado com node --check.
+- Backend: 22 testes aprovados e 0 falhas.

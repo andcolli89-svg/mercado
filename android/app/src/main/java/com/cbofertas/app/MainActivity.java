@@ -3,6 +3,9 @@ package com.cbofertas.app;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -307,6 +310,31 @@ public class MainActivity extends Activity {
                     Toast.makeText(MainActivity.this, "Não foi possível abrir o Mercado Livre.", Toast.LENGTH_LONG).show();
                 }
             });
+        }
+
+        @JavascriptInterface
+        public void copyText(String value) {
+            final String text = value == null ? "" : value.trim();
+            runOnUiThread(() -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("CbOfertas", text));
+                    Toast.makeText(MainActivity.this, "Link copiado.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public String getClipboardText() {
+            try {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.getPrimaryClip() == null) return "";
+                ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+                CharSequence text = item.coerceToText(MainActivity.this);
+                return text == null ? "" : text.toString();
+            } catch (Exception ignored) {
+                return "";
+            }
         }
 
         @JavascriptInterface

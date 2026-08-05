@@ -2519,25 +2519,60 @@ function v63AskAffiliateLink(batchId){
  if(value!==null)v63ReplaceAffiliateLink(batchId,value);
 }
 function v63BatchStats(items=getV63Batch()){return{total:items.length,ready:items.filter(x=>isAffiliateLink(x.link)).length,blocked:items.filter(x=>!isAffiliateLink(x.link)).length,photos:items.filter(x=>Boolean(x.image)).length};}
+function v63OpenExternal(value=''){
+ const link=String(value||'').trim();if(!link)return;
+ if(window.Android?.openExternalLink)window.Android.openExternalLink(link);else window.open(link,'_blank','noopener');
+}
+async function v63CopyLink(value=''){
+ const link=String(value||'').trim();if(!link)return v6Status('batchStatus','Este anúncio ainda não possui link.','error');
+ try{
+  if(window.Android?.copyText){window.Android.copyText(link);v6Status('batchStatus','Link copiado. Agora gere o afiliado no Mercado Livre.','success');return;}
+  await navigator.clipboard.writeText(link);v6Status('batchStatus','Link copiado.','success');
+ }catch{window.prompt('Copie o link:',link);}
+}
+async function v63UseCopiedAffiliate(batchId){
+ let value='';
+ try{value=String(window.Android?.getClipboardText?.()||'').trim();}catch{}
+ if(!value){try{value=String(await navigator.clipboard.readText()).trim();}catch{}}
+ if(!value)value=String(window.prompt('Cole o link afiliado gerado no Mercado Livre:','https://meli.la/')||'').trim();
+ if(value)v63ReplaceAffiliateLink(batchId,value);
+}
+function v63ImageCandidates(data={}){
+ const base=apiBase(),values=[];
+ if(data.imageProxy)values.push(String(data.imageProxy).startsWith('/')?`${base}${data.imageProxy}`:String(data.imageProxy));
+ if(data.image)values.push(String(data.image));
+ return [...new Set(values.filter(Boolean))];
+}
+function v63CanLoadImage(url=''){
+ return new Promise(resolve=>{const img=new Image(),timer=setTimeout(()=>resolve(false),9000);img.onload=()=>{clearTimeout(timer);resolve(true)};img.onerror=()=>{clearTimeout(timer);resolve(false)};img.src=url+(url.includes('?')?'&':'?')+`cb=${Date.now()}`;});
+}
+async function v63FindPhoto(item){
+ if(!item?.link)return false;
+ const data=await liveProductData(item.link),candidates=v63ImageCandidates(data);
+ let selected='';for(const candidate of candidates){if(await v63CanLoadImage(candidate)){selected=candidate;break;}}
+ item.image=selected;item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
+ return Boolean(selected);
+}
 function renderV63Batch(){
  const items=getV63Batch(),stats=v63BatchStats(items),list=v6Node('batchItemsList');
  if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${stats.ready} afiliado(s) pronto(s) • ${stats.blocked} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
  if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${stats.ready} prontos`;
- if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><div class="batch-thumb">${x.image?`<img src="${escapeHtml(x.image)}" alt="">`:'<span>🛍️</span>'}</div><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><code>${escapeHtml(x.link||'Sem link')}</code><button class="batch-affiliate-btn" type="button" data-batch-affiliate="${escapeHtml(x.batchId)}">🔗 Trocar link afiliado</button></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Separar anúncios.</div>';
+ if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" alt="Foto de ${escapeHtml(x.title||'oferta')}" onerror="this.parentElement.classList.add('image-error');this.remove()">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button type="button" data-batch-copy="${escapeHtml(x.batchId)}">📋 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">🔗 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button></div></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Separar anúncios.</div>';
 }
 async function prepareV63BatchPhotos(){
  const items=getV63Batch();if(!items.length)return v6Status('batchStatus','Separe os anúncios primeiro.','error');
- v6Status('batchStatus','Buscando fotos e dados dos anúncios...');let ok=0;
- for(const item of items){
-   if(item.image||!item.link)continue;
-   try{const data=await liveProductData(item.link);if(data){item.image=data.imageProxy?`${apiBase()}${data.imageProxy}`:(data.image||'');item.title=data.title||item.title;item.id=data.id||item.id;item.catalogProductId=data.catalogProductId||item.catalogProductId;item.seller=data.seller||'';if(item.image)ok++;}}
-   catch{}
- }
- saveV63Batch(items);v6Status('batchStatus',`${ok} foto(s) encontrada(s). Os anúncios sem foto continuam visíveis, mas podem ser revisados antes da exportação.`,ok?'success':'error');
+ v6Status('batchStatus','Buscando fotos e dados dos anúncios...');let ok=0,failed=0;
+ for(const item of items){if(item.image)continue;try{if(await v63FindPhoto(item))ok++;else failed++;}catch{failed++;}}
+ saveV63Batch(items);v6Status('batchStatus',`${ok} foto(s) encontrada(s)${failed?` • ${failed} não localizada(s)`:''}.`,ok?'success':'error');
+}
+async function v63PrepareOnePhoto(batchId){
+ const items=getV63Batch(),item=items.find(x=>x.batchId===batchId);if(!item)return;
+ v6Status('batchStatus',`Buscando foto de “${item.title||'Oferta'}”...`);
+ try{const ok=await v63FindPhoto(item);saveV63Batch(items);v6Status('batchStatus',ok?'Foto encontrada e aberta no anúncio.':'A foto não foi encontrada nesse link. Abra o anúncio e confira se ele continua disponível.',ok?'success':'error');}catch(e){v6Status('batchStatus',e.message||'Não foi possível buscar a foto.','error');}
 }
 function applyV63SavedAffiliates(){
  const items=getV63Batch();let applied=0;
- items.forEach(item=>{const saved=affiliateFor(item);if(saved&&isAffiliateLink(saved)&&item.link!==saved){item.link=saved;item.affiliateConfirmed=true;item.status='affiliate_ready';item.message=String(item.message||'').replace(/https?:\/\/[^\s<>()]+/g,saved);item.finalText=item.message;applied++;}});
+ items.forEach(item=>{const saved=affiliateFor(item);if(saved&&isAffiliateLink(saved)&&item.link!==saved){const old=item.link;item.link=saved;item.affiliateConfirmed=true;item.status='affiliate_ready';item.message=String(item.message||'').split(old).join(saved);item.finalText=item.message;applied++;}});
  saveV63Batch(items);v6Status('batchStatus',applied?`${applied} link(s) afiliado(s) aplicado(s) pela biblioteca.`:'Nenhum afiliado salvo compatível foi encontrado.',applied?'success':'error');
 }
 function v63SmartShuffle(items){
@@ -2564,7 +2599,14 @@ function initV63Batch(){
  v6Node('batchPrepareBtn')?.addEventListener('click',prepareV63BatchPhotos);
  v6Node('batchApplyAffiliateBtn')?.addEventListener('click',applyV63SavedAffiliates);
  v6Node('batchSendPilotBtn')?.addEventListener('click',sendV63BatchToPilot);
- v6Node('batchItemsList')?.addEventListener('click',event=>{const button=event.target.closest('[data-batch-affiliate]');if(button)v63AskAffiliateLink(button.dataset.batchAffiliate);});
+ v6Node('batchItemsList')?.addEventListener('click',event=>{
+  const open=event.target.closest('[data-batch-open-link]');if(open){event.preventDefault();const item=getV63Batch().find(x=>x.batchId===open.dataset.batchOpenLink);if(item)v63OpenExternal(item.link);return;}
+  const copy=event.target.closest('[data-batch-copy]');if(copy){const item=getV63Batch().find(x=>x.batchId===copy.dataset.batchCopy);if(item)v63CopyLink(item.link);return;}
+  const generate=event.target.closest('[data-batch-generate]');if(generate){const item=getV63Batch().find(x=>x.batchId===generate.dataset.batchGenerate);if(item){v63CopyLink(item.link);v63OpenExternal(item.link);}return;}
+  const use=event.target.closest('[data-batch-use-copy]');if(use){v63UseCopiedAffiliate(use.dataset.batchUseCopy);return;}
+  const photo=event.target.closest('[data-batch-photo]');if(photo){v63PrepareOnePhoto(photo.dataset.batchPhoto);return;}
+  const image=event.target.closest('[data-batch-photo-open]');if(image){const item=getV63Batch().find(x=>x.batchId===image.dataset.batchPhotoOpen);if(item?.image)window.open(item.image,'_blank');return;}
+ });
  renderV63Batch();
 }
 
