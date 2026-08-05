@@ -57,7 +57,9 @@ const document = {
   querySelector: getElement,
   querySelectorAll() { return []; },
   createElement() { return new FakeElement(); },
-  execCommand() { return true; }
+  execCommand() { return true; },
+  addEventListener() {},
+  removeEventListener() {}
 };
 
 const windowObject = {
