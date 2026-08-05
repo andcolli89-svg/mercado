@@ -22,6 +22,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.ValueCallback;
 import android.widget.Toast;
+import android.widget.FrameLayout;
+import android.view.ViewGroup;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -33,6 +35,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -78,8 +81,13 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
-        setContentView(webView);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+        setContentView(root);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -295,7 +303,144 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+
+    private void resolveImageInsideAndroid(final String requestId, final String sourceUrl) {
+        runOnUiThread(() -> {
+            final WebView resolver = new WebView(MainActivity.this);
+            WebSettings resolverSettings = resolver.getSettings();
+            resolverSettings.setJavaScriptEnabled(true);
+            resolverSettings.setDomStorageEnabled(true);
+            resolverSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            resolverSettings.setUserAgentString(webView.getSettings().getUserAgentString());
+
+            FrameLayout root = (FrameLayout) webView.getParent();
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(1, 1);
+            resolver.setAlpha(0.01f);
+            root.addView(resolver, params);
+
+            final Handler handler = new Handler(Looper.getMainLooper());
+            final boolean[] completed = { false };
+            final Runnable timeout = () -> {
+                if (completed[0]) return;
+                completed[0] = true;
+                finishLocalImageRequest(resolver, requestId, "", "", "Tempo esgotado ao abrir o anúncio no celular.");
+            };
+            handler.postDelayed(timeout, 25000);
+
+            resolver.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                    return false;
+                }
+
+                @Override public void onPageFinished(WebView view, String url) {
+                    if (completed[0]) return;
+                    Uri current = Uri.parse(url == null ? "" : url);
+                    String host = current.getHost() == null ? "" : current.getHost().toLowerCase();
+                    if (host.equals("meli.la")) return;
+
+                    String script = "(function(){" +
+                            "function c(v){return String(v||'').replace(/&amp;/g,'&').trim();}" +
+                            "var image='';var title='';" +
+                            "var og=document.querySelector('meta[property=\\\"og:image\\\"]');" +
+                            "var tw=document.querySelector('meta[name=\\\"twitter:image\\\"],meta[property=\\\"twitter:image\\\"]');" +
+                            "var ot=document.querySelector('meta[property=\\\"og:title\\\"]');" +
+                            "image=c(og&&og.content)||c(tw&&tw.content);title=c(ot&&ot.content)||c(document.title);" +
+                            "if(!image){var scripts=document.scripts||[];for(var i=0;i<scripts.length&&!image;i++){var t=scripts[i].textContent||'';" +
+                            "var m=t.match(/\\\"secure_url\\\"\\s*:\\s*\\\"(https?:[^\\\"]+)/i)||t.match(/\\\"thumbnail\\\"\\s*:\\s*\\\"(https?:[^\\\"]+)/i);" +
+                            "if(m)image=c(m[1]);" +
+                            "if(!image){var p=t.match(/([0-9]{5,}-ML[AB][0-9]+_[0-9]{4,})/i);if(p)image='https://http2.mlstatic.com/D_NQ_NP_'+p[1]+'-O.webp';}" +
+                            "}}" +
+                            "if(!image){var img=document.querySelector('.ui-pdp-gallery__figure img, img[data-zoom], picture img, img[src*=\\\"mlstatic\\\"]');if(img)image=c(img.currentSrc||img.src||img.getAttribute('data-src'));}" +
+                            "return JSON.stringify({image:image,title:title,url:location.href});})()";
+
+                    view.evaluateJavascript(script, value -> {
+                        if (completed[0]) return;
+                        try {
+                            String decoded = value == null ? "" : value;
+                            if (decoded.startsWith("\"") && decoded.endsWith("\"")) {
+                                decoded = new JSONArray("[" + decoded + "]").getString(0);
+                            }
+                            JSONObject result = new JSONObject(decoded);
+                            String image = result.optString("image", "");
+                            String title = result.optString("title", "");
+                            String finalUrl = result.optString("url", url);
+                            if (image.isEmpty()) return;
+                            completed[0] = true;
+                            handler.removeCallbacks(timeout);
+                            downloadImageAsDataUrl(resolver, requestId, image, title, finalUrl);
+                        } catch (Exception ignored) { }
+                    });
+                }
+            });
+            resolver.loadUrl(sourceUrl);
+        });
+    }
+
+    private void downloadImageAsDataUrl(final WebView resolver, final String requestId, final String imageUrl, final String title, final String finalUrl) {
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(imageUrl).openConnection();
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(20000);
+                connection.setInstanceFollowRedirects(true);
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36");
+                connection.setRequestProperty("Referer", "https://www.mercadolivre.com.br/");
+                connection.connect();
+                if (connection.getResponseCode() < 200 || connection.getResponseCode() >= 300) {
+                    throw new Exception("A imagem respondeu com código " + connection.getResponseCode() + ".");
+                }
+                String mime = connection.getContentType();
+                if (mime == null || !mime.startsWith("image/")) mime = "image/jpeg";
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                try (InputStream input = connection.getInputStream()) {
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        output.write(buffer, 0, read);
+                        if (output.size() > 6 * 1024 * 1024) throw new Exception("A imagem é grande demais.");
+                    }
+                }
+                String dataUrl = "data:" + mime + ";base64," + Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP);
+                finishLocalImageRequest(resolver, requestId, dataUrl, title, "");
+            } catch (Exception error) {
+                finishLocalImageRequest(resolver, requestId, "", title, error.getMessage());
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        }).start();
+    }
+
+    private void finishLocalImageRequest(final WebView resolver, final String requestId, final String dataUrl, final String title, final String error) {
+        runOnUiThread(() -> {
+            try {
+                if (resolver != null) {
+                    if (resolver.getParent() instanceof ViewGroup) ((ViewGroup) resolver.getParent()).removeView(resolver);
+                    resolver.stopLoading();
+                    resolver.destroy();
+                }
+            } catch (Exception ignored) { }
+            String javascript = "window.CbOfertasLocalImageResolved(" +
+                    JSONObject.quote(requestId == null ? "" : requestId) + "," +
+                    JSONObject.quote(dataUrl == null ? "" : dataUrl) + "," +
+                    JSONObject.quote(title == null ? "" : title) + "," +
+                    JSONObject.quote(error == null ? "" : error) + ");";
+            webView.evaluateJavascript(javascript, null);
+        });
+    }
+
     public class AndroidBridge {
+        @JavascriptInterface
+        public void resolveProductImage(String requestId, String sourceUrl) {
+            final String id = requestId == null ? "" : requestId.trim();
+            final String url = sourceUrl == null ? "" : sourceUrl.trim();
+            if (id.isEmpty() || firstMercadoLivreLink(url) == null) {
+                finishLocalImageRequest(null, id, "", "", "Link do Mercado Livre inválido.");
+                return;
+            }
+            resolveImageInsideAndroid(id, url);
+        }
+
         @JavascriptInterface
         public void openExternalLink(String value) {
             final String link = value == null ? "" : value.trim();

@@ -2580,6 +2580,26 @@ async function v63UseCopiedAffiliate(batchId){
  if(!value)value=String(window.prompt('Cole o link afiliado gerado no Mercado Livre:','https://meli.la/')||'').trim();
  if(value)v63ReplaceAffiliateLink(batchId,value);
 }
+
+const v643LocalImageRequests=new Map();
+window.CbOfertasLocalImageResolved=(requestId,dataUrl,title,error)=>{
+ const pending=v643LocalImageRequests.get(String(requestId||''));
+ if(!pending)return;
+ v643LocalImageRequests.delete(String(requestId||''));
+ clearTimeout(pending.timer);
+ if(dataUrl)pending.resolve({image:String(dataUrl),title:String(title||'')});
+ else pending.reject(new Error(String(error||'Foto não localizada no anúncio.')));
+};
+function v643ResolveImageOnDevice(link=''){
+ return new Promise((resolve,reject)=>{
+  if(!window.Android?.resolveProductImage)return reject(new Error('Leitor local de fotos indisponível nesta versão do aplicativo.'));
+  const requestId=`img-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+  const timer=setTimeout(()=>{v643LocalImageRequests.delete(requestId);reject(new Error('Tempo esgotado ao abrir o anúncio no celular.'));},30000);
+  v643LocalImageRequests.set(requestId,{resolve,reject,timer});
+  try{window.Android.resolveProductImage(requestId,String(link||''));}catch(error){clearTimeout(timer);v643LocalImageRequests.delete(requestId);reject(error);}
+ });
+}
+
 function v63ImageCandidates(data={}){
  const base=apiBase(),values=[];
  if(data.imageProxy)values.push(String(data.imageProxy).startsWith('/')?`${base}${data.imageProxy}`:String(data.imageProxy));
@@ -2601,15 +2621,24 @@ async function v63DownloadImage(url=''){
 }
 async function v63FindPhoto(item){
  if(!item?.link)return false;
- const data=await liveProductData(item.link),candidates=v63ImageCandidates(data);
- item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
  let lastError=null;
- for(const candidate of candidates){
-  try{
-   const embedded=await v63DownloadImage(candidate);
-   if(embedded){item.image=embedded;item.imageFallback='';item.photoSource=candidate;item.photoLoadedAt=Date.now();return true;}
-  }catch(error){lastError=error;}
- }
+ // Prioridade: o próprio celular abre o anúncio numa WebView invisível. Isso evita
+ // bloqueios do Mercado Livre contra servidores como o Render.
+ try{
+  const local=await v643ResolveImageOnDevice(item.link);
+  if(local?.image){item.image=local.image;item.imageFallback='';item.photoSource='webview-local';item.photoLoadedAt=Date.now();item.photoError='';if(local.title&&!item.title)item.title=local.title;return true;}
+ }catch(error){lastError=error;}
+ // Reserva: mantém a consulta antiga ao backend para aparelhos/ambientes sem bridge Android.
+ try{
+  const data=await liveProductData(item.link),candidates=v63ImageCandidates(data);
+  item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
+  for(const candidate of candidates){
+   try{
+    const embedded=await v63DownloadImage(candidate);
+    if(embedded){item.image=embedded;item.imageFallback='';item.photoSource=candidate;item.photoLoadedAt=Date.now();item.photoError='';return true;}
+   }catch(error){lastError=error;}
+  }
+ }catch(error){lastError=error;}
  item.image='';item.imageFallback='';item.photoError=lastError?.message||'Foto não localizada.';
  return false;
 }

@@ -1,0 +1,17 @@
+CbOfertas V6.4.3 — Busca de fotos no próprio celular
+
+Implementado:
+- WebView invisível abre links meli.la e Mercado Livre dentro do Android.
+- Segue os redirecionamentos usando a sessão real do aparelho.
+- Extrai a imagem nesta ordem: og:image, twitter:image, JSON interno, pictures.id e imagem da galeria.
+- Baixa a foto diretamente no Android e salva em Base64 no anúncio do Lote.
+- Não depende do Render para localizar a foto.
+- O backend continua disponível apenas como alternativa.
+- Limite de 25 segundos por anúncio e 6 MB por imagem.
+
+Validação:
+- JavaScript: aprovado.
+- Estrutura: 18 arquivos essenciais e 180 IDs.
+- Inicialização web: aprovada.
+- Backend: 24 testes aprovados, 0 falhas.
+- Sintaxe Java: analisada sem erros de sintaxe (dependências Android externas ao javac local).
