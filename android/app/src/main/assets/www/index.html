@@ -45,7 +45,9 @@
   <nav id="offersToolbar" class="hidden" aria-hidden="true"></nav>
   <p id="topActionStatus" class="top-action-status" aria-live="polite"></p>
 
-  <main>
+  <button id="showRadarPageBtn" type="button" hidden aria-hidden="true"></button>
+<button id="showFavoritesPageBtn" type="button" hidden aria-hidden="true"></button>
+<main>
     <section id="offersPage" class="page-view">
       <section id="editorCollapsedNotice" class="card saved-notice hidden">
         <div class="saved-check">✓</div>
@@ -158,10 +160,6 @@
       </div>
     </section>
 
-
-    <section id="radarPage" class="page-view hidden">
-      <section class="page-intro radar-intro"><span>⚡</span><div><h1>Radar automático de ofertas</h1><p>Encontre promoções prontas, filtre as melhores e aprove somente o que deseja compartilhar.</p></div><button id="refreshRadarBtn" class="btn primary compact" type="button">↻ Atualizar</button></section>
-
       <section class="card radar-control-card">
         <div class="section-title"><span>🎯</span><div><h2>O que você quer encontrar?</h2><p>O radar consulta as ofertas do Mercado Livre e ordena as oportunidades mais fortes.</p></div></div>
         <div class="radar-filter-grid">
@@ -201,6 +199,12 @@
       <div class="radar-footer-actions"><button id="restoreHiddenRadarBtn" class="btn outline" type="button">Restaurar ofertas ocultadas</button></div>
     </section>
 
+
+
+
+    <section id="radarPage" class="page-view hidden">
+      <section class="page-intro radar-intro"><span>⚡</span><div><h1>Radar automático de ofertas</h1><p>Encontre promoções prontas, filtre as melhores e aprove somente o que deseja compartilhar.</p></div><button id="refreshRadarBtn" class="btn primary compact" type="button">↻ Atualizar</button></section>
+
     <section id="historyPage" class="page-view hidden">
       <section class="page-intro"><span>◷</span><div><h1>Histórico de ofertas</h1><p>Edite, agende ou envie cada publicação separadamente.</p></div></section>
       <section class="card publication-card">
@@ -217,10 +221,6 @@
       </section>
       <section class="notice"><b>Envio separado e com confirmação</b><p>Cada produto abre uma mensagem separada. O WhatsApp Business exige que você escolha o grupo e confirme cada envio.</p></section>
     </section>
-
-
-    <section id="favoritesPage" class="page-view hidden">
-      <section class="page-intro favorites-intro"><span>★</span><div><h1>Favoritos</h1><p>Guarde produtos interessantes sem misturar com a fila de publicações.</p></div></section>
       <section class="card favorites-toolbar">
         <label>Pesquisar favoritos<input id="favoritesSearch" placeholder="Digite o nome do produto"></label>
         <div class="favorites-summary"><small>Total salvo</small><strong id="favoritesCount">0</strong></div>
@@ -230,6 +230,12 @@
       <section id="favoritesEmpty" class="card empty"><b>Nenhum favorito salvo.</b><p>Use o botão ☆ no formulário, no Radar ou no histórico para guardar um produto.</p></section>
       <p id="favoritesStatus" class="status" aria-live="polite"></p>
     </section>
+
+
+
+
+    <section id="favoritesPage" class="page-view hidden">
+      <section class="page-intro favorites-intro"><span>★</span><div><h1>Favoritos</h1><p>Guarde produtos interessantes sem misturar com a fila de publicações.</p></div></section>
 
     <section id="couponsPage" class="page-view hidden">
       <section class="page-intro"><span>🎟️</span><div><h1>Cupons</h1><p>Cadastre vários cupons, altere quando precisar e escolha quais usar nas ofertas.</p></div></section>
@@ -296,7 +302,7 @@
         <label class="batch-input-label">Cole aqui os anúncios copiados do WhatsApp
           <textarea id="batchInput" rows="11" placeholder="Texto do anúncio...&#10;Cupom...&#10;https://meli.la/..."></textarea>
         </label>
-        <button id="batchSeparateBtn" class="btn primary full" type="button">📥 Separar anúncios</button>
+        <button id="batchSeparateBtn" class="btn primary full" type="button">📥 Adicionar anúncios ao lote</button>
         <p id="batchStatus" class="status" aria-live="polite"></p>
       </section>
       <section class="card batch-results-card">
@@ -395,9 +401,7 @@
 
   <nav class="bottom-nav" aria-label="Navegação principal">
     <button id="showOffersPageBtn" class="bottom-tab active" data-page="offers" type="button"><span>⌂</span><b>Início</b></button>
-    <button id="showRadarPageBtn" class="bottom-tab" data-page="radar" type="button"><span>⚡</span><b>Radar</b></button>
     <button id="showHistoryPageBtn" class="bottom-tab" data-page="history" type="button"><span>◷</span><b>Histórico</b></button>
-    <button id="showFavoritesPageBtn" class="bottom-tab" data-page="favorites" type="button"><span>★</span><b>Favoritos</b></button>
     <button id="showCouponsPageBtn" class="bottom-tab" data-page="coupons" type="button"><span>🎟</span><b>Cupons</b></button>
     <button id="showBatchPageBtn" class="bottom-tab" data-page="batch" type="button"><span>📥</span><b>Lote</b></button>
     <button id="showAutomationPageBtn" class="bottom-tab" data-page="automation" type="button"><span>🤖</span><b>Piloto</b></button>

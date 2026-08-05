@@ -1,0 +1,18 @@
+CbOfertas V6.3.5 — Lote persistente e fotos
+
+Alterações:
+- Adicionar novos anúncios não apaga o lote existente.
+- Links repetidos não são duplicados.
+- O campo de entrada é limpo somente após adicionar itens novos.
+- Botão “Excluir” em cada anúncio do lote.
+- Abas Radar e Favoritos removidas da barra inferior.
+- Busca de fotos prioriza o proxy do backend.
+- Imagem direta é usada como alternativa quando o proxy falha.
+- A foto não é mais descartada por um teste antecipado do WebView.
+- Mantidos os botões Copiar link, Gerar link no ML, Usar link copiado e Buscar foto.
+
+Validação:
+- JavaScript: aprovado.
+- Estrutura e interface: aprovadas.
+- Inicialização web: aprovada.
+- Backend: 22 testes aprovados, 0 falhas.

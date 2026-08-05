@@ -359,7 +359,7 @@ function compressImageFile(file, maxWidth = 1000, quality = 0.72) {
 }
 
 function showPage(page = 'offers') {
-  const validPage = ['offers', 'radar', 'history', 'favorites', 'coupons', 'batch', 'automation', 'settings'].includes(page) ? page : 'offers';
+  const validPage = ['offers', 'history', 'coupons', 'batch', 'automation', 'settings'].includes(page) ? page : 'offers';
   const views = {
     offers: el.offersPage,
     radar: el.radarPage,
@@ -2499,8 +2499,18 @@ function v63ParseBatch(raw=''){
    let block=v63StripWhatsAppHeader(v63NormalizeBlock(text.slice(start,end)));
    const link=m[0].replace(/[),.;]+$/,'');
    if(!block.includes(link))block=`${block}\n${link}`.trim();
-   return {batchId:`batch-${Date.now()}-${i}`,title:v63ExtractTitle(block),message:block,finalText:block,link,image:'',seller:'',coupon:'',status:isAffiliateLink(link)?'affiliate_ready':'blocked_link',affiliateConfirmed:isAffiliateLink(link),createdAt:Date.now()};
+   return {batchId:`batch-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,title:v63ExtractTitle(block),message:block,finalText:block,link,image:'',seller:'',coupon:'',status:isAffiliateLink(link)?'affiliate_ready':'blocked_link',affiliateConfirmed:isAffiliateLink(link),createdAt:Date.now()};
  });
+}
+function v63MergeBatch(existing=[],incoming=[]){
+ const merged=[...existing],seen=new Set(existing.map(x=>String(x.link||'').trim()).filter(Boolean));
+ incoming.forEach(item=>{const key=String(item.link||'').trim();if(!key||seen.has(key))return;seen.add(key);merged.push(item);});
+ return merged;
+}
+function v63DeleteItem(batchId){
+ const items=getV63Batch().filter(x=>x.batchId!==batchId);
+ saveV63Batch(items);
+ v6Status('batchStatus','Anúncio removido do lote.','success');
 }
 function v63ReplaceAffiliateLink(batchId,newLink){
  const link=String(newLink||'').trim();
@@ -2549,15 +2559,17 @@ function v63CanLoadImage(url=''){
 async function v63FindPhoto(item){
  if(!item?.link)return false;
  const data=await liveProductData(item.link),candidates=v63ImageCandidates(data);
- let selected='';for(const candidate of candidates){if(await v63CanLoadImage(candidate)){selected=candidate;break;}}
- item.image=selected;item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
+ // Prioriza o proxy do backend. No WebView, testar a imagem antes de exibir pode
+ // falhar por demora do Render ou política do provedor, mesmo quando a URL funciona.
+ const selected=candidates[0]||'';
+ item.image=selected;item.imageFallback=candidates[1]||'';item.title=data?.title||item.title;item.id=data?.id||item.id;item.catalogProductId=data?.catalogProductId||item.catalogProductId;item.seller=data?.seller||'';
  return Boolean(selected);
 }
 function renderV63Batch(){
  const items=getV63Batch(),stats=v63BatchStats(items),list=v6Node('batchItemsList');
  if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${stats.ready} afiliado(s) pronto(s) • ${stats.blocked} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
  if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${stats.ready} prontos`;
- if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" alt="Foto de ${escapeHtml(x.title||'oferta')}" onerror="this.parentElement.classList.add('image-error');this.remove()">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button type="button" data-batch-copy="${escapeHtml(x.batchId)}">📋 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">🔗 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button></div></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Separar anúncios.</div>';
+ if(list)list.innerHTML=items.length?items.map((x,i)=>`<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" data-fallback="${escapeHtml(x.imageFallback||'')}" alt="Foto de ${escapeHtml(x.title||'oferta')}" onerror="const f=this.dataset.fallback;if(f&&this.src!==f){this.src=f;this.dataset.fallback='';}else{this.parentElement.classList.add('image-error');this.remove();}">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small><a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button type="button" data-batch-copy="${escapeHtml(x.batchId)}">📋 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">🔗 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button><button class="danger" type="button" data-batch-delete="${escapeHtml(x.batchId)}">🗑 Excluir</button></div></div></article>`).join(''):'<div class="empty">Cole anúncios acima e toque em Adicionar anúncios ao lote.</div>';
 }
 async function prepareV63BatchPhotos(){
  const items=getV63Batch();if(!items.length)return v6Status('batchStatus','Separe os anúncios primeiro.','error');
@@ -2595,7 +2607,7 @@ function sendV63BatchToPilot(){
 }
 function initV63Batch(){
  v6Node('showBatchPageBtn')?.addEventListener('click',()=>showPage('batch'));
- v6Node('batchSeparateBtn')?.addEventListener('click',()=>{const items=v63ParseBatch(v6Node('batchInput')?.value||'');saveV63Batch(items);v6Status('batchStatus',items.length?`${items.length} anúncio(s) separado(s).`:'Nenhum link de anúncio foi encontrado.',items.length?'success':'error');});
+ v6Node('batchSeparateBtn')?.addEventListener('click',()=>{const incoming=v63ParseBatch(v6Node('batchInput')?.value||'');const before=getV63Batch();const items=v63MergeBatch(before,incoming);saveV63Batch(items);const added=items.length-before.length;if(added&&v6Node('batchInput'))v6Node('batchInput').value='';v6Status('batchStatus',added?`${added} anúncio(s) adicionado(s). O lote anterior foi preservado.`:(incoming.length?'Esses links já estavam no lote.':'Nenhum link de anúncio foi encontrado.'),added?'success':'error');});
  v6Node('batchPrepareBtn')?.addEventListener('click',prepareV63BatchPhotos);
  v6Node('batchApplyAffiliateBtn')?.addEventListener('click',applyV63SavedAffiliates);
  v6Node('batchSendPilotBtn')?.addEventListener('click',sendV63BatchToPilot);
@@ -2606,6 +2618,7 @@ function initV63Batch(){
   const use=event.target.closest('[data-batch-use-copy]');if(use){v63UseCopiedAffiliate(use.dataset.batchUseCopy);return;}
   const photo=event.target.closest('[data-batch-photo]');if(photo){v63PrepareOnePhoto(photo.dataset.batchPhoto);return;}
   const image=event.target.closest('[data-batch-photo-open]');if(image){const item=getV63Batch().find(x=>x.batchId===image.dataset.batchPhotoOpen);if(item?.image)window.open(item.image,'_blank');return;}
+  const del=event.target.closest('[data-batch-delete]');if(del){if(confirm('Excluir este anúncio do lote?'))v63DeleteItem(del.dataset.batchDelete);return;}
  });
  renderV63Batch();
 }
