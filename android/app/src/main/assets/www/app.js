@@ -2428,11 +2428,11 @@ async function exportV6Queue(filter='all'){
   v6Status('v6QueueStatus','Preparando fotos e salvando a exportação...');
   const packed=[];let imageFailures=0;
   for(let i=0;i<q.length;i++){let item=recordV6Use({...q[i]},'exported');let embedded='';const candidates=[item.imageProxy,item.image,item.originalImage].filter(Boolean);for(const src of candidates){embedded=await v62ImageData(src);if(embedded)break}if(embedded)item.image=embedded;else if(candidates.length)imageFailures++;item.imageEmbedded=Boolean(embedded);item.packageIndex=i+1;packed.push(item)}
-  const payload={format:'cbofertas',version:'6.4',createdAt:Date.now(),config:v6Config(),coupons:getSavedCoupons(),affiliateLibrary:getAffiliateLibrary(),queue:packed,integrity:{items:packed.length,embeddedImages:packed.filter(x=>x.imageEmbedded).length,imageFailures}};
+  const payload={format:'cbofertas',version:'8.0',createdAt:Date.now(),config:v6Config(),coupons:getSavedCoupons(),affiliateLibrary:getAffiliateLibrary(),queue:packed,integrity:{items:packed.length,embeddedImages:packed.filter(x=>x.imageEmbedded).length,imageFailures}};
   const name=`CbOfertas_Fila_${new Date().toISOString().replace(/[:.]/g,'-')}.cbofertas`;
   const saved=getV6SavedExports();saved.unshift({id:`exp-${Date.now()}`,name,createdAt:payload.createdAt,lastUsedAt:payload.createdAt,queue:packed});saveV6SavedExports(saved);
   const content=JSON.stringify(payload);
-  try{if(window.Android?.shareTextFile){window.Android.shareTextFile(name,'application/vnd.cbofertas+json',content)}else{const blob=new Blob([content],{type:'application/vnd.cbofertas+json'}),file=new File([blob],name,{type:'application/vnd.cbofertas+json'});if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({title:'Fila CbOfertas V6.4',files:[file]});else{const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}}v6Status('v6QueueStatus',`${packed.length} ofertas exportadas e salvas; ${payload.integrity.embeddedImages} fotos incorporadas${imageFailures?`; ${imageFailures} sem foto`:''}.`,imageFailures?'error':'success')}catch(e){if(e.name!=='AbortError')v6Status('v6QueueStatus','Não foi possível exportar a fila.','error')}
+  try{if(window.Android?.shareTextFile){window.Android.shareTextFile(name,'application/vnd.cbofertas+json',content)}else{const blob=new Blob([content],{type:'application/vnd.cbofertas+json'}),file=new File([blob],name,{type:'application/vnd.cbofertas+json'});if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({title:'Fila CbOfertas V8',files:[file]});else{const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}}v6Status('v6QueueStatus',`${packed.length} ofertas exportadas e salvas; ${payload.integrity.embeddedImages} fotos incorporadas${imageFailures?`; ${imageFailures} sem foto`:''}.`,imageFailures?'error':'success')}catch(e){if(e.name!=='AbortError')v6Status('v6QueueStatus','Não foi possível exportar a fila.','error')}
 }
 async function importV6Queue(file){
  try{
@@ -2440,7 +2440,7 @@ async function importV6Queue(file){
   const queue=data.queue.map((item,index)=>({...item,queueId:item.queueId||`v62-import-${Date.now()}-${index}`,status:'pending',attempts:0,lastError:''}));
   localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(queue));
   if(Array.isArray(data.coupons))saveSavedCoupons(data.coupons);
-  if(data.affiliateLibrary&&typeof data.affiliateLibrary==='object')saveAffiliateLibrary(data.affiliateLibrary);
+  if(data.affiliateLibrary&&typeof data.affiliateLibrary==='object'){(window.saveAffiliateLibrary||function(v){localStorage.setItem(AFFILIATE_LIBRARY_STORAGE_KEY,JSON.stringify(v||{}));})(data.affiliateLibrary);}
   if(data.config)localStorage.setItem(V6_CONFIG_KEY,JSON.stringify(data.config));
   renderCouponLibrary();applyV6Config();renderV6Queue();renderV6SavedExports();renderV62Report();
   const embedded=queue.filter(x=>String(x.image||'').startsWith('data:image/')).length;

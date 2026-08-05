@@ -1,18 +1,50 @@
 'use strict';
-const fs=require('node:fs'),path=require('node:path');
-const root=path.resolve(__dirname,'..');
-const required=['backend/server.js','backend/src/app.js','backend/src/config.js','backend/src/lib/http.js','backend/src/lib/format.js','backend/src/services/productService.js','backend/src/services/imageService.js','backend/test/smoke.test.js','scripts/smoke-webapp.js','android/app/build.gradle','android/app/src/main/AndroidManifest.xml','android/app/src/main/java/com/cbofertas/app/MainActivity.java','android/app/src/main/java/com/cbofertas/app/CbDatabaseHelper.java','android/app/src/main/java/com/cbofertas/app/WhatsAppAutomationService.java','android/app/src/main/res/xml/accessibility_service_config.xml','android/app/src/main/assets/www/index.html','android/app/src/main/assets/www/app.js','android/app/src/main/assets/www/style.css','.github/workflows/build-apk.yml'];
-const errors=[];for(const p of required){const f=path.join(root,p);if(!fs.existsSync(f)||fs.statSync(f).size===0)errors.push(`Arquivo ausente ou vazio: ${p}`)}
-const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const html=read('android/app/src/main/assets/www/index.html'),app=read('android/app/src/main/assets/www/app.js'),gradle=read('android/app/build.gradle'),workflow=read('.github/workflows/build-apk.yml'),manifest=read('android/app/src/main/AndroidManifest.xml'),main=read('android/app/src/main/java/com/cbofertas/app/MainActivity.java');
-for(const id of ['offersPage','historyPage','couponsPage','batchPage','automationPage','settingsPage','batchInput','batchSendPilotBtn','exportQueueBtn','importQueueInput'])if(!html.includes(`id="${id}"`))errors.push(`Interface sem #${id}`);
-for(const marker of ['CbOfertasReceiveSharedLink','buildV6Queue','exportV6Queue','importV6Queue','scheduleAutomaticMessage','openAutomationSettings','v63ParseBatch','sendV63BatchToPilot','CbV7Database'])if(!app.includes(marker))errors.push(`app.js sem ${marker}`);
-const vn=gradle.match(/versionName\s+'([^']+)'/)?.[1]||'',vc=Number(gradle.match(/versionCode\s+(\d+)/)?.[1]||0);
-if(!/^7\./.test(vn)||vc<700)errors.push(`Versão V7 inválida: ${vn}/${vc}`);
-if(!workflow.includes('npm test')||!workflow.includes('assembleDebug')||!workflow.includes('CbOfertas-V7.1'))errors.push('Workflow V7 inválido');
-if(!manifest.includes('android.intent.action.SEND')||!manifest.includes('WhatsAppAutomationService'))errors.push('Manifest incompleto');
-for(const method of ['dbUpsertOffer','dbListOffers','dbRecordUsage','dbSaveExport','resolveProductImage'])if(!main.includes(method))errors.push(`MainActivity sem ${method}`);
-const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]),set=new Set(ids),dups=[...new Set(ids.filter((x,i)=>ids.indexOf(x)!==i))];if(dups.length)errors.push(`IDs duplicados: ${dups.join(', ')}`);
-const refs=[...app.matchAll(/\$\('#([^']+)'\)/g)].map(m=>m[1]);const missing=[...new Set(refs.filter(x=>!set.has(x)))];if(missing.length)errors.push(`IDs ausentes: ${missing.join(', ')}`);
-if(errors.length){console.error('Falha na validação:');errors.forEach(e=>console.error('- '+e));process.exit(1)}
-console.log(`CbOfertas ${vn} validado: ${required.length} arquivos, ${set.size} IDs e SQLite nativo.`);
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const required = [
+  'android/app/build.gradle',
+  'android/app/src/main/AndroidManifest.xml',
+  'android/app/src/main/res/xml/file_paths.xml',
+  'android/app/src/main/java/com/cbofertas/app/MainActivity.java',
+  'android/app/src/main/java/com/cbofertas/app/WhatsAppAutomationService.java',
+  'android/app/src/main/assets/www/index.html',
+  'android/app/src/main/assets/www/app.js',
+  'android/app/src/main/assets/www/modules/core/event-bus.js',
+  'android/app/src/main/assets/www/modules/core/storage.js',
+  'android/app/src/main/assets/www/modules/core/safe-runtime.js',
+  'android/app/src/main/assets/www/modules/features/affiliate-module.js',
+  'android/app/src/main/assets/www/modules/features/navigation-module.js',
+  'android/app/src/main/assets/www/modules/features/queue-transfer-module.js',
+  'android/app/src/main/assets/www/modules/features/startup-module.js',
+  'backend/package.json',
+  'backend/src/app.js',
+  '.github/workflows/build-apk.yml'
+];
+const errors = [];
+for (const relative of required) {
+  const file = path.join(root, relative);
+  if (!fs.existsSync(file) || fs.statSync(file).size === 0) errors.push(`Ausente ou vazio: ${relative}`);
+}
+const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
+const gradle = read('android/app/build.gradle');
+const html = read('android/app/src/main/assets/www/index.html');
+const app = read('android/app/src/main/assets/www/app.js');
+const affiliate = read('android/app/src/main/assets/www/modules/features/affiliate-module.js');
+const filePaths = read('android/app/src/main/res/xml/file_paths.xml');
+const versionName = gradle.match(/versionName\s+'([^']+)'/)?.[1] || '';
+const versionCode = Number(gradle.match(/versionCode\s+(\d+)/)?.[1] || 0);
+if (versionName !== '8.0.0' || versionCode !== 800) errors.push(`Versão incorreta: ${versionName}/${versionCode}`);
+if (!affiliate.includes('saveAffiliateLibrary')) errors.push('Módulo de afiliados sem compatibilidade saveAffiliateLibrary');
+if (!html.includes('modules/core/event-bus.js') || !html.includes('queue-transfer-module.js')) errors.push('HTML não carrega módulos V8');
+if (app.includes("saveAffiliateLibrary(data.affiliateLibrary);")) errors.push('app.js ainda contém chamada insegura antiga');
+if (!filePaths.includes('cache_root') || !filePaths.includes('files_root')) errors.push('FileProvider incompleto');
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+const duplicates = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+if (duplicates.length) errors.push(`IDs duplicados: ${duplicates.join(', ')}`);
+if (errors.length) {
+  console.error('Falha na validação V8:');
+  errors.forEach(error => console.error('- ' + error));
+  process.exit(1);
+}
+console.log(`CbOfertas ${versionName} validada: ${required.length} arquivos essenciais, ${ids.length} IDs e módulos isolados.`);

@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
                 if (acceptTypes != null) {
                     for (String accept : acceptTypes) {
                         String normalized = accept == null ? "" : accept.toLowerCase(java.util.Locale.ROOT);
-                        if (normalized.contains("cbofertas") || normalized.contains("application/json") || normalized.contains(".json")) {
+                        if (normalized.contains("cbofertas") || normalized.contains("application/json") || normalized.contains("text/plain") || normalized.contains(".json")) {
                             queueImport = true;
                             break;
                         }
@@ -128,10 +128,11 @@ public class MainActivity extends Activity {
                 }
 
                 if (queueImport) {
-                    picker.setType("application/json");
+                    picker.setType("*/*");
                     picker.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                             "application/json",
                             "application/octet-stream",
+                            "application/vnd.cbofertas+json",
                             "text/plain"
                     });
                 } else {
@@ -145,7 +146,7 @@ public class MainActivity extends Activity {
                 } catch (Exception error) {
                     MainActivity.this.fileChooserCallback.onReceiveValue(null);
                     MainActivity.this.fileChooserCallback = null;
-                    Toast.makeText(MainActivity.this, "Não foi possível abrir a galeria.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, queueImport ? "Não foi possível abrir os arquivos de fila." : "Não foi possível abrir a galeria.", Toast.LENGTH_LONG).show();
                     return false;
                 }
             }
