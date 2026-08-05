@@ -2711,3 +2711,17 @@ initV6();
 initV63Batch();
 
 setTimeout(()=>{v6Node('v62RunPreflightBtn')?.addEventListener('click',runV62Preflight);v6Node('v62RefreshReportBtn')?.addEventListener('click',()=>{syncV62AutomationResult();renderV62Report();});v6Node('v62ExportReportBtn')?.addEventListener('click',exportV62Report);renderV62Report();setInterval(syncV62AutomationResult,5000);},0);
+
+
+/* CbOfertas V7 — ponte de persistência SQLite */
+const CbV7Database={
+ available(){return !!(window.Android&&typeof Android.dbUpsertOffer==='function')},
+ upsert(o){try{return this.available()?Android.dbUpsertOffer(JSON.stringify(o||{})):''}catch(e){return''}},
+ list(){try{return this.available()?JSON.parse(Android.dbListOffers()||'[]'):[]}catch(e){return[]}},
+ remove(id){try{return this.available()&&Android.dbDeleteOffer(String(id||''))}catch(e){return false}},
+ usage(id,type,coupon='',details=''){try{if(this.available())Android.dbRecordUsage(String(id||''),String(type||'used'),String(coupon||''),String(details||''))}catch(e){}},
+ history(id){try{return this.available()?JSON.parse(Android.dbListUsage(String(id||''))||'[]'):[]}catch(e){return[]}},
+ saveExport(id,name,payload,count){try{return this.available()&&Android.dbSaveExport(String(id),String(name||''),JSON.stringify(payload||{}),Number(count||0))}catch(e){return false}},
+ exports(){try{return this.available()?JSON.parse(Android.dbListExports()||'[]'):[]}catch(e){return[]}}
+};
+window.CbV7Database=CbV7Database;

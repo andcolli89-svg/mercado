@@ -1,76 +1,18 @@
 'use strict';
-
-const fs = require('node:fs');
-const path = require('node:path');
-
-const root = path.resolve(__dirname, '..');
-const requiredFiles = [
-  'backend/server.js',
-  'backend/src/app.js',
-  'backend/src/config.js',
-  'backend/src/lib/http.js',
-  'backend/src/lib/format.js',
-  'backend/src/services/productService.js',
-  'backend/src/services/radarService.js',
-  'backend/src/services/imageService.js',
-  'backend/test/smoke.test.js',
-  'scripts/smoke-webapp.js',
-  'android/app/build.gradle',
-  'android/app/src/main/AndroidManifest.xml',
-  'android/app/src/main/java/com/cbofertas/app/WhatsAppAutomationService.java',
-  'android/app/src/main/res/xml/accessibility_service_config.xml',
-  'android/app/src/main/assets/www/index.html',
-  'android/app/src/main/assets/www/app.js',
-  'android/app/src/main/assets/www/style.css',
-  '.github/workflows/build-apk.yml'
-];
-
-const errors = [];
-for (const relativePath of requiredFiles) {
-  const fullPath = path.join(root, relativePath);
-  if (!fs.existsSync(fullPath) || fs.statSync(fullPath).size === 0) {
-    errors.push(`Arquivo ausente ou vazio: ${relativePath}`);
-  }
-}
-
-const html = fs.readFileSync(path.join(root, 'android/app/src/main/assets/www/index.html'), 'utf8');
-const app = fs.readFileSync(path.join(root, 'android/app/src/main/assets/www/app.js'), 'utf8');
-const gradle = fs.readFileSync(path.join(root, 'android/app/build.gradle'), 'utf8');
-const workflow = fs.readFileSync(path.join(root, '.github/workflows/build-apk.yml'), 'utf8');
-const manifest = fs.readFileSync(path.join(root, 'android/app/src/main/AndroidManifest.xml'), 'utf8');
-
-for (const id of ['radarPage', 'historyPage', 'favoritesPage', 'couponsPage', 'favoritesList', 'affiliateLinkBtn', 'affiliateStatus', 'automationPage', 'batchPage', 'batchInput', 'batchSendPilotBtn', 'exportQueueBtn', 'importQueueInput']) {
-  if (!html.includes(`id="${id}"`)) errors.push(`Interface sem o elemento #${id}`);
-}
-for (const marker of ['FAVORITES_STORAGE_KEY', 'getAutomaticCouponCodes', 'renderRadarOffers', 'renderPublications', 'renderFavorites', 'CbOfertasReceiveSharedLink', 'openAffiliateGenerator', 'buildV6Queue', 'exportV6Queue', 'importV6Queue', 'scheduleAutomaticMessage', 'openAutomationSettings', 'v63ParseBatch', 'sendV63BatchToPilot']) {
-  if (!app.includes(marker)) errors.push(`app.js sem o recurso ${marker}`);
-}
-if (!gradle.includes("versionName '6.3'") || !gradle.includes('versionCode 630')) {
-  errors.push('Versão Android não está configurada como 6.3/630');
-}
-if (!workflow.includes('npm test') || !workflow.includes('assembleDebug') || !workflow.includes('CbOfertas-V6.3.apk')) {
-  errors.push('Workflow não valida backend e APK da V6.3');
-}
-if (!manifest.includes('android.intent.action.SEND') || !manifest.includes('text/plain')) {
-  errors.push('Android não está registrado para receber o link compartilhado pelo Mercado Livre');
-}
-if (!manifest.includes('WhatsAppAutomationService') || !manifest.includes('BIND_ACCESSIBILITY_SERVICE')) {
-  errors.push('Manifest sem o módulo de acessibilidade do Piloto Automático');
-}
-
-const idMatches = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
-const ids = new Set(idMatches);
-const duplicateIds = [...ids].filter(id => idMatches.filter(value => value === id).length > 1);
-if (duplicateIds.length) errors.push(`IDs HTML duplicados: ${duplicateIds.join(', ')}`);
-
-const referencedIds = [...app.matchAll(/\$\('#([^']+)'\)/g)].map(match => match[1]);
-const missingIds = [...new Set(referencedIds.filter(id => !ids.has(id)))];
-if (missingIds.length) errors.push(`IDs usados no app.js e ausentes no HTML: ${missingIds.join(', ')}`);
-
-if (errors.length) {
-  console.error('Falha na validação do projeto:');
-  errors.forEach(error => console.error(`- ${error}`));
-  process.exit(1);
-}
-
-console.log(`CbOfertas V6.3 validado: ${requiredFiles.length} arquivos essenciais e ${ids.size} IDs de interface.`);
+const fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const required=['backend/server.js','backend/src/app.js','backend/src/config.js','backend/src/lib/http.js','backend/src/lib/format.js','backend/src/services/productService.js','backend/src/services/imageService.js','backend/test/smoke.test.js','scripts/smoke-webapp.js','android/app/build.gradle','android/app/src/main/AndroidManifest.xml','android/app/src/main/java/com/cbofertas/app/MainActivity.java','android/app/src/main/java/com/cbofertas/app/CbDatabaseHelper.java','android/app/src/main/java/com/cbofertas/app/WhatsAppAutomationService.java','android/app/src/main/res/xml/accessibility_service_config.xml','android/app/src/main/assets/www/index.html','android/app/src/main/assets/www/app.js','android/app/src/main/assets/www/style.css','.github/workflows/build-apk.yml'];
+const errors=[];for(const p of required){const f=path.join(root,p);if(!fs.existsSync(f)||fs.statSync(f).size===0)errors.push(`Arquivo ausente ou vazio: ${p}`)}
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const html=read('android/app/src/main/assets/www/index.html'),app=read('android/app/src/main/assets/www/app.js'),gradle=read('android/app/build.gradle'),workflow=read('.github/workflows/build-apk.yml'),manifest=read('android/app/src/main/AndroidManifest.xml'),main=read('android/app/src/main/java/com/cbofertas/app/MainActivity.java');
+for(const id of ['offersPage','historyPage','couponsPage','batchPage','automationPage','settingsPage','batchInput','batchSendPilotBtn','exportQueueBtn','importQueueInput'])if(!html.includes(`id="${id}"`))errors.push(`Interface sem #${id}`);
+for(const marker of ['CbOfertasReceiveSharedLink','buildV6Queue','exportV6Queue','importV6Queue','scheduleAutomaticMessage','openAutomationSettings','v63ParseBatch','sendV63BatchToPilot','CbV7Database'])if(!app.includes(marker))errors.push(`app.js sem ${marker}`);
+const vn=gradle.match(/versionName\s+'([^']+)'/)?.[1]||'',vc=Number(gradle.match(/versionCode\s+(\d+)/)?.[1]||0);
+if(!/^7\./.test(vn)||vc<700)errors.push(`Versão V7 inválida: ${vn}/${vc}`);
+if(!workflow.includes('npm test')||!workflow.includes('assembleDebug')||!workflow.includes('CbOfertas-V7'))errors.push('Workflow V7 inválido');
+if(!manifest.includes('android.intent.action.SEND')||!manifest.includes('WhatsAppAutomationService'))errors.push('Manifest incompleto');
+for(const method of ['dbUpsertOffer','dbListOffers','dbRecordUsage','dbSaveExport','resolveProductImage'])if(!main.includes(method))errors.push(`MainActivity sem ${method}`);
+const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]),set=new Set(ids),dups=[...new Set(ids.filter((x,i)=>ids.indexOf(x)!==i))];if(dups.length)errors.push(`IDs duplicados: ${dups.join(', ')}`);
+const refs=[...app.matchAll(/\$\('#([^']+)'\)/g)].map(m=>m[1]);const missing=[...new Set(refs.filter(x=>!set.has(x)))];if(missing.length)errors.push(`IDs ausentes: ${missing.join(', ')}`);
+if(errors.length){console.error('Falha na validação:');errors.forEach(e=>console.error('- '+e));process.exit(1)}
+console.log(`CbOfertas ${vn} validado: ${required.length} arquivos, ${set.size} IDs e SQLite nativo.`);

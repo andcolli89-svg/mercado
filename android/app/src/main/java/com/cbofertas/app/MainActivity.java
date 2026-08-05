@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 3201;
     private static final int FILE_CHOOSER_REQUEST = 3202;
     private WebView webView;
+    private CbDatabaseHelper database;
     private boolean pageReady = false;
     private Intent pendingScheduledIntent;
     private String pendingSharedProductLink;
@@ -81,6 +82,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        database = new CbDatabaseHelper(this);
         FrameLayout root = new FrameLayout(this);
         webView = new WebView(this);
         root.addView(webView, new FrameLayout.LayoutParams(
@@ -430,6 +432,15 @@ public class MainActivity extends Activity {
     }
 
     public class AndroidBridge {
+        @JavascriptInterface public String dbUpsertOffer(String json) { return database.upsertOffer(json); }
+        @JavascriptInterface public String dbListOffers() { return database.listOffers(); }
+        @JavascriptInterface public boolean dbDeleteOffer(String id) { return database.deleteOffer(id == null ? "" : id); }
+        @JavascriptInterface public void dbRecordUsage(String offerId, String type, String coupon, String details) { database.recordUsage(offerId, type, coupon, details); }
+        @JavascriptInterface public String dbListUsage(String offerId) { return database.listUsage(offerId); }
+        @JavascriptInterface public boolean dbSaveExport(String id, String name, String payload, int count) { return database.saveExport(id, name, payload, count); }
+        @JavascriptInterface public String dbListExports() { return database.listExports(); }
+        @JavascriptInterface public boolean dbDeleteExport(String id) { return database.deleteExport(id == null ? "" : id); }
+
         @JavascriptInterface
         public void resolveProductImage(String requestId, String sourceUrl) {
             final String id = requestId == null ? "" : requestId.trim();
