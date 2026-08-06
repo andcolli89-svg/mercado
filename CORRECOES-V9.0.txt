@@ -1,0 +1,28 @@
+CbOfertas V9.0
+
+Modo Seguro — padrão:
+- Abre foto + texto no WhatsApp Business.
+- Usuário escolhe o grupo e toca em enviar.
+- Não usa cliques automáticos.
+- Oferta fica como Aguardando confirmação.
+- Só sai da fila após Confirmar envio.
+
+Piloto Experimental:
+- Mantém automação por acessibilidade como opção.
+- Separado do modo seguro.
+- Não é o modo padrão.
+
+Fila:
+- Estados: Pendente, Preparando, Aguardando confirmação, Enviada e Falhou.
+- Botão Tentar novamente.
+- Limite de tentativas configurável.
+- Mensagem enviada só sai da fila após confirmação.
+
+Diagnóstico:
+- Versão.
+- Modo.
+- Grupo.
+- Acessibilidade.
+- Ponte com WhatsApp.
+- Tamanho da fila.
+- Último erro.
