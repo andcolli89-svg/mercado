@@ -1,0 +1,14 @@
+CbOfertas V8.8 — reconstrução sobre o fluxo real
+
+- Novo arquivo v88-lote-runtime.js, carregado depois do código legado.
+- Selo visual V8.8 NOVO em cada card do Lote.
+- Botão individual Enviar agora com foto/texto.
+- Chamada direta para shareToWhatsAppBusiness.
+- Migração obrigatória: item externo nunca é afiliado confirmado.
+- Somente Usar link copiado registra affiliateConfirmationSource=use_copied_link.
+- renderV63Batch substituído em tempo de execução.
+- Cache bust v=880.
+- Version code 880.
+- Primeiro clique protegido por groupTapIssued.
+- Trava pós-envio aumentada para 6,5 segundos.
+- Retorno ao CbOfertas antecipado para 1,1 segundo.

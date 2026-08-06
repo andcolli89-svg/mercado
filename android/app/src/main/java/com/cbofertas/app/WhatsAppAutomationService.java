@@ -228,7 +228,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
 
                 // SEGUNDO E ÚLTIMO CLIQUE. O trabalho é encerrado antes do gesto.
                 handler.removeCallbacksAndMessages(null);
-                long lockUntil = System.currentTimeMillis() + 5000L;
+                long lockUntil = System.currentTimeMillis() + 6500L;
 
                 JSONObject result = new JSONObject();
                 result.put("id", activeJobId);
@@ -259,7 +259,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 if (clicked) {
                     lastActionAt = System.currentTimeMillis();
                     Toast.makeText(this, "Oferta enviada. Voltando ao CbOfertas.", Toast.LENGTH_SHORT).show();
-                    handler.postDelayed(this::returnToCbOfertas, 1400L);
+                    handler.postDelayed(this::returnToCbOfertas, 1100L);
                 } else {
                     getSharedPreferences(PREFS, MODE_PRIVATE)
                             .edit()
