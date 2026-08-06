@@ -87,9 +87,10 @@ public class WhatsAppAutomationService extends AccessibilityService {
                     && (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
                     || event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) {
                 AccessibilityNodeInfo root = getRootInActiveWindow();
+                String configuredGroup = prefs.getString(KEY_GROUP, "");
                 if (root != null
                         && screenContainsAny(root, "1 selecionado", "1 selected")
-                        && captureSelectedDestination(root)) {
+                        && captureSelectedDestination(root, configuredGroup)) {
                     return;
                 }
             }
@@ -407,48 +408,80 @@ public class WhatsAppAutomationService extends AccessibilityService {
         return dispatchGesture(gesture, null, null);
     }
 
-    private boolean captureSelectedDestination(AccessibilityNodeInfo root) {
+    private boolean captureSelectedDestination(AccessibilityNodeInfo root, String configuredGroup) {
         List<AccessibilityNodeInfo> all = new ArrayList<>();
         collect(root, all);
 
         AccessibilityNodeInfo selected = null;
+        String target = normalizeText(configuredGroup);
 
-        for (AccessibilityNodeInfo node : all) {
-            if (node == null) continue;
+        // Primeira opção: usa o nome do grupo configurado.
+        // O WhatsApp costuma repetir esse nome na parte inferior da tela
+        // depois que o destino fica selecionado.
+        if (!target.isEmpty()) {
+            AccessibilityNodeInfo bestMatch = null;
+            int bestScore = -1;
 
-            boolean marked = node.isChecked() || node.isSelected();
-            String desc = node.getContentDescription() == null
-                    ? ""
-                    : normalizeText(node.getContentDescription().toString());
-
-            if (!marked && !(desc.contains("selecionado") || desc.contains("selected"))) {
-                continue;
-            }
-
-            Rect bounds = bestRowBounds(node);
-            if (bounds.isEmpty() || bounds.height() < 40) continue;
-
-            selected = node;
-            break;
-        }
-
-        if (selected == null) {
-            // Fallback: procura o pequeno check visual que aparece sobre o avatar.
             for (AccessibilityNodeInfo node : all) {
                 if (node == null) continue;
-                Rect bounds = new Rect();
-                node.getBoundsInScreen(bounds);
+
+                String nodeText = node.getText() == null
+                        ? ""
+                        : normalizeText(node.getText().toString());
+                String nodeDesc = node.getContentDescription() == null
+                        ? ""
+                        : normalizeText(node.getContentDescription().toString());
+
+                boolean matches = nodeText.equals(target)
+                        || nodeDesc.equals(target)
+                        || (!nodeText.isEmpty() && nodeText.contains(target))
+                        || (!nodeDesc.isEmpty() && nodeDesc.contains(target));
+
+                if (!matches) continue;
+
+                Rect bounds = bestRowBounds(node);
                 if (bounds.isEmpty()) continue;
 
+                int score = 0;
+                if (node.isChecked() || node.isSelected()) score += 100;
+                if (bounds.height() >= 45 && bounds.height() <= 250) score += 40;
+                if (bounds.width() > 250) score += 20;
+
+                // Prefere a linha da lista, não o texto repetido na prévia inferior.
+                Rect screen = new Rect();
+                root.getBoundsInScreen(screen);
+                if (!screen.isEmpty() && bounds.exactCenterY() < screen.height() * 0.72f) {
+                    score += 60;
+                }
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = node;
+                }
+            }
+
+            selected = bestMatch;
+        }
+
+        // Segunda opção: procura nós marcados/checkados.
+        if (selected == null) {
+            for (AccessibilityNodeInfo node : all) {
+                if (node == null) continue;
+
+                boolean marked = node.isChecked() || node.isSelected();
                 String desc = node.getContentDescription() == null
                         ? ""
                         : normalizeText(node.getContentDescription().toString());
 
-                if (desc.contains("check") || desc.contains("marcado")
-                        || desc.contains("selecionado") || desc.contains("selected")) {
-                    selected = node;
-                    break;
+                if (!marked && !(desc.contains("selecionado") || desc.contains("selected"))) {
+                    continue;
                 }
+
+                Rect bounds = bestRowBounds(node);
+                if (bounds.isEmpty() || bounds.height() < 40) continue;
+
+                selected = node;
+                break;
             }
         }
 
@@ -468,12 +501,14 @@ public class WhatsAppAutomationService extends AccessibilityService {
         x = Math.max(0.02f, Math.min(0.98f, x));
         y = Math.max(0.02f, Math.min(0.98f, y));
 
-        getSharedPreferences(PREFS, MODE_PRIVATE)
+        boolean saved = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .edit()
                 .putFloat(KEY_GROUP_X, x)
                 .putFloat(KEY_GROUP_Y, y)
                 .remove(KEY_CALIBRATION_MODE)
-                .apply();
+                .commit();
+
+        if (!saved) return false;
 
         Toast.makeText(
                 this,
@@ -481,7 +516,8 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 Toast.LENGTH_LONG
         ).show();
 
-        handler.postDelayed(this::returnToCbOfertas, 650L);
+        // Dá tempo para o SharedPreferences terminar e só então reabre o app.
+        handler.postDelayed(this::returnToCbOfertas, 900L);
         return true;
     }
 

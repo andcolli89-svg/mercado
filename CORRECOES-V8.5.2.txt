@@ -1,0 +1,13 @@
+CbOfertas V8.5.2 — calibração pelo nome configurado
+
+Problema observado:
+O WhatsApp mostra “1 selecionado” e repete o nome do grupo na parte
+inferior, mas alguns aparelhos não expõem a linha como checked/selected.
+
+Correções:
+- Usa primeiro o nome configurado em KEY_GROUP.
+- Procura o mesmo nome na árvore de acessibilidade.
+- Prefere a linha superior da lista em vez da prévia inferior.
+- Mantém checked/selected como alternativa.
+- Usa commit() para salvar a coordenada antes de retornar.
+- Reabre o CbOfertas após 900 ms.
