@@ -2683,7 +2683,7 @@ function sendV63BatchToPilot(){
  if(!eligible.length)return v6Status('batchPilotStatus',`Nenhum anúncio enviado: ${blocked||all.length} item(ns) sem link afiliado confirmado.`, 'error');
  const cfg=saveV6Config(),shuffled=v63SmartShuffle(eligible).slice(0,cfg.limit),today=new Date(),[sh,sm]=cfg.start.split(':').map(Number);
  let cursor=new Date(today.getFullYear(),today.getMonth(),today.getDate()+1,sh,sm,0,0),inBatch=0;
- const queue=shuffled.map((item,i)=>{if(i>0){inBatch++;cursor=new Date(cursor.getTime()+(inBatch<cfg.batch?cfg.item:cfg.round-(cfg.item*(cfg.batch-1)))*60000);if(inBatch>=cfg.batch)inBatch=0;}return{...item,queueId:`v63-${Date.now()}-${i}`,scheduledAt:cursor.getTime(),status:'pending',message:item.message||item.finalText,affiliateConfirmed:true,source:'whatsapp_batch'};});
+ const queue=shuffled.map((item,i)=>{if(i>0){inBatch++;cursor=new Date(cursor.getTime()+(inBatch<cfg.batch?cfg.item:cfg.round-(cfg.item*(cfg.batch-1)))*60000);if(inBatch>=cfg.batch)inBatch=0;}return{...item,queueId:`v63-${Date.now()}-${i}`,scheduledAt:cursor.getTime(),status:'pending',message:item.message||item.finalText,affiliateConfirmed:false,source:'whatsapp_batch'};});
  localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(queue));renderV6Queue();renderV62Report();showPage('automation');
  v6Status('v6QueueStatus',`${queue.length} anúncio(s) afiliado(s) enviados ao Piloto em ordem embaralhada.${blocked?` ${blocked} bloqueado(s) sem afiliado.`:''}`,'success');
 }
@@ -2725,3 +2725,73 @@ const CbV7Database={
  exports(){try{return this.available()?JSON.parse(Android.dbListExports()||'[]'):[]}catch(e){return[]}}
 };
 window.CbV7Database=CbV7Database;
+
+
+/* CbOfertas V8.6 — limite diário e grupo padrão */
+(function () {
+  const DEFAULT_GROUP = 'GRUPO DE OFERTAS CB #1 🛒';
+  const DEFAULT_DAILY_MAX = 80;
+
+  function byId(id) {
+    return (typeof document !== 'undefined' &&
+            document &&
+            typeof document.getElementById === 'function')
+      ? document.getElementById(id)
+      : null;
+  }
+
+  function applyDefaults() {
+    const groupInput =
+      byId('automationGroupInput') ||
+      byId('v6GroupInput') ||
+      byId('pilotGroupInput');
+
+    if (groupInput && !String(groupInput.value || '').trim()) {
+      groupInput.value = DEFAULT_GROUP;
+    }
+
+    const maxInput =
+      byId('automationDailyMaxInput') ||
+      byId('v6DailyMax') ||
+      byId('dailyMaxInput');
+
+    if (maxInput) {
+      maxInput.max = '500';
+      const current = Number(maxInput.value || 0);
+      if (!current || current === 36 || current === 70) {
+        maxInput.value = String(DEFAULT_DAILY_MAX);
+      }
+    }
+
+    if (typeof localStorage === 'undefined' || !localStorage) return;
+
+    const keys = ['cbofertas-v6-config','cbofertas-automation-config','cbofertas-pilot-config'];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        const config = JSON.parse(raw);
+        if (!String(config.group || '').trim()) config.group = DEFAULT_GROUP;
+        const max = Number(config.dailyMax ?? config.maxDaily ?? config.daily ?? 0);
+        if (!max || max === 36 || max === 70) {
+          if ('maxDaily' in config) config.maxDaily = DEFAULT_DAILY_MAX;
+          else if ('daily' in config) config.daily = DEFAULT_DAILY_MAX;
+          else config.dailyMax = DEFAULT_DAILY_MAX;
+        }
+        localStorage.setItem(key, JSON.stringify(config));
+      } catch (_) {}
+    }
+  }
+
+  window.CB_DEFAULT_GROUP = DEFAULT_GROUP;
+  window.CB_DEFAULT_DAILY_MAX = DEFAULT_DAILY_MAX;
+
+  if (typeof document !== 'undefined' &&
+      document &&
+      document.readyState === 'loading' &&
+      typeof document.addEventListener === 'function') {
+    document.addEventListener('DOMContentLoaded', applyDefaults);
+  } else {
+    applyDefaults();
+  }
+})();

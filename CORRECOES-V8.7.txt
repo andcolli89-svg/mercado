@@ -1,0 +1,9 @@
+CbOfertas V8.7
+- Exatamente dois cliques: grupo e enviar.
+- Trava pós-envio de 5 segundos.
+- Retorno ao CbOfertas após 1,4 segundo.
+- Enviadas saem da fila e vão ao histórico sem cupons.
+- Histórico limitado.
+- Envio imediato da primeira ao ativar.
+- Ações em massa no Lote.
+- Afiliado confirmado somente por Usar link copiado.

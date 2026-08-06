@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#dff7cf">
-  <title>CbOfertas V8.5</title>
+  <title>CbOfertas V8.7</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css?v=637">
@@ -14,7 +14,7 @@
   <aside id="sideMenu" class="side-menu" aria-label="Menu principal">
     <div class="side-menu-head">
       <div class="mini-logo">🏷️</div>
-      <div><b>CbOfertas</b><small>V8.5 • Criador de Ofertas Inteligente</small></div>
+      <div><b>CbOfertas</b><small>V8.7 • Criador de Ofertas Inteligente</small></div>
       <button id="closeMenuBtn" type="button" aria-label="Fechar menu">✕</button>
     </div>
     <button class="menu-link" data-page="offers" type="button">⌂ <span>Início</span></button>
@@ -34,7 +34,7 @@
       <div class="brand-mark">🏷️</div>
       <div>
         <div class="brand"><span>Cb</span><b>Ofertas</b></div>
-        <small>V8.5 • Criador de Ofertas Inteligente</small>
+        <small>V8.7 • Criador de Ofertas Inteligente</small>
       </div>
     </div>
     <button id="themeToggleBtn" class="header-icon theme-button" type="button" aria-label="Alternar tema">☾</button>
@@ -252,6 +252,20 @@
 
 
     <section id="batchPage" class="page-view hidden">
+      <section class="card" id="batchBulkActionsCard">
+        <h2>📦 Ações das mensagens selecionadas</h2>
+        <div class="actions two-buttons">
+          <button id="selectAllBatchBtn" class="btn secondary" type="button">Selecionar todas</button>
+          <button id="clearBatchSelectionBtn" class="btn outline" type="button">Desmarcar todas</button>
+        </div>
+        <div class="actions two-buttons">
+          <button id="sendSelectedBatchWhatsAppBtn" class="btn primary" type="button">Enviar ao WhatsApp</button>
+          <button id="sendSelectedBatchPilotBtn" class="btn secondary" type="button">Adicionar ao Piloto</button>
+        </div>
+        <label class="check-row"><input id="keepBatchAfterSendCheck" type="checkbox"><span>Manter no Lote depois de enviar</span></label>
+        <p id="batchBulkStatus" class="status">Selecione as mensagens no Lote.</p>
+      </section>
+
       <section class="page-intro batch-intro"><span>📥</span><div><h1>Lote WhatsApp</h1><p>Cole vários anúncios, separe e envie somente os afiliados confirmados para o Piloto Automático.</p></div></section>
       <section class="card batch-card">
         <label class="batch-input-label">Cole aqui os anúncios copiados do WhatsApp
@@ -330,6 +344,18 @@
       </section>
     </section>
     <section id="settingsPage" class="page-view hidden">
+      <section class="card setting-card" id="historyStorageSettings">
+        <h2>🗂️ Histórico sem cupons</h2>
+        <label class="field"><span>Limite de mensagens</span>
+          <select id="historyLimitSelect">
+            <option value="100">100</option><option value="250">250</option>
+            <option value="500" selected>500</option><option value="1000">1000</option>
+          </select>
+        </label>
+        <button id="trimHistoryBtn" class="btn outline full" type="button">Limpar excedentes</button>
+        <p id="historyStorageStatus" class="status">Limite atual: 500 mensagens.</p>
+      </section>
+
       <section class="page-intro"><span>⚙️</span><div><h1>Configurações</h1><p>O servidor oficial já vem preenchido e pronto para uso.</p></div></section>
       <section class="card server-card">
         <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar os anúncios do Mercado Livre.</p></div></div>
@@ -386,10 +412,11 @@
   <script src="modules/features/affiliate-module.js?v=800"></script>
   <script src="modules/features/navigation-module.js?v=800"></script>
   <script src="modules/features/queue-transfer-module.js?v=800"></script>
-  <script src="app.js?v=850"></script>
-  <script src="modules/features/calibration-module.js?v=850"></script>
-  <script src="modules/features/current-offer-actions.js?v=850"></script>
+  <script src="app.js?v=870"></script>
+  <script src="modules/features/calibration-module.js?v=870"></script>
+  <script src="modules/features/current-offer-actions.js?v=870"></script>
 
-  <script src="modules/features/startup-module.js?v=850"></script>
+  <script src="modules/features/queue-governance-module.js?v=870"></script>
+  <script src="modules/features/startup-module.js?v=870"></script>
 </body>
 </html>

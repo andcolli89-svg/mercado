@@ -38,6 +38,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
     static final String KEY_GROUP_Y = "cal_group_y";
     static final String KEY_SEND_X = "cal_send_x";
     static final String KEY_SEND_Y = "cal_send_y";
+    static final String KEY_POST_SEND_LOCK_UNTIL = "post_send_lock_until";
 
     private static final String WA = "com.whatsapp";
     private static final String WAB = "com.whatsapp.w4b";
@@ -70,6 +71,10 @@ public class WhatsAppAutomationService extends AccessibilityService {
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         if (!prefs.getBoolean(KEY_ENABLED, false)) return;
+
+        long postSendLock = prefs.getLong(KEY_POST_SEND_LOCK_UNTIL, 0L);
+        if (postSendLock > System.currentTimeMillis()) return;
+        if (postSendLock > 0L) prefs.edit().remove(KEY_POST_SEND_LOCK_UNTIL).apply();
 
         String calibrationMode = prefs.getString(KEY_CALIBRATION_MODE, "");
         if (calibrationMode != null && !calibrationMode.trim().isEmpty()) {
@@ -218,35 +223,49 @@ public class WhatsAppAutomationService extends AccessibilityService {
                     return;
                 }
 
-                // Encerra o trabalho ANTES do toque final. Assim nenhum evento posterior
-                // consegue acionar o microfone/áudio dentro da conversa.
-                finishJob("send_triggered", "Toque final executado; aguardando próxima oferta.");
+                // SEGUNDO E ÚLTIMO CLIQUE. O trabalho é encerrado antes do gesto.
+                handler.removeCallbacksAndMessages(null);
+                long lockUntil = System.currentTimeMillis() + 5000L;
 
-                boolean dispatched = false;
+                JSONObject result = new JSONObject();
+                result.put("id", activeJobId);
+                result.put("status", "send_triggered");
+                result.put("message", "Envio acionado com dois cliques.");
+                result.put("at", System.currentTimeMillis());
+
+                getSharedPreferences(PREFS, MODE_PRIVATE)
+                        .edit()
+                        .remove(KEY_JOB)
+                        .putLong(KEY_POST_SEND_LOCK_UNTIL, lockUntil)
+                        .putString(KEY_LAST_RESULT, result.toString())
+                        .commit();
+
+                boolean clicked = false;
                 if (hasCalibration(KEY_SEND_X, KEY_SEND_Y)) {
-                    dispatched = tapCalibrated(KEY_SEND_X, KEY_SEND_Y, 170);
+                    clicked = tapCalibrated(KEY_SEND_X, KEY_SEND_Y, 160);
                 }
-
-                if (!dispatched) {
+                if (!clicked) {
                     AccessibilityNodeInfo send = findSendControl(root);
                     if (send != null) {
-                        dispatched = clickNodeOrParent(send);
-                        if (!dispatched) dispatched = clickNodeByCoordinates(send);
+                        clicked = clickNodeOrParent(send);
+                        if (!clicked) clicked = clickNodeByCoordinates(send);
                     }
                 }
+                if (!clicked) clicked = tapBottomRightOnce();
 
-                if (!dispatched) dispatched = tapBottomRightOnce();
-
-                if (dispatched) {
+                if (clicked) {
                     lastActionAt = System.currentTimeMillis();
                     Toast.makeText(this, "Oferta enviada. Voltando ao CbOfertas.", Toast.LENGTH_SHORT).show();
-                    handler.postDelayed(this::returnToCbOfertas, 1800L);
+                    handler.postDelayed(this::returnToCbOfertas, 1400L);
                 } else {
-                    failJob("Não foi possível tocar no botão final de envio.");
+                    getSharedPreferences(PREFS, MODE_PRIVATE)
+                            .edit()
+                            .remove(KEY_POST_SEND_LOCK_UNTIL)
+                            .apply();
+                    failJob("Não foi possível executar o clique final.");
                 }
                 return;
             }
-
 
             if ("verify".equals(stage)) {
                 if (!screenContains(root, group)) return;
