@@ -1,0 +1,11 @@
+CbOfertas V8.4.1 — correção de compilação
+
+Erro corrigido:
+cannot find symbol: class SharedPreferences
+location: class MainActivity.AndroidBridge
+
+Correção:
+- Adicionado import android.content.SharedPreferences;
+- Versão atualizada para 8.4.1 / 841.
+- Calibração por aparelho preservada.
+- Bloqueio contra clique no áudio preservado.
