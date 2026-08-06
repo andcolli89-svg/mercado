@@ -48,6 +48,8 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 | AccessibilityEvent.TYPE_VIEW_CLICKED;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
         info.notificationTimeout = 150;
+        info.flags |= AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+        info.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
         info.packageNames = new String[]{WA, WAB};
         setServiceInfo(info);
         Toast.makeText(this, "Piloto automático CbOfertas ativado.", Toast.LENGTH_SHORT).show();
@@ -123,6 +125,12 @@ public class WhatsAppAutomationService extends AccessibilityService {
                         return;
                     }
                 }
+                // A tela nova do WhatsApp mostra "1 selecionado" e uma seta preta
+                // circular no canto inferior direito, frequentemente sem ID ou descrição.
+                if (screenContainsAny(root, "1 selecionado", "selected")) {
+                    if (tapBottomRightAction(job, "send")) return;
+                }
+
                 // Algumas versões já entram na tela final sem botão intermediário.
                 if (screenContains(root, group) && hasSendControl(root)) {
                     updateStage(job, "send");
@@ -135,7 +143,11 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 // Trava principal: só envia se o nome exato do grupo estiver visível.
                 if (!screenContains(root, group)) return;
                 AccessibilityNodeInfo send = findSendControl(root);
-                if (send == null) return;
+                if (send == null) {
+                    // Reserva para o botão circular preto de envio.
+                    if (!testMode && tapBottomRightAction(job, "verify")) return;
+                    return;
+                }
                 if (testMode) {
                     finishJob("test_ready", "Modo teste: mensagem pronta, sem tocar em Enviar.");
                     Toast.makeText(this, "Modo teste: confira a mensagem e envie manualmente.", Toast.LENGTH_LONG).show();
@@ -309,6 +321,52 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 .addStroke(new GestureDescription.StrokeDescription(path, 0, 140))
                 .build();
         return dispatchGesture(gesture, null, null);
+    }
+
+    private boolean screenContainsAny(AccessibilityNodeInfo root, String... values) {
+        List<AccessibilityNodeInfo> all = new ArrayList<>();
+        collect(root, all);
+        for (AccessibilityNodeInfo node : all) {
+            String text = node.getText() == null ? "" : normalizeText(node.getText().toString());
+            String desc = node.getContentDescription() == null ? "" : normalizeText(node.getContentDescription().toString());
+            for (String value : values) {
+                String target = normalizeText(value);
+                if ((!text.isEmpty() && text.contains(target)) ||
+                        (!desc.isEmpty() && desc.contains(target))) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean tapBottomRightAction(JSONObject job, String nextStage) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+
+        Rect screen = new Rect();
+        root.getBoundsInScreen(screen);
+        if (screen.isEmpty()) return false;
+
+        // Centro aproximado do botão circular mostrado pelo WhatsApp.
+        float x = screen.right - Math.max(70f, screen.width() * 0.085f);
+        float y = screen.bottom - Math.max(95f, screen.height() * 0.085f);
+
+        Path path = new Path();
+        path.moveTo(x, y);
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 170))
+                .build();
+
+        return dispatchGesture(gesture, new GestureResultCallback() {
+            @Override public void onCompleted(GestureDescription gestureDescription) {
+                updateStage(job, nextStage);
+                lastActionAt = System.currentTimeMillis();
+                handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 1200L);
+            }
+
+            @Override public void onCancelled(GestureDescription gestureDescription) {
+                handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 800L);
+            }
+        }, null);
     }
 
     private void updateStage(JSONObject job, String stage) {

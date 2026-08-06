@@ -1,0 +1,13 @@
+CbOfertas V8.1 — Clique no grupo e seta preta
+
+Correções:
+- Habilitado android:canPerformGestures=true.
+- Ativadas flags de IDs e janelas interativas no serviço.
+- Toque por coordenadas agora pode funcionar de fato.
+- Detecção do estado “1 selecionado”.
+- Toque de reserva na seta circular preta do canto inferior direito.
+- Reserva também para o botão final de envio sem ID/descrição.
+
+Importante:
+Depois de instalar esta versão, desligue e ligue novamente o serviço
+Piloto Automático CbOfertas na Acessibilidade.
