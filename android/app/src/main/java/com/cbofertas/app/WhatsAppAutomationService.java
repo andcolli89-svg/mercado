@@ -437,22 +437,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
         }, null);
     }
 
-    private boolean screenContainsAny(AccessibilityNodeInfo root, String... values) {
-        List<AccessibilityNodeInfo> all = new ArrayList<>();
-        collect(root, all);
-        for (AccessibilityNodeInfo node : all) {
-            String text = node.getText() == null ? "" : normalizeText(node.getText().toString());
-            String desc = node.getContentDescription() == null ? "" : normalizeText(node.getContentDescription().toString());
-            for (String value : values) {
-                String target = normalizeText(value);
-                if ((!text.isEmpty() && text.contains(target)) ||
-                        (!desc.isEmpty() && desc.contains(target))) return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isConversationScreen(AccessibilityNodeInfo root, String group) {
+        private boolean isConversationScreen(AccessibilityNodeInfo root, String group) {
         if (!screenContains(root, group)) return false;
 
         // Indicadores comuns da conversa aberta.
