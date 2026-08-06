@@ -72,9 +72,27 @@ public class WhatsAppAutomationService extends AccessibilityService {
         if (!prefs.getBoolean(KEY_ENABLED, false)) return;
 
         String calibrationMode = prefs.getString(KEY_CALIBRATION_MODE, "");
-        if (calibrationMode != null && !calibrationMode.trim().isEmpty()
-                && event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-            if (captureCalibration(event, calibrationMode.trim())) return;
+        if (calibrationMode != null && !calibrationMode.trim().isEmpty()) {
+            String safeMode = calibrationMode.trim();
+
+            if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED
+                    || event.getEventType() == AccessibilityEvent.TYPE_VIEW_SELECTED) {
+                if (captureCalibration(event, safeMode)) return;
+            }
+
+            // Algumas versões do WhatsApp não entregam o clique da linha.
+            // Nesse caso, assim que aparecer "1 selecionado", localiza o item
+            // marcado/checkado na árvore e salva suas coordenadas.
+            if ("group".equals(safeMode)
+                    && (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                    || event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) {
+                AccessibilityNodeInfo root = getRootInActiveWindow();
+                if (root != null
+                        && screenContainsAny(root, "1 selecionado", "1 selected")
+                        && captureSelectedDestination(root)) {
+                    return;
+                }
+            }
         }
 
         String raw = prefs.getString(KEY_JOB, "");
@@ -387,6 +405,84 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 .addStroke(new GestureDescription.StrokeDescription(path, 0, 140))
                 .build();
         return dispatchGesture(gesture, null, null);
+    }
+
+    private boolean captureSelectedDestination(AccessibilityNodeInfo root) {
+        List<AccessibilityNodeInfo> all = new ArrayList<>();
+        collect(root, all);
+
+        AccessibilityNodeInfo selected = null;
+
+        for (AccessibilityNodeInfo node : all) {
+            if (node == null) continue;
+
+            boolean marked = node.isChecked() || node.isSelected();
+            String desc = node.getContentDescription() == null
+                    ? ""
+                    : normalizeText(node.getContentDescription().toString());
+
+            if (!marked && !(desc.contains("selecionado") || desc.contains("selected"))) {
+                continue;
+            }
+
+            Rect bounds = bestRowBounds(node);
+            if (bounds.isEmpty() || bounds.height() < 40) continue;
+
+            selected = node;
+            break;
+        }
+
+        if (selected == null) {
+            // Fallback: procura o pequeno check visual que aparece sobre o avatar.
+            for (AccessibilityNodeInfo node : all) {
+                if (node == null) continue;
+                Rect bounds = new Rect();
+                node.getBoundsInScreen(bounds);
+                if (bounds.isEmpty()) continue;
+
+                String desc = node.getContentDescription() == null
+                        ? ""
+                        : normalizeText(node.getContentDescription().toString());
+
+                if (desc.contains("check") || desc.contains("marcado")
+                        || desc.contains("selecionado") || desc.contains("selected")) {
+                    selected = node;
+                    break;
+                }
+            }
+        }
+
+        if (selected == null) return false;
+
+        Rect rowBounds = bestRowBounds(selected);
+        Rect screenBounds = new Rect();
+        root.getBoundsInScreen(screenBounds);
+
+        if (rowBounds.isEmpty() || screenBounds.isEmpty()) return false;
+
+        float x = (rowBounds.exactCenterX() - screenBounds.left)
+                / Math.max(1f, screenBounds.width());
+        float y = (rowBounds.exactCenterY() - screenBounds.top)
+                / Math.max(1f, screenBounds.height());
+
+        x = Math.max(0.02f, Math.min(0.98f, x));
+        y = Math.max(0.02f, Math.min(0.98f, y));
+
+        getSharedPreferences(PREFS, MODE_PRIVATE)
+                .edit()
+                .putFloat(KEY_GROUP_X, x)
+                .putFloat(KEY_GROUP_Y, y)
+                .remove(KEY_CALIBRATION_MODE)
+                .apply();
+
+        Toast.makeText(
+                this,
+                "Posição do grupo salva neste aparelho.",
+                Toast.LENGTH_LONG
+        ).show();
+
+        handler.postDelayed(this::returnToCbOfertas, 650L);
+        return true;
     }
 
     private boolean captureCalibration(AccessibilityEvent event, String mode) {
