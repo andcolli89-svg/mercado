@@ -1,0 +1,12 @@
+CbOfertas V8.7.2
+
+- Botão individual “Enviar agora” em cada oferta do Lote.
+- Envia foto + texto quando a imagem estiver disponível.
+- Envia somente texto quando não houver imagem.
+- Abre diretamente o WhatsApp Business.
+- Não remove a oferta do Lote ao abrir o compartilhamento.
+- Mensagens importadas ou coladas entram sempre como afiliado não confirmado.
+- Links aplicados pela biblioteca continuam não confirmados.
+- Somente “Usar link copiado” confirma manualmente o afiliado.
+- Registros antigos sem a origem use_copied_link são migrados para não confirmados.
+- Checkbox de seleção visível em cada card.

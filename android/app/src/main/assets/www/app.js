@@ -2490,7 +2490,7 @@ function syncV62AutomationResult(){try{const raw=window.Android?.getAutomationLa
 // ===== V6.3: Lote WhatsApp + fila embaralhada com afiliado obrigatório =====
 const V63_BATCH_KEY='cbofertas-v63-whatsapp-batch';
 function getV63Batch(){const data=safeJson(localStorage.getItem(V63_BATCH_KEY)||'[]',[]);return Array.isArray(data)?data:[];}
-function saveV63Batch(items){localStorage.setItem(V63_BATCH_KEY,JSON.stringify(Array.isArray(items)?items:[]));renderV63Batch();}
+function saveV63Batch(items){const safe=Array.isArray(items)?items:[];v63NormalizeAffiliateState(safe);localStorage.setItem(V63_BATCH_KEY,JSON.stringify(safe));renderV63Batch();}
 function v63NormalizeBlock(value=''){return String(value||'').replace(/\r/g,'').replace(/\n{3,}/g,'\n\n').trim();}
 function v63StripWhatsAppHeader(value=''){
  return String(value||'')
@@ -2513,7 +2513,7 @@ function v63ParseBatch(raw=''){
    let block=v63StripWhatsAppHeader(v63NormalizeBlock(text.slice(start,end)));
    const link=m[0].replace(/[),.;]+$/,'');
    if(!block.includes(link))block=`${block}\n${link}`.trim();
-   return {batchId:`batch-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,title:v63ExtractTitle(block),message:block,finalText:block,link,image:'',seller:'',coupon:'',status:isAffiliateLink(link)?'affiliate_ready':'blocked_link',affiliateConfirmed:isAffiliateLink(link),createdAt:Date.now()};
+   return {batchId:`batch-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,title:v63ExtractTitle(block),message:block,finalText:block,link,image:'',seller:'',coupon:'',status:'blocked_link',affiliateConfirmed:false,affiliateConfirmationSource:'',affiliateConfirmedAt:0,createdAt:Date.now()};
  });
 }
 function v63MergeBatch(existing=[],incoming=[]){
@@ -2534,13 +2534,31 @@ function v63ReplaceAffiliateLink(batchId,newLink){
  let message=String(item.message||item.finalText||'');
  if(previous&&message.includes(previous))message=message.split(previous).join(link);
  else message=message.replace(/https?:\/\/(?:[\w.-]+\.)?(?:meli\.la|mercadolivre\.com\.br|mercadolibre\.com)[^\s<>()]*/gi,link);
- item.link=link;item.message=message;item.finalText=message;item.affiliateConfirmed=true;item.status='affiliate_ready';
+ item.link=link;item.message=message;item.finalText=message;item.affiliateConfirmed=true;item.affiliateConfirmationSource='use_copied_link';item.affiliateConfirmedAt=Date.now();item.status='affiliate_ready';
  saveV63Batch(items);v6Status('batchStatus','Link afiliado atualizado neste anúncio.','success');
 }
 function v63AskAffiliateLink(batchId){
  const item=getV63Batch().find(x=>x.batchId===batchId);if(!item)return;
  const value=window.prompt('Cole o novo link afiliado deste anúncio:',item.link||'https://meli.la/');
  if(value!==null)v63ReplaceAffiliateLink(batchId,value);
+}
+function v63IsManuallyConfirmed(item){
+ return !!(item&&item.affiliateConfirmed===true&&item.affiliateConfirmationSource==='use_copied_link'&&isAffiliateLink(item.link));
+}
+function v63NormalizeAffiliateState(items=[]){
+ let changed=false;
+ items.forEach(item=>{
+  if(!v63IsManuallyConfirmed(item)){
+   if(item.affiliateConfirmed!==false||item.affiliateConfirmationSource||item.affiliateConfirmedAt){
+    item.affiliateConfirmed=false;
+    item.affiliateConfirmationSource='';
+    item.affiliateConfirmedAt=0;
+    if(item.status==='affiliate_ready')item.status='blocked_link';
+    changed=true;
+   }
+  }
+ });
+ return changed;
 }
 function v63BatchStats(items=getV63Batch()){return{total:items.length,ready:items.filter(x=>isAffiliateLink(x.link)).length,blocked:items.filter(x=>!isAffiliateLink(x.link)).length,photos:items.filter(x=>Boolean(x.image)).length};}
 function v63OpenExternal(value=''){
@@ -2643,13 +2661,14 @@ async function v63FindPhoto(item){
  return false;
 }
 function renderV63Batch(){
- const items=getV63Batch(),stats=v63BatchStats(items),list=v6Node('batchItemsList');
- if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${stats.ready} afiliado(s) pronto(s) • ${stats.blocked} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
- if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${stats.ready} prontos`;
+ const items=getV63Batch();v63NormalizeAffiliateState(items);
+ const stats=v63BatchStats(items),list=v6Node('batchItemsList');
+ if(v6Node('batchSummary'))v6Node('batchSummary').textContent=items.length?`${stats.total} anúncio(s) • ${items.filter(v63IsManuallyConfirmed).length} afiliado(s) confirmado(s) • ${items.filter(x=>!v63IsManuallyConfirmed(x)).length} bloqueado(s) • ${stats.photos} com foto`:'Nenhum lote separado.';
+ if(v6Node('batchReadyBadge'))v6Node('batchReadyBadge').textContent=`${items.filter(v63IsManuallyConfirmed).length} prontos`;
  if(list)list.innerHTML=items.length?items.map((x,i)=>{
-  const copied=Number(x.copiedAt||0)>0;
+  const copied=Number(x.copiedAt||0)>0,confirmed=v63IsManuallyConfirmed(x);
   const copiedLabel=copied?`✅ Copiado às ${new Date(x.copiedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${Number(x.copyCount||0)>1?` • ${x.copyCount} vezes`:''}`:'';
-  return `<article class="batch-item ${isAffiliateLink(x.link)?'ready':'blocked'} ${copied?'batch-copied':''}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" alt="Foto de ${escapeHtml(x.title||'oferta')}">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${isAffiliateLink(x.link)?'✅ Afiliado confirmado':'⛔ Bloqueado: link afiliado ausente'}${x.image?' • foto pronta':' • sem foto'}</small>${copied?`<strong class="batch-copied-badge">${escapeHtml(copiedLabel)}</strong>`:''}<a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button class="batch-copy-ad" type="button" data-batch-copy-ad="${escapeHtml(x.batchId)}">${copied?'📋 Copiar novamente':'📋 Copiar anúncio'}</button>${copied?`<button type="button" data-batch-unmark="${escapeHtml(x.batchId)}">↩ Desmarcar</button>`:''}<button type="button" data-batch-copy="${escapeHtml(x.batchId)}">🔗 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">💰 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button><button class="danger" type="button" data-batch-delete="${escapeHtml(x.batchId)}">🗑 Excluir</button></div></div></article>`;
+  return `<article class="batch-item ${confirmed?'ready':'blocked'} ${copied?'batch-copied':''}" data-batch-id="${escapeHtml(x.batchId)}"><input class="batch-select-checkbox" type="checkbox" data-batch-select="${escapeHtml(x.batchId)}" aria-label="Selecionar ${escapeHtml(x.title||'oferta')}"><button class="batch-thumb" type="button" data-batch-photo-open="${escapeHtml(x.batchId)}" ${x.image?'':'disabled'}>${x.image?`<img src="${escapeHtml(x.image)}" alt="Foto de ${escapeHtml(x.title||'oferta')}">`:'<span>🛍️</span>'}</button><div class="batch-item-main"><b>${i+1}. ${escapeHtml(x.title||'Oferta')}</b><small>${confirmed?'✅ Afiliado confirmado manualmente':'⛔ Afiliado não confirmado'}${x.image?' • foto pronta':' • sem foto'}</small>${copied?`<strong class="batch-copied-badge">${escapeHtml(copiedLabel)}</strong>`:''}<a class="batch-link" href="${escapeHtml(x.link||'#')}" data-batch-open-link="${escapeHtml(x.batchId)}">${escapeHtml(x.link||'Sem link')}</a><div class="batch-actions"><button class="batch-send-now" type="button" data-batch-send-now="${escapeHtml(x.batchId)}">📲 Enviar agora${x.image?' com foto':''}</button><button class="batch-copy-ad" type="button" data-batch-copy-ad="${escapeHtml(x.batchId)}">${copied?'📋 Copiar novamente':'📋 Copiar anúncio'}</button>${copied?`<button type="button" data-batch-unmark="${escapeHtml(x.batchId)}">↩ Desmarcar</button>`:''}<button type="button" data-batch-copy="${escapeHtml(x.batchId)}">🔗 Copiar link</button><button type="button" data-batch-generate="${escapeHtml(x.batchId)}">💰 Gerar link no ML</button><button type="button" data-batch-use-copy="${escapeHtml(x.batchId)}">✅ Usar link copiado</button><button type="button" data-batch-photo="${escapeHtml(x.batchId)}">🖼 Buscar foto</button><button class="danger" type="button" data-batch-delete="${escapeHtml(x.batchId)}">🗑 Excluir</button></div></div></article>`;
  }).join(''):'<div class="empty">Cole anúncios acima e toque em Adicionar anúncios ao lote.</div>';
 }
 
@@ -2666,7 +2685,7 @@ async function v63PrepareOnePhoto(batchId){
 }
 function applyV63SavedAffiliates(){
  const items=getV63Batch();let applied=0;
- items.forEach(item=>{const saved=affiliateFor(item);if(saved&&isAffiliateLink(saved)&&item.link!==saved){const old=item.link;item.link=saved;item.affiliateConfirmed=true;item.status='affiliate_ready';item.message=String(item.message||'').split(old).join(saved);item.finalText=item.message;applied++;}});
+ items.forEach(item=>{const saved=affiliateFor(item);if(saved&&isAffiliateLink(saved)&&item.link!==saved){const old=item.link;item.link=saved;item.affiliateConfirmed=false;item.affiliateConfirmationSource='';item.affiliateConfirmedAt=0;item.status='blocked_link';item.message=String(item.message||'').split(old).join(saved);item.finalText=item.message;applied++;}});
  saveV63Batch(items);v6Status('batchStatus',applied?`${applied} link(s) afiliado(s) aplicado(s) pela biblioteca.`:'Nenhum afiliado salvo compatível foi encontrado.',applied?'success':'error');
 }
 function v63SmartShuffle(items){
@@ -2679,7 +2698,7 @@ function v63SmartShuffle(items){
  return result;
 }
 function sendV63BatchToPilot(){
- const all=getV63Batch(),eligible=all.filter(x=>isAffiliateLink(String(x.link||''))),blocked=all.length-eligible.length;
+ const all=getV63Batch(),eligible=all.filter(v63IsManuallyConfirmed),blocked=all.length-eligible.length;
  if(!eligible.length)return v6Status('batchPilotStatus',`Nenhum anúncio enviado: ${blocked||all.length} item(ns) sem link afiliado confirmado.`, 'error');
  const cfg=saveV6Config(),shuffled=v63SmartShuffle(eligible).slice(0,cfg.limit),today=new Date(),[sh,sm]=cfg.start.split(':').map(Number);
  let cursor=new Date(today.getFullYear(),today.getMonth(),today.getDate()+1,sh,sm,0,0),inBatch=0;
@@ -2687,13 +2706,29 @@ function sendV63BatchToPilot(){
  localStorage.setItem(V6_QUEUE_KEY,JSON.stringify(queue));renderV6Queue();renderV62Report();showPage('automation');
  v6Status('v6QueueStatus',`${queue.length} anúncio(s) afiliado(s) enviados ao Piloto em ordem embaralhada.${blocked?` ${blocked} bloqueado(s) sem afiliado.`:''}`,'success');
 }
+function v63SendNow(batchId){
+ const items=getV63Batch(),item=items.find(x=>x.batchId===batchId);
+ if(!item)return;
+ if(!v63IsManuallyConfirmed(item))return v6Status('batchStatus','Use primeiro o botão “Usar link copiado” para confirmar seu link afiliado.','error');
+ const text=String(item.message||item.finalText||'').trim();
+ if(!text)return v6Status('batchStatus','Esta oferta não possui texto para enviar.','error');
+ if(!window.Android||typeof Android.shareSavedMessagesSeparately!=='function')return v6Status('batchStatus','O envio direto está disponível apenas no aplicativo Android.','error');
+ try{
+  Android.shareSavedMessagesSeparately(JSON.stringify([{text,image:String(item.image||'')}]),true);
+  v6Status('batchStatus',item.image?'WhatsApp Business aberto com foto e texto.':'WhatsApp Business aberto com o texto da oferta.','success');
+ }catch(e){
+  v6Status('batchStatus',e.message||'Não foi possível abrir o WhatsApp Business.','error');
+ }
+}
 function initV63Batch(){
+ const migrated=getV63Batch();if(v63NormalizeAffiliateState(migrated))localStorage.setItem(V63_BATCH_KEY,JSON.stringify(migrated));
  v6Node('showBatchPageBtn')?.addEventListener('click',()=>showPage('batch'));
  v6Node('batchSeparateBtn')?.addEventListener('click',()=>{const incoming=v63ParseBatch(v6Node('batchInput')?.value||'');const before=getV63Batch();const items=v63MergeBatch(before,incoming);saveV63Batch(items);const added=items.length-before.length;if(added&&v6Node('batchInput'))v6Node('batchInput').value='';v6Status('batchStatus',added?`${added} anúncio(s) adicionado(s). O lote anterior foi preservado.`:(incoming.length?'Esses links já estavam no lote.':'Nenhum link de anúncio foi encontrado.'),added?'success':'error');});
  v6Node('batchPrepareBtn')?.addEventListener('click',prepareV63BatchPhotos);
  v6Node('batchApplyAffiliateBtn')?.addEventListener('click',applyV63SavedAffiliates);
  v6Node('batchSendPilotBtn')?.addEventListener('click',sendV63BatchToPilot);
  v6Node('batchItemsList')?.addEventListener('click',event=>{
+  const sendNow=event.target.closest('[data-batch-send-now]');if(sendNow){v63SendNow(sendNow.dataset.batchSendNow);return;}
   const open=event.target.closest('[data-batch-open-link]');if(open){event.preventDefault();const item=getV63Batch().find(x=>x.batchId===open.dataset.batchOpenLink);if(item)v63OpenExternal(item.link);return;}
   const copyAd=event.target.closest('[data-batch-copy-ad]');if(copyAd){v63CopyAdvertisement(copyAd.dataset.batchCopyAd);return;}
   const unmark=event.target.closest('[data-batch-unmark]');if(unmark){v63UnmarkCopied(unmark.dataset.batchUnmark);return;}

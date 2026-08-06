@@ -72,7 +72,7 @@
       const items=selected(); if(!items.length)throw new Error('Selecione pelo menos uma mensagem.');
       requireConfirmed(items);
       if(!global.Android?.shareMessagesSeparately)throw new Error('Função disponível apenas no aplicativo Android.');
-      global.Android.shareMessagesSeparately(JSON.stringify(items.map(i=>({
+      global.Android.shareSavedMessagesSeparately(JSON.stringify(items.map(i=>({
         text:i.message||i.finalText||i.text||'', image:i.image||i.imageUrl||''
       }))),true);
       items.forEach(i=>saveHistory(i,{sentMode:'manual_batch'}));
@@ -103,9 +103,11 @@
     const first=read(QUEUE).find(i=>i.status==='pending'||!i.status);if(!first)return;
     if(!confirmed(first)){const n=byId('automationStatus');if(n)n.textContent='Primeira oferta sem afiliado confirmado.';return}
     const cfg=parse(localStorage.getItem(CONFIG)||'{}',{});
-    global.Android?.scheduleAutomaticMessage?.(
-      idOf(first),String(first.image||first.imageUrl||''),String(first.message||first.finalText||first.text||''),
-      String(cfg.group||''),true,false,Date.now()+500
+    global.Android?.testAutomaticShare?.(
+      String(first.image||first.imageUrl||''),
+      String(first.message||first.finalText||first.text||''),
+      String(cfg.group||window.CB_DEFAULT_GROUP||''),
+      false
     );
   }
   function wrapAffiliate(){
@@ -132,10 +134,43 @@
     if(e.target?.id==='historyLimitSelect'){localStorage.setItem(LIMIT,e.target.value);trim()}
     if(e.target?.id==='automationEnabledCheck'&&e.target.checked)setTimeout(firstSend,300);
   });
+  function enforceStrictAffiliateState(){
+    const list=read(BATCH);
+    let changed=false;
+
+    for(const item of list){
+      const validSource=item?.affiliateConfirmationSource==='use_copied_link';
+      if(!validSource && (item.affiliateConfirmed!==false || item.affiliateConfirmedAt)){
+        item.affiliateConfirmed=false;
+        item.affiliateConfirmedAt=0;
+        item.affiliateConfirmationSource='';
+        changed=true;
+      }
+    }
+
+    if(changed){
+      global.saveV63Batch?.(list);
+      if(!global.saveV63Batch)write(BATCH,list);
+    }
+
+    document.querySelectorAll(
+      '[data-affiliate-confirmed], input[name="affiliateConfirmed"], .affiliate-confirmed-checkbox'
+    ).forEach((checkbox,index)=>{
+      const item=list[index];
+      checkbox.checked=Boolean(
+        item?.affiliateConfirmed===true &&
+        item?.affiliateConfirmationSource==='use_copied_link'
+      );
+      checkbox.disabled=true;
+      checkbox.title='Confirmado somente pelo botão Usar link copiado';
+    });
+  }
+
   function init(){
+    enforceStrictAffiliateState();
     const sel=byId('historyLimitSelect');if(sel)sel.value=String(historyLimit());
     trim();ensureChecks();wrapAffiliate();processResult();
-    setInterval(()=>{processResult();ensureChecks();wrapAffiliate()},1500);
+    setInterval(()=>{processResult();ensureChecks();wrapAffiliate();enforceStrictAffiliateState()},900);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   global.CbQueueGovernance={stripCoupon,saveHistory,processResult};

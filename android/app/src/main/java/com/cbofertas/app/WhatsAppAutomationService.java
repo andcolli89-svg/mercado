@@ -131,52 +131,55 @@ public class WhatsAppAutomationService extends AccessibilityService {
             if (root == null) return;
 
             if ("pick_group".equals(stage)) {
-                // Só avança quando o próprio WhatsApp confirmar visualmente a seleção.
+                // Depois do primeiro toque, apenas aguarda a confirmação visual.
+                // Nunca repete o clique no grupo durante o mesmo trabalho.
                 if (screenContainsAny(root, "1 selecionado", "1 selected")) {
-                    job.put("pickAttempts", 0);
-                    job.put("pickMisses", 0);
                     updateStage(job, "confirm_destination");
-                    handler.postDelayed(this::processCurrentScreen, 350L);
+                    handler.postDelayed(this::processCurrentScreen, 300L);
                     return;
                 }
 
+                boolean tapIssued = job.optBoolean("groupTapIssued", false);
+                if (tapIssued) {
+                    int checks = job.optInt("groupSelectionChecks", 0) + 1;
+                    job.put("groupSelectionChecks", checks);
+                    saveJob(job);
+
+                    if (checks < 12) {
+                        handler.postDelayed(this::processCurrentScreen, 450L);
+                    } else {
+                        failJob("O primeiro clique foi executado, mas o WhatsApp não confirmou o grupo.");
+                    }
+                    return;
+                }
+
+                // Marca ANTES do gesto para impedir repetição por eventos simultâneos.
+                job.put("groupTapIssued", true);
+                job.put("groupSelectionChecks", 0);
+                saveJobCommit(job);
+
+                boolean clicked = false;
+
                 if (hasCalibration(KEY_GROUP_X, KEY_GROUP_Y)
                         && screenContainsAny(root, "Enviar para", "Send to")) {
-                    int attempts = job.optInt("calibratedPickAttempts", 0) + 1;
-                    job.put("calibratedPickAttempts", attempts);
-                    saveJob(job);
-                    if (tapCalibrated(KEY_GROUP_X, KEY_GROUP_Y, 160)) {
-                        lastActionAt = System.currentTimeMillis();
-                        handler.postDelayed(this::processCurrentScreen, 950L);
-                        return;
+                    clicked = tapCalibrated(KEY_GROUP_X, KEY_GROUP_Y, 160);
+                }
+
+                if (!clicked) {
+                    AccessibilityNodeInfo groupNode = findDestinationNode(root, group);
+                    if (groupNode != null) {
+                        clicked = clickNodeOrParent(groupNode);
+                        if (!clicked) clicked = clickNodeByCoordinates(groupNode);
                     }
                 }
 
-                AccessibilityNodeInfo groupNode = findDestinationNode(root, group);
-                if (groupNode != null) {
-                    int attempts = job.optInt("pickAttempts", 0) + 1;
-                    job.put("pickAttempts", attempts);
-                    saveJob(job);
-
-                    boolean clicked = clickNodeOrParent(groupNode);
-                    if (clicked) {
-                        lastActionAt = System.currentTimeMillis();
-                        // Continua em pick_group até aparecer "1 selecionado".
-                        handler.postDelayed(this::processCurrentScreen, 900L);
-                        return;
-                    }
-
-                    if (clickDestinationByCoordinates(groupNode, job)) return;
-                }
-
-                int misses = job.optInt("pickMisses", 0) + 1;
-                job.put("pickMisses", misses);
-                saveJob(job);
-
-                if (misses < 15) {
-                    handler.postDelayed(this::processCurrentScreen, 700L);
+                if (clicked) {
+                    lastActionAt = System.currentTimeMillis();
+                    handler.postDelayed(this::processCurrentScreen, 650L);
                 } else {
-                    failJob("O WhatsApp não confirmou a seleção do grupo.");
+                    job.put("groupTapIssued", false);
+                    saveJobCommit(job);
+                    failJob("Não foi possível executar o primeiro clique no grupo.");
                 }
                 return;
             }
@@ -267,23 +270,6 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 return;
             }
 
-            if ("verify".equals(stage)) {
-                if (!screenContains(root, group)) return;
-                AccessibilityNodeInfo retry = findByDescriptions(root, "Tentar novamente", "Retry", "Não enviada", "Falha ao enviar");
-                if (retry != null) {
-                    int attempts = job.optInt("attempts", 0) + 1;
-                    job.put("attempts", attempts);
-                    if (attempts < 3 && clickNodeOrParent(retry)) {
-                        updateStage(job, "verify");
-                        handler.postDelayed(this::processCurrentScreen, 2500L);
-                        return;
-                    }
-                    failJob("O WhatsApp não confirmou o envio após " + attempts + " tentativa(s).");
-                    return;
-                }
-                finishJob("sent", "Mensagem apresentada no grupo sem erro visível após o envio.");
-                Toast.makeText(this, "Oferta processada para " + group + ".", Toast.LENGTH_SHORT).show();
-            }
         } catch (Exception error) {
             failJob("Falha na automação: " + (error.getMessage() == null ? "erro desconhecido" : error.getMessage()));
         }
