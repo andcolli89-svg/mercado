@@ -6,6 +6,7 @@ import android.graphics.Rect;
 import android.graphics.Path;
 import android.accessibilityservice.GestureDescription;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
@@ -45,7 +46,8 @@ public class WhatsAppAutomationService extends AccessibilityService {
         AccessibilityServiceInfo info = getServiceInfo();
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 | AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
-                | AccessibilityEvent.TYPE_VIEW_CLICKED;
+                | AccessibilityEvent.TYPE_VIEW_CLICKED
+                | AccessibilityEvent.TYPE_VIEW_SELECTED;
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
         info.notificationTimeout = 150;
         info.flags |= AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
@@ -93,26 +95,51 @@ public class WhatsAppAutomationService extends AccessibilityService {
             if (root == null) return;
 
             if ("pick_group".equals(stage)) {
+                // Só avança quando o próprio WhatsApp confirmar visualmente a seleção.
+                if (screenContainsAny(root, "1 selecionado", "1 selected")) {
+                    job.put("pickAttempts", 0);
+                    job.put("pickMisses", 0);
+                    updateStage(job, "confirm_destination");
+                    handler.postDelayed(this::processCurrentScreen, 350L);
+                    return;
+                }
+
                 AccessibilityNodeInfo groupNode = findDestinationNode(root, group);
                 if (groupNode != null) {
+                    int attempts = job.optInt("pickAttempts", 0) + 1;
+                    job.put("pickAttempts", attempts);
+                    saveJob(job);
+
                     boolean clicked = clickNodeOrParent(groupNode);
                     if (clicked) {
-                        updateStage(job, "confirm_destination");
                         lastActionAt = System.currentTimeMillis();
-                        handler.postDelayed(this::processCurrentScreen, 1200L);
+                        // Continua em pick_group até aparecer "1 selecionado".
+                        handler.postDelayed(this::processCurrentScreen, 900L);
                         return;
                     }
+
                     if (clickDestinationByCoordinates(groupNode, job)) return;
                 }
-                // Em algumas versões o compartilhamento abre direto em uma conversa já escolhida.
-                if (screenContains(root, group) && hasSendControl(root)) {
-                    updateStage(job, "send");
-                    handler.postDelayed(this::processCurrentScreen, 500L);
+
+                int misses = job.optInt("pickMisses", 0) + 1;
+                job.put("pickMisses", misses);
+                saveJob(job);
+
+                if (misses < 15) {
+                    handler.postDelayed(this::processCurrentScreen, 700L);
+                } else {
+                    failJob("O WhatsApp não confirmou a seleção do grupo.");
                 }
                 return;
             }
 
             if ("confirm_destination".equals(stage)) {
+                if (!screenContainsAny(root, "1 selecionado", "1 selected")) {
+                    updateStage(job, "pick_group");
+                    handler.postDelayed(this::processCurrentScreen, 450L);
+                    return;
+                }
+
                 AccessibilityNodeInfo next = findByDescriptions(root,
                         "Avançar", "Próximo", "Next", "Enviar para", "Continuar");
                 if (next != null) {
@@ -140,25 +167,66 @@ public class WhatsAppAutomationService extends AccessibilityService {
             }
 
             if ("send".equals(stage)) {
-                // Trava principal: só envia se o nome exato do grupo estiver visível.
                 if (!screenContains(root, group)) return;
-                AccessibilityNodeInfo send = findSendControl(root);
-                if (send == null) {
-                    // Reserva para o botão circular preto de envio.
-                    if (!testMode && tapBottomRightAction(job, "verify")) return;
-                    return;
-                }
+
                 if (testMode) {
                     finishJob("test_ready", "Modo teste: mensagem pronta, sem tocar em Enviar.");
                     Toast.makeText(this, "Modo teste: confira a mensagem e envie manualmente.", Toast.LENGTH_LONG).show();
                     return;
                 }
-                boolean sentClick = clickNodeOrParent(send);
-                if (!sentClick) sentClick = clickNodeByCoordinates(send);
-                if (sentClick) {
-                    lastActionAt = System.currentTimeMillis();
-                    updateStage(job, "verify");
-                    handler.postDelayed(this::processCurrentScreen, 2500L);
+
+                // Trava contra clique duplo: muda e salva a etapa ANTES do toque.
+                if (job.optBoolean("finalTapIssued", false)) {
+                    updateStage(job, "await_chat");
+                    handler.postDelayed(this::processCurrentScreen, 800L);
+                    return;
+                }
+
+                job.put("finalTapIssued", true);
+                job.put("stage", "await_chat");
+                saveJobCommit(job);
+                lastActionAt = System.currentTimeMillis();
+
+                AccessibilityNodeInfo send = findSendControl(root);
+                boolean dispatched;
+                if (send != null) {
+                    dispatched = clickNodeOrParent(send);
+                    if (!dispatched) dispatched = clickNodeByCoordinates(send);
+                } else {
+                    // Na tela de prévia o WhatsApp usa uma seta preta sem texto/ID.
+                    dispatched = tapBottomRightOnce();
+                }
+
+                if (!dispatched) {
+                    job.put("finalTapIssued", false);
+                    job.put("stage", "send");
+                    saveJobCommit(job);
+                    handler.postDelayed(this::processCurrentScreen, 800L);
+                }
+                return;
+            }
+
+            if ("await_chat".equals(stage)) {
+                // Nunca toca no canto inferior direito nesta etapa:
+                // dentro da conversa aquele botão é o microfone/áudio.
+                if (isConversationScreen(root, group)) {
+                    finishJob("sent", "Mensagem enviada e conversa aberta sem erro visível.");
+                    Toast.makeText(this, "Oferta enviada para " + group + ".", Toast.LENGTH_SHORT).show();
+                    handler.postDelayed(this::returnToCbOfertas, 650L);
+                    return;
+                }
+
+                int checks = job.optInt("chatChecks", 0) + 1;
+                job.put("chatChecks", checks);
+                saveJob(job);
+
+                if (checks < 18) {
+                    handler.postDelayed(this::processCurrentScreen, 650L);
+                } else {
+                    // Mesmo sem identificar todos os elementos em versões antigas,
+                    // encerra para impedir qualquer segundo clique no botão de áudio.
+                    finishJob("sent_unverified", "O envio foi acionado; confirmação visual não disponível.");
+                    handler.postDelayed(this::returnToCbOfertas, 650L);
                 }
                 return;
             }
@@ -286,9 +354,9 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 .build();
         return dispatchGesture(gesture, new GestureResultCallback() {
             @Override public void onCompleted(GestureDescription gestureDescription) {
-                updateStage(job, "confirm_destination");
+                // Permanece em pick_group até o WhatsApp mostrar "1 selecionado".
                 lastActionAt = System.currentTimeMillis();
-                handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 1200L);
+                handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 900L);
             }
             @Override public void onCancelled(GestureDescription gestureDescription) {
                 handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 800L);
@@ -367,6 +435,97 @@ public class WhatsAppAutomationService extends AccessibilityService {
                 handler.postDelayed(WhatsAppAutomationService.this::processCurrentScreen, 800L);
             }
         }, null);
+    }
+
+    private boolean screenContainsAny(AccessibilityNodeInfo root, String... values) {
+        List<AccessibilityNodeInfo> all = new ArrayList<>();
+        collect(root, all);
+        for (AccessibilityNodeInfo node : all) {
+            String text = node.getText() == null ? "" : normalizeText(node.getText().toString());
+            String desc = node.getContentDescription() == null ? "" : normalizeText(node.getContentDescription().toString());
+            for (String value : values) {
+                String target = normalizeText(value);
+                if ((!text.isEmpty() && text.contains(target)) ||
+                        (!desc.isEmpty() && desc.contains(target))) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isConversationScreen(AccessibilityNodeInfo root, String group) {
+        if (!screenContains(root, group)) return false;
+
+        // Indicadores comuns da conversa aberta.
+        if (screenContainsAny(root, "Mensagem", "Digite uma mensagem", "Message", "Type a message")) {
+            return true;
+        }
+
+        String[] ids = {
+                "com.whatsapp:id/entry",
+                "com.whatsapp.w4b:id/entry",
+                "com.whatsapp:id/conversation_entry_action_button",
+                "com.whatsapp.w4b:id/conversation_entry_action_button"
+        };
+
+        for (String id : ids) {
+            try {
+                List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByViewId(id);
+                if (nodes != null && !nodes.isEmpty()) return true;
+            } catch (Exception ignored) { }
+        }
+
+        // A tela de seleção não mostra mais "1 selecionado".
+        return !screenContainsAny(root, "1 selecionado", "1 selected", "Enviar para");
+    }
+
+    private boolean tapBottomRightOnce() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+
+        Rect screen = new Rect();
+        root.getBoundsInScreen(screen);
+        if (screen.isEmpty()) return false;
+
+        float x = screen.right - Math.max(70f, screen.width() * 0.085f);
+        float y = screen.bottom - Math.max(105f, screen.height() * 0.09f);
+
+        Path path = new Path();
+        path.moveTo(x, y);
+
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 170))
+                .build();
+
+        return dispatchGesture(gesture, null, null);
+    }
+
+    private void saveJob(JSONObject job) {
+        try {
+            getSharedPreferences(PREFS, MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_JOB, job.toString())
+                    .apply();
+        } catch (Exception ignored) { }
+    }
+
+    private void saveJobCommit(JSONObject job) {
+        try {
+            getSharedPreferences(PREFS, MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_JOB, job.toString())
+                    .commit();
+        } catch (Exception ignored) { }
+    }
+
+    private void returnToCbOfertas() {
+        try {
+            Intent launch = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (launch == null) return;
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(launch);
+        } catch (Exception ignored) { }
     }
 
     private void updateStage(JSONObject job, String stage) {
