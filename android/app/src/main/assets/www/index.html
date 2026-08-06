@@ -352,7 +352,19 @@
         <label class="check-option radar-setting-toggle"><input id="settingsRadarAuto" type="checkbox" checked><span>Atualizar automaticamente ao abrir</span></label>
         <small class="setting-help">As ofertas repetidas são reconhecidas pelo link e podem ficar ocultas depois de usadas.</small>
       </section>
-      <section class="card about-card"><b>CbOfertas V8.0</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
+
+      <section class="card setting-card">
+        <div class="setting-title"><span>🎯</span><div><h2>Calibração do Piloto</h2><p>Salve posições diferentes em cada celular para o grupo e a seta de envio.</p></div></div>
+        <div class="actions two-buttons">
+          <button id="calibrateGroupBtn" class="btn secondary" type="button">Calibrar grupo</button>
+          <button id="calibrateSendBtn" class="btn secondary" type="button">Calibrar seta</button>
+        </div>
+        <button id="clearCalibrationBtn" class="btn outline full" type="button">Apagar calibração</button>
+        <p id="calibrationStatus" class="status">Verificando calibração...</p>
+        <small class="setting-help">Depois de tocar em calibrar, vá ao WhatsApp Business e toque uma vez no item indicado. A posição fica salva apenas neste aparelho.</small>
+      </section>
+
+      <section class="card about-card"><b>CbOfertas V8.4</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
     </section>
   </main>
 
@@ -371,7 +383,8 @@
   <script src="modules/features/affiliate-module.js?v=800"></script>
   <script src="modules/features/navigation-module.js?v=800"></script>
   <script src="modules/features/queue-transfer-module.js?v=800"></script>
-  <script src="app.js?v=800"></script>
-  <script src="modules/features/startup-module.js?v=800"></script>
+  <script src="app.js?v=840"></script>
+  <script src="modules/features/calibration-module.js?v=840"></script>
+  <script src="modules/features/startup-module.js?v=840"></script>
 </body>
 </html>

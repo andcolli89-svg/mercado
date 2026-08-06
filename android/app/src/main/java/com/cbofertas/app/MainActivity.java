@@ -750,6 +750,50 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void startAutomationCalibration(String mode) {
+            String safeMode = "send".equals(mode) ? "send" : "group";
+            getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE)
+                    .edit()
+                    .putString(WhatsAppAutomationService.KEY_CALIBRATION_MODE, safeMode)
+                    .apply();
+            runOnUiThread(() -> Toast.makeText(
+                    MainActivity.this,
+                    "Abra o WhatsApp Business e toque uma vez no " +
+                            ("send".equals(safeMode) ? "botão de envio." : "grupo desejado."),
+                    Toast.LENGTH_LONG
+            ).show());
+        }
+
+        @JavascriptInterface
+        public String getAutomationCalibration() {
+            SharedPreferences prefs = getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE);
+            try {
+                JSONObject result = new JSONObject();
+                result.put("group", prefs.contains(WhatsAppAutomationService.KEY_GROUP_X)
+                        && prefs.contains(WhatsAppAutomationService.KEY_GROUP_Y));
+                result.put("send", prefs.contains(WhatsAppAutomationService.KEY_SEND_X)
+                        && prefs.contains(WhatsAppAutomationService.KEY_SEND_Y));
+                result.put("mode", prefs.getString(WhatsAppAutomationService.KEY_CALIBRATION_MODE, ""));
+                return result.toString();
+            } catch (Exception ignored) {
+                return "{}";
+            }
+        }
+
+        @JavascriptInterface
+        public void clearAutomationCalibration() {
+            getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE)
+                    .edit()
+                    .remove(WhatsAppAutomationService.KEY_CALIBRATION_MODE)
+                    .remove(WhatsAppAutomationService.KEY_GROUP_X)
+                    .remove(WhatsAppAutomationService.KEY_GROUP_Y)
+                    .remove(WhatsAppAutomationService.KEY_SEND_X)
+                    .remove(WhatsAppAutomationService.KEY_SEND_Y)
+                    .apply();
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Calibração apagada.", Toast.LENGTH_SHORT).show());
+        }
+
+        @JavascriptInterface
         public boolean isAutomationServiceEnabled() {
             return WhatsAppAutomationService.isEnabled(MainActivity.this);
         }

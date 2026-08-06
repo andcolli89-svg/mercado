@@ -7,8 +7,8 @@ android {
         applicationId 'com.cbofertas.app'
         minSdk 24
         targetSdk 35
-        versionCode 831
-        versionName '8.3.1'
+        versionCode 840
+        versionName '8.4.0'
     }
 }
 

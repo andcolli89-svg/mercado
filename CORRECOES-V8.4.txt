@@ -1,0 +1,10 @@
+CbOfertas V8.4 — calibração por aparelho e bloqueio definitivo do áudio
+
+- Cada celular salva suas próprias coordenadas do grupo e da seta.
+- Botões de calibração adicionados em Configurações.
+- A calibração é capturada pelo próximo toque manual no WhatsApp Business.
+- O celular antigo usa a posição calibrada do grupo.
+- A seta final usa a posição calibrada quando disponível.
+- O trabalho é apagado ANTES do toque final.
+- Nenhum evento posterior pode clicar no microfone/áudio.
+- O CbOfertas volta à frente cerca de 1,8 segundo após o toque final.

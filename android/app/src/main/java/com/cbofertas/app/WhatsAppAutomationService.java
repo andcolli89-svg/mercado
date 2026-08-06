@@ -33,6 +33,11 @@ public class WhatsAppAutomationService extends AccessibilityService {
     static final String KEY_TEST_MODE = "test_mode";
     static final String KEY_JOB = "active_job";
     static final String KEY_LAST_RESULT = "last_result";
+    static final String KEY_CALIBRATION_MODE = "calibration_mode";
+    static final String KEY_GROUP_X = "cal_group_x";
+    static final String KEY_GROUP_Y = "cal_group_y";
+    static final String KEY_SEND_X = "cal_send_x";
+    static final String KEY_SEND_Y = "cal_send_y";
 
     private static final String WA = "com.whatsapp";
     private static final String WAB = "com.whatsapp.w4b";
@@ -65,6 +70,13 @@ public class WhatsAppAutomationService extends AccessibilityService {
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         if (!prefs.getBoolean(KEY_ENABLED, false)) return;
+
+        String calibrationMode = prefs.getString(KEY_CALIBRATION_MODE, "");
+        if (calibrationMode != null && !calibrationMode.trim().isEmpty()
+                && event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            if (captureCalibration(event, calibrationMode.trim())) return;
+        }
+
         String raw = prefs.getString(KEY_JOB, "");
         if (raw == null || raw.trim().isEmpty()) return;
         if (System.currentTimeMillis() - lastActionAt < 600L) return;
@@ -102,6 +114,18 @@ public class WhatsAppAutomationService extends AccessibilityService {
                     updateStage(job, "confirm_destination");
                     handler.postDelayed(this::processCurrentScreen, 350L);
                     return;
+                }
+
+                if (hasCalibration(KEY_GROUP_X, KEY_GROUP_Y)
+                        && screenContainsAny(root, "Enviar para", "Send to")) {
+                    int attempts = job.optInt("calibratedPickAttempts", 0) + 1;
+                    job.put("calibratedPickAttempts", attempts);
+                    saveJob(job);
+                    if (tapCalibrated(KEY_GROUP_X, KEY_GROUP_Y, 160)) {
+                        lastActionAt = System.currentTimeMillis();
+                        handler.postDelayed(this::processCurrentScreen, 950L);
+                        return;
+                    }
                 }
 
                 AccessibilityNodeInfo groupNode = findDestinationNode(root, group);
@@ -175,61 +199,35 @@ public class WhatsAppAutomationService extends AccessibilityService {
                     return;
                 }
 
-                // Trava contra clique duplo: muda e salva a etapa ANTES do toque.
-                if (job.optBoolean("finalTapIssued", false)) {
-                    updateStage(job, "await_chat");
-                    handler.postDelayed(this::processCurrentScreen, 800L);
-                    return;
-                }
+                // Encerra o trabalho ANTES do toque final. Assim nenhum evento posterior
+                // consegue acionar o microfone/áudio dentro da conversa.
+                finishJob("send_triggered", "Toque final executado; aguardando próxima oferta.");
 
-                job.put("finalTapIssued", true);
-                job.put("stage", "await_chat");
-                saveJobCommit(job);
-                lastActionAt = System.currentTimeMillis();
-
-                AccessibilityNodeInfo send = findSendControl(root);
-                boolean dispatched;
-                if (send != null) {
-                    dispatched = clickNodeOrParent(send);
-                    if (!dispatched) dispatched = clickNodeByCoordinates(send);
-                } else {
-                    // Na tela de prévia o WhatsApp usa uma seta preta sem texto/ID.
-                    dispatched = tapBottomRightOnce();
+                boolean dispatched = false;
+                if (hasCalibration(KEY_SEND_X, KEY_SEND_Y)) {
+                    dispatched = tapCalibrated(KEY_SEND_X, KEY_SEND_Y, 170);
                 }
 
                 if (!dispatched) {
-                    job.put("finalTapIssued", false);
-                    job.put("stage", "send");
-                    saveJobCommit(job);
-                    handler.postDelayed(this::processCurrentScreen, 800L);
-                }
-                return;
-            }
-
-            if ("await_chat".equals(stage)) {
-                // Nunca toca no canto inferior direito nesta etapa:
-                // dentro da conversa aquele botão é o microfone/áudio.
-                if (isConversationScreen(root, group)) {
-                    finishJob("sent", "Mensagem enviada e conversa aberta sem erro visível.");
-                    Toast.makeText(this, "Oferta enviada para " + group + ".", Toast.LENGTH_SHORT).show();
-                    handler.postDelayed(this::returnToCbOfertas, 650L);
-                    return;
+                    AccessibilityNodeInfo send = findSendControl(root);
+                    if (send != null) {
+                        dispatched = clickNodeOrParent(send);
+                        if (!dispatched) dispatched = clickNodeByCoordinates(send);
+                    }
                 }
 
-                int checks = job.optInt("chatChecks", 0) + 1;
-                job.put("chatChecks", checks);
-                saveJob(job);
+                if (!dispatched) dispatched = tapBottomRightOnce();
 
-                if (checks < 18) {
-                    handler.postDelayed(this::processCurrentScreen, 650L);
+                if (dispatched) {
+                    lastActionAt = System.currentTimeMillis();
+                    Toast.makeText(this, "Oferta enviada. Voltando ao CbOfertas.", Toast.LENGTH_SHORT).show();
+                    handler.postDelayed(this::returnToCbOfertas, 1800L);
                 } else {
-                    // Mesmo sem identificar todos os elementos em versões antigas,
-                    // encerra para impedir qualquer segundo clique no botão de áudio.
-                    finishJob("sent_unverified", "O envio foi acionado; confirmação visual não disponível.");
-                    handler.postDelayed(this::returnToCbOfertas, 650L);
+                    failJob("Não foi possível tocar no botão final de envio.");
                 }
                 return;
             }
+
 
             if ("verify".equals(stage)) {
                 if (!screenContains(root, group)) return;
@@ -387,6 +385,65 @@ public class WhatsAppAutomationService extends AccessibilityService {
         path.moveTo(bounds.exactCenterX(), bounds.exactCenterY());
         GestureDescription gesture = new GestureDescription.Builder()
                 .addStroke(new GestureDescription.StrokeDescription(path, 0, 140))
+                .build();
+        return dispatchGesture(gesture, null, null);
+    }
+
+    private boolean captureCalibration(AccessibilityEvent event, String mode) {
+        AccessibilityNodeInfo source = event.getSource();
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (source == null || root == null) return false;
+
+        Rect sourceBounds = bestRowBounds(source);
+        Rect screenBounds = new Rect();
+        root.getBoundsInScreen(screenBounds);
+        if (sourceBounds.isEmpty() || screenBounds.isEmpty()) return false;
+
+        float x = (sourceBounds.exactCenterX() - screenBounds.left) / Math.max(1f, screenBounds.width());
+        float y = (sourceBounds.exactCenterY() - screenBounds.top) / Math.max(1f, screenBounds.height());
+        x = Math.max(0.02f, Math.min(0.98f, x));
+        y = Math.max(0.02f, Math.min(0.98f, y));
+
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
+        if ("group".equals(mode)) {
+            editor.putFloat(KEY_GROUP_X, x).putFloat(KEY_GROUP_Y, y);
+        } else if ("send".equals(mode)) {
+            editor.putFloat(KEY_SEND_X, x).putFloat(KEY_SEND_Y, y);
+        } else {
+            return false;
+        }
+        editor.remove(KEY_CALIBRATION_MODE).apply();
+
+        String label = "group".equals(mode) ? "grupo" : "seta de envio";
+        Toast.makeText(this, "Posição do " + label + " salva neste aparelho.", Toast.LENGTH_LONG).show();
+        return true;
+    }
+
+    private boolean hasCalibration(String xKey, String yKey) {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        return prefs.contains(xKey) && prefs.contains(yKey);
+    }
+
+    private boolean tapCalibrated(String xKey, String yKey, long duration) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+
+        Rect screen = new Rect();
+        root.getBoundsInScreen(screen);
+        if (screen.isEmpty()) return false;
+
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        float rx = prefs.getFloat(xKey, -1f);
+        float ry = prefs.getFloat(yKey, -1f);
+        if (rx <= 0f || ry <= 0f) return false;
+
+        float x = screen.left + screen.width() * rx;
+        float y = screen.top + screen.height() * ry;
+
+        Path path = new Path();
+        path.moveTo(x, y);
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, duration))
                 .build();
         return dispatchGesture(gesture, null, null);
     }
