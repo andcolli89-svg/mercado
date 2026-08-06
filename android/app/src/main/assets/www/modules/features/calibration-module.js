@@ -17,8 +17,8 @@
     bridge()?.startAutomationCalibration?.(mode);
     const node = document.getElementById('calibrationStatus');
     if (node) node.textContent = mode === 'send'
-      ? 'Abra o WhatsApp Business e toque uma vez na seta preta.'
-      : 'Abra o WhatsApp Business e toque uma vez no grupo desejado.';
+      ? 'O WhatsApp Business será aberto. Escolha uma conversa de teste e toque na seta preta.'
+      : 'O WhatsApp Business será aberto. Toque uma vez no grupo desejado.';
   }
   document.addEventListener('click', event => {
     if (event.target.closest?.('#calibrateGroupBtn')) start('group');

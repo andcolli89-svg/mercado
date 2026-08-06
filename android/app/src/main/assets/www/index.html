@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#dff7cf">
-  <title>CbOfertas V7</title>
+  <title>CbOfertas V8.5</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css?v=637">
@@ -14,7 +14,7 @@
   <aside id="sideMenu" class="side-menu" aria-label="Menu principal">
     <div class="side-menu-head">
       <div class="mini-logo">🏷️</div>
-      <div><b>CbOfertas</b><small>V8 • Criador de Ofertas Inteligente</small></div>
+      <div><b>CbOfertas</b><small>V8.5 • Criador de Ofertas Inteligente</small></div>
       <button id="closeMenuBtn" type="button" aria-label="Fechar menu">✕</button>
     </div>
     <button class="menu-link" data-page="offers" type="button">⌂ <span>Início</span></button>
@@ -34,7 +34,7 @@
       <div class="brand-mark">🏷️</div>
       <div>
         <div class="brand"><span>Cb</span><b>Ofertas</b></div>
-        <small>V8 • Criador de Ofertas Inteligente</small>
+        <small>V8.5 • Criador de Ofertas Inteligente</small>
       </div>
     </div>
     <button id="themeToggleBtn" class="header-icon theme-button" type="button" aria-label="Alternar tema">☾</button>
@@ -121,6 +121,9 @@
 
           <div class="product-actions">
             <button id="saveItemBtn" class="btn primary" type="button">♡ Salvar no histórico</button>
+            <button id="addCurrentToBatchBtn" class="btn secondary" type="button">📥 Adicionar ao Lote</button>
+            <button id="addCurrentToPilotBtn" class="btn secondary" type="button">🤖 Adicionar ao Piloto</button>
+            <button id="saveCurrentAndPilotBtn" class="btn primary" type="button">✅ Salvar + Piloto</button>
             <button id="favoriteCurrentBtn" class="btn favorite-action" type="button">☆ Favoritar</button>
             <button id="clearBtn" class="btn outline-danger" type="button">🧹 Limpar</button>
             <button id="clearCouponBtn" class="btn outline" type="button">🗑️ Limpar cupons desta oferta</button>
@@ -361,7 +364,7 @@
         </div>
         <button id="clearCalibrationBtn" class="btn outline full" type="button">Apagar calibração</button>
         <p id="calibrationStatus" class="status">Verificando calibração...</p>
-        <small class="setting-help">Depois de tocar em calibrar, vá ao WhatsApp Business e toque uma vez no item indicado. A posição fica salva apenas neste aparelho.</small>
+        <small class="setting-help">O CbOfertas abrirá o WhatsApp Business automaticamente. Para a seta, escolha uma conversa de teste e depois toque na seta preta. A posição fica salva apenas neste aparelho.</small>
       </section>
 
       <section class="card about-card"><b>CbOfertas V8.4</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
@@ -383,8 +386,10 @@
   <script src="modules/features/affiliate-module.js?v=800"></script>
   <script src="modules/features/navigation-module.js?v=800"></script>
   <script src="modules/features/queue-transfer-module.js?v=800"></script>
-  <script src="app.js?v=840"></script>
-  <script src="modules/features/calibration-module.js?v=840"></script>
-  <script src="modules/features/startup-module.js?v=840"></script>
+  <script src="app.js?v=850"></script>
+  <script src="modules/features/calibration-module.js?v=850"></script>
+  <script src="modules/features/current-offer-actions.js?v=850"></script>
+
+  <script src="modules/features/startup-module.js?v=850"></script>
 </body>
 </html>

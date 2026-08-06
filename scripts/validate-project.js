@@ -18,6 +18,7 @@ const required = [
   'android/app/src/main/assets/www/modules/features/queue-transfer-module.js',
   'android/app/src/main/assets/www/modules/features/startup-module.js',
   'android/app/src/main/assets/www/modules/features/calibration-module.js',
+  'android/app/src/main/assets/www/modules/features/current-offer-actions.js',
   'backend/package.json',
   'backend/src/app.js',
   '.github/workflows/build-apk.yml'
@@ -35,7 +36,7 @@ const affiliate = read('android/app/src/main/assets/www/modules/features/affilia
 const filePaths = read('android/app/src/main/res/xml/file_paths.xml');
 const versionName = gradle.match(/versionName\s+'([^']+)'/)?.[1] || '';
 const versionCode = Number(gradle.match(/versionCode\s+(\d+)/)?.[1] || 0);
-if (versionName !== '8.4.1' || versionCode !== 841) errors.push(`Versão incorreta: ${versionName}/${versionCode}`);
+if (versionName !== '8.5.0' || versionCode !== 850) errors.push(`Versão incorreta: ${versionName}/${versionCode}`);
 if (!affiliate.includes('saveAffiliateLibrary')) errors.push('Módulo de afiliados sem compatibilidade saveAffiliateLibrary');
 if (!html.includes('modules/core/event-bus.js') || !html.includes('queue-transfer-module.js')) errors.push('HTML não carrega módulos V8');
 if (app.includes("saveAffiliateLibrary(data.affiliateLibrary);")) errors.push('app.js ainda contém chamada insegura antiga');

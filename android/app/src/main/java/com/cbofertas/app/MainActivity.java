@@ -757,12 +757,18 @@ public class MainActivity extends Activity {
                     .edit()
                     .putString(WhatsAppAutomationService.KEY_CALIBRATION_MODE, safeMode)
                     .apply();
-            runOnUiThread(() -> Toast.makeText(
-                    MainActivity.this,
-                    "Abra o WhatsApp Business e toque uma vez no " +
-                            ("send".equals(safeMode) ? "botão de envio." : "grupo desejado."),
-                    Toast.LENGTH_LONG
-            ).show());
+
+            runOnUiThread(() -> {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Calibração ativa. Toque " +
+                                ("send".equals(safeMode)
+                                        ? "no contato de teste e depois na seta preta."
+                                        : "uma vez no grupo desejado."),
+                        Toast.LENGTH_LONG
+                ).show();
+                openWhatsAppCalibration(safeMode);
+            });
         }
 
         @JavascriptInterface
@@ -968,6 +974,38 @@ public class MainActivity extends Activity {
             startActivity(Intent.createChooser(buildShareIntent(imageUri, mimeType, text), "Compartilhar oferta"));
         } catch (Exception error) {
             Toast.makeText(this, "Não foi possível abrir o compartilhamento.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openWhatsAppCalibration(String mode) {
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        share.putExtra(
+                Intent.EXTRA_TEXT,
+                "send".equals(mode)
+                        ? "Calibração da seta do CbOfertas — mensagem de teste."
+                        : "Calibração do grupo do CbOfertas — não enviar."
+        );
+        share.setPackage("com.whatsapp.w4b");
+        share.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try {
+            startActivity(share);
+        } catch (Exception businessError) {
+            share.setPackage("com.whatsapp");
+            try {
+                startActivity(share);
+            } catch (Exception normalError) {
+                Toast.makeText(
+                        this,
+                        "WhatsApp Business não encontrado neste aparelho.",
+                        Toast.LENGTH_LONG
+                ).show();
+                getSharedPreferences(WhatsAppAutomationService.PREFS, MODE_PRIVATE)
+                        .edit()
+                        .remove(WhatsAppAutomationService.KEY_CALIBRATION_MODE)
+                        .apply();
+            }
         }
     }
 

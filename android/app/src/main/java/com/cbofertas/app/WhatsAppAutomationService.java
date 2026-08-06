@@ -404,6 +404,12 @@ public class WhatsAppAutomationService extends AccessibilityService {
         x = Math.max(0.02f, Math.min(0.98f, x));
         y = Math.max(0.02f, Math.min(0.98f, y));
 
+        // Ao calibrar a seta, ignora o primeiro toque feito no contato/grupo.
+        // Somente um toque no quadrante inferior direito é aceito.
+        if ("send".equals(mode) && (x < 0.62f || y < 0.62f)) {
+            return false;
+        }
+
         SharedPreferences.Editor editor = getSharedPreferences(PREFS, MODE_PRIVATE).edit();
         if ("group".equals(mode)) {
             editor.putFloat(KEY_GROUP_X, x).putFloat(KEY_GROUP_Y, y);
@@ -416,6 +422,7 @@ public class WhatsAppAutomationService extends AccessibilityService {
 
         String label = "group".equals(mode) ? "grupo" : "seta de envio";
         Toast.makeText(this, "Posição do " + label + " salva neste aparelho.", Toast.LENGTH_LONG).show();
+        handler.postDelayed(this::returnToCbOfertas, 650L);
         return true;
     }
 
