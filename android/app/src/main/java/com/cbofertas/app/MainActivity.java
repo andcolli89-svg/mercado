@@ -3,6 +3,8 @@ package com.cbofertas.app;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.ClipboardManager;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -44,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new AndroidBridge(), "Android");
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient());
-        webView.loadUrl("file:///android_asset/www/index.html?v=1220");
+        webView.loadUrl("file:///android_asset/www/index.html?v=1230");
     }
 
     @Override
@@ -70,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
     public class AndroidBridge {
         @JavascriptInterface
         public String getVersion() {
-            return "12.2.0";
+            return "12.3.0";
         }
 
         @JavascriptInterface
@@ -193,7 +195,12 @@ public class MainActivity extends AppCompatActivity {
                 int returnDelayMs,
                 int maxAttempts,
                 boolean stopOnError,
-                int clickStrategy
+                int clickStrategy,
+                int tapDurationMs,
+                int groupOffsetX,
+                int groupOffsetY,
+                int sendOffsetX,
+                int sendOffsetY
         ) {
             if (text == null || text.trim().isEmpty()) return false;
             if (group == null || group.trim().isEmpty()) return false;
@@ -218,6 +225,11 @@ public class MainActivity extends AppCompatActivity {
                     .putInt("group_delay", Math.max(200, groupDelayMs))
                     .putInt("return_delay", Math.max(400, returnDelayMs))
                     .putInt("click_strategy", Math.max(0, Math.min(2, clickStrategy)))
+                    .putInt("tap_duration", Math.max(60, Math.min(800, tapDurationMs)))
+                    .putInt("group_offset_x", Math.max(-500, Math.min(500, groupOffsetX)))
+                    .putInt("group_offset_y", Math.max(-500, Math.min(500, groupOffsetY)))
+                    .putInt("send_offset_x", Math.max(-500, Math.min(500, sendOffsetX)))
+                    .putInt("send_offset_y", Math.max(-500, Math.min(500, sendOffsetY)))
                     .putLong("job_started_at", now)
                     .putLong("stage_started_at", now)
                     .putBoolean("stop_on_error", stopOnError)
@@ -247,6 +259,37 @@ public class MainActivity extends AppCompatActivity {
         public void clearAutomationLastResult() {
             getSharedPreferences(PREFS, MODE_PRIVATE)
                     .edit().remove("last_result").apply();
+        }
+
+
+        @JavascriptInterface
+        public String getClipboardText() {
+            try {
+                ClipboardManager clipboard =
+                        (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard == null || !clipboard.hasPrimaryClip()) return "";
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip == null || clip.getItemCount() == 0) return "";
+                CharSequence value = clip.getItemAt(0).coerceToText(MainActivity.this);
+                return value == null ? "" : value.toString();
+            } catch (Exception error) {
+                return "";
+            }
+        }
+
+        @JavascriptInterface
+        public boolean copyText(String text) {
+            try {
+                ClipboardManager clipboard =
+                        (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard == null) return false;
+                clipboard.setPrimaryClip(
+                        ClipData.newPlainText("CbOfertas", text == null ? "" : text)
+                );
+                return true;
+            } catch (Exception error) {
+                return false;
+            }
         }
 
         @JavascriptInterface

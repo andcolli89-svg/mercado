@@ -21,6 +21,11 @@ function autoRead() {
       returnDelay:1400,
       attempts:3,
       clickStrategy:'fallback',
+      tapDuration:220,
+      groupOffsetX:0,
+      groupOffsetY:0,
+      sendOffsetX:0,
+      sendOffsetY:0,
       stopOnError:true,
       ...JSON.parse(localStorage.getItem(AUTO_KEY) || '{}')
     };
@@ -37,6 +42,11 @@ function autoRead() {
       returnDelay:1400,
       attempts:3,
       clickStrategy:'fallback',
+      tapDuration:220,
+      groupOffsetX:0,
+      groupOffsetY:0,
+      sendOffsetX:0,
+      sendOffsetY:0,
       stopOnError:true
     };
   }
@@ -55,6 +65,11 @@ function autoSaveFromForm() {
     returnDelay: Math.max(400, Number(document.getElementById('automationReturnDelay')?.value || 1400)),
     attempts: Math.max(1, Number(document.getElementById('automationAttempts')?.value || 3)),
     clickStrategy: document.getElementById('automationClickStrategy')?.value || 'fallback',
+    tapDuration: Math.max(60, Number(document.getElementById('automationTapDuration')?.value || 220)),
+    groupOffsetX: Number(document.getElementById('automationGroupOffsetX')?.value || 0),
+    groupOffsetY: Number(document.getElementById('automationGroupOffsetY')?.value || 0),
+    sendOffsetX: Number(document.getElementById('automationSendOffsetX')?.value || 0),
+    sendOffsetY: Number(document.getElementById('automationSendOffsetY')?.value || 0),
     stopOnError: Boolean(document.getElementById('automationStopOnError')?.checked)
   };
   localStorage.setItem(AUTO_KEY, JSON.stringify(config));
@@ -78,6 +93,11 @@ function autoLoadForm() {
   assign('automationReturnDelay',c.returnDelay);
   assign('automationAttempts',c.attempts);
   assign('automationClickStrategy',c.clickStrategy);
+  assign('automationTapDuration',c.tapDuration);
+  assign('automationGroupOffsetX',c.groupOffsetX);
+  assign('automationGroupOffsetY',c.groupOffsetY);
+  assign('automationSendOffsetX',c.sendOffsetX);
+  assign('automationSendOffsetY',c.sendOffsetY);
 
   const stop=document.getElementById('automationStopOnError');
   if(stop) stop.checked = c.stopOnError !== false;
@@ -178,7 +198,12 @@ function autoStartItem(item) {
     c.returnDelay,
     c.attempts,
     c.stopOnError,
-    autoStrategyCode(c.clickStrategy)
+    autoStrategyCode(c.clickStrategy),
+    c.tapDuration,
+    c.groupOffsetX,
+    c.groupOffsetY,
+    c.sendOffsetX,
+    c.sendOffsetY
   );
 
   if(started) {
@@ -386,7 +411,7 @@ function autoDiagnostic() {
     : 'agora';
 
   if(out) out.textContent=[
-    'Versão: 12.2.0',
+    'Versão: 12.3.0',
     `Acessibilidade: ${service?'ativa':'inativa'}`,
     `Aplicativo: ${c.app==='business'?'WhatsApp Business':'WhatsApp comum'}`,
     `Destino: ${c.group || 'não configurado'}`,
@@ -481,9 +506,16 @@ function settings() {
 }
 
 function offerCard(item, mode='offers') {
-  const checked = mode === 'batch' ? `<input type="checkbox" data-batch-check="${esc(item.id)}">` : '';
-  const image = item.image ? `<img src="${esc(item.image)}" alt="">` : `<div style="width:72px;height:72px;background:#eef2ee;border-radius:10px;display:grid;place-items:center">🛍️</div>`;
+  const checked = mode === 'batch'
+    ? `<input class="batch-check" type="checkbox" data-batch-check="${esc(item.id)}" aria-label="Selecionar ${esc(item.title)}">`
+    : '';
+
+  const image = item.image
+    ? `<img src="${esc(item.image)}" alt="">`
+    : `<div style="width:72px;height:72px;background:#eef2ee;border-radius:10px;display:grid;place-items:center">🛍️</div>`;
+
   let actions = '';
+
   if (mode === 'offers') {
     actions = `<div class="item-actions">
       <button data-add-batch="${esc(item.id)}">Adicionar ao lote</button>
@@ -491,8 +523,48 @@ function offerCard(item, mode='offers') {
       <button data-send-offer="${esc(item.id)}" class="whatsapp">WhatsApp</button>
       <button data-delete-offer="${esc(item.id)}" class="danger">Excluir</button>
     </div>`;
+  } else if (mode === 'batch') {
+    const confirmed = isAffiliateConfirmed(item);
+
+    actions = `<div class="batch-item-actions">
+      <button data-batch-open-product="${esc(item.id)}">🛒 Abrir produto no ML</button>
+      <button data-batch-copy-original="${esc(item.id)}">🔗 Copiar link original</button>
+      <button data-batch-use-affiliate="${esc(item.id)}" class="${confirmed ? '' : 'primary'}">✅ Usar link copiado</button>
+      <button data-batch-one-send="${esc(item.id)}" class="whatsapp">📲 Enviar no WhatsApp Business</button>
+      <button data-batch-one-queue="${esc(item.id)}" class="primary">🤖 Adicionar à fila</button>
+      <button data-batch-delete="${esc(item.id)}" class="danger">Excluir</button>
+    </div>`;
   }
-  return `<article class="item">${checked}${image}<div><b>${esc(item.title)}</b><small>${esc(item.link)}</small><div class="tags"><span class="tag">${money(item.price)}</span><span class="tag">${esc(item.category||'Sem categoria')}</span><span class="tag">${esc(item.channel||'Sem canal')}</span></div></div>${actions}</article>`;
+
+  const affiliateState = mode === 'batch'
+    ? `<label class="affiliate-confirm-line">
+        <input type="checkbox" disabled ${isAffiliateConfirmed(item) ? 'checked' : ''}>
+        <span>${isAffiliateConfirmed(item)
+          ? 'Afiliado confirmado pelo botão Usar link copiado'
+          : 'Afiliado ainda não confirmado'}</span>
+      </label>`
+    : '';
+
+  const preview = mode === 'batch' && item.message
+    ? `<div class="batch-message-preview">${esc(item.message)}</div>`
+    : '';
+
+  return `<article class="item ${mode === 'batch' ? (isAffiliateConfirmed(item) ? 'affiliate-ready' : 'affiliate-blocked') : ''}">
+    ${checked}
+    ${image}
+    <div>
+      <b>${esc(item.title)}</b>
+      ${affiliateState}
+      <small>${esc(item.link)}</small>
+      <div class="tags">
+        ${item.price ? `<span class="tag">${money(item.price)}</span>` : ''}
+        <span class="tag">${esc(item.category||'Sem categoria')}</span>
+        <span class="tag">${esc(item.channel||'WhatsApp')}</span>
+      </div>
+      ${preview}
+    </div>
+    ${actions}
+  </article>`;
 }
 
 function renderOffers() {
@@ -549,13 +621,449 @@ function addToUniqueList(key, item) {
   save(key, items);
 }
 
-function renderBatch() {
-  const items = read(K.batch);
-  $('batchList').innerHTML = items.length ? items.map(i => offerCard(i,'batch')).join('') : '<p>Nenhuma oferta no lote.</p>';
+
+function normalizeBatchPaste(value='') {
+  return String(value || '')
+    .replace(/\r/g,'')
+    .replace(/\u200e|\u200f|\u202a|\u202c/g,'')
+    .replace(/[ \t]+\n/g,'\n')
+    .replace(/\n{3,}/g,'\n\n')
+    .trim();
 }
 
-$('selectAllBatch').onclick = () => document.querySelectorAll('[data-batch-check]').forEach(c => c.checked = true);
-$('clearBatchSelection').onclick = () => document.querySelectorAll('[data-batch-check]').forEach(c => c.checked = false);
+function cleanWhatsAppLine(line='') {
+  let value = String(line || '').trim();
+
+  value = value
+    .replace(/^\s*\[?\d{1,2}\/\d{1,2}(?:\/\d{2,4})?[,\s]+\d{1,2}:\d{2}(?::\d{2})?\]?\s*(?:-\s*)?/i,'')
+    .replace(/^\s*\d{1,2}:\d{2}\s*(?:-|–|—)?\s*/i,'')
+    .replace(/^\s*\+?\d[\d\s().-]{7,}\s*:\s*/i,'')
+    .replace(/^\s*[^:\n]{2,45}\s*:\s*(?=\S)/i, match => {
+      return /r\$|cupom|http|oferta/i.test(match) ? match : '';
+    })
+    .replace(/^\s*\d+\s*[.)-]\s*/,'')
+    .replace(/^\s*[•·▪▫►▶]+\s*/,'')
+    .trim();
+
+  if (/^(encaminhada|encaminhado|forwarded|mensagem encaminhada)$/i.test(value)) return '';
+  if (/^(editada|edited|mensagem apagada|esta mensagem foi apagada)$/i.test(value)) return '';
+  if (/^\d{1,2}\/\d{1,2}(?:\/\d{2,4})?$/.test(value)) return '';
+  if (/^\d{1,2}:\d{2}(?::\d{2})?$/.test(value)) return '';
+  if (/^(copiado às|afiliado confirmado|foto pronta|sem foto)/i.test(value)) return '';
+
+  return value;
+}
+
+function cleanBatchMessage(value='') {
+  const lines = normalizeBatchPaste(value)
+    .split('\n')
+    .map(cleanWhatsAppLine)
+    .filter(Boolean);
+
+  const result = [];
+  for (const line of lines) {
+    if (result[result.length - 1] === line) continue;
+    result.push(line);
+  }
+
+  return result.join('\n')
+    .replace(/\n{3,}/g,'\n\n')
+    .trim();
+}
+
+function stripWhatsAppPasteHeader(value='') {
+  return cleanBatchMessage(value);
+}
+
+function extractBatchTitle(block='') {
+  const lines = cleanBatchMessage(block)
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const ignored =
+    /^(https?:\/\/|de\s+r\$|por\s+r\$|r\$|use\s+o?\s*cupom|cupom|loja oficial|frete|\d+%\s*off|vendido por|compre aqui|link)/i;
+
+  const title = lines.find(line =>
+    !ignored.test(line) &&
+    line.length > 3
+  ) || lines[0] || 'Oferta';
+
+  return title
+    .replace(/^[-•*\s\d.)]+/,'')
+    .replace(/^\*+|\*+$/g,'')
+    .trim()
+    .slice(0,180);
+}
+
+function extractBatchPrice(block='') {
+  const text = String(block || '');
+
+  const preferred = text.match(
+    /(?:por|apenas|no pix|à vista)\s*(?:de\s*)?r\$\s*([\d.]+(?:,\d{1,2})?)/i
+  );
+  if (preferred) return num(preferred[1]);
+
+  const prices = [...text.matchAll(/r\$\s*([\d.]+(?:,\d{1,2})?)/gi)];
+  if (!prices.length) return 0;
+
+  return num(prices[prices.length - 1][1]);
+}
+
+function isAffiliateLink(value='') {
+  try {
+    return /(^|\.)meli\.la$/i.test(new URL(String(value).trim()).hostname);
+  } catch (_) {
+    return false;
+  }
+}
+
+function isAffiliateConfirmed(item) {
+  return Boolean(
+    item &&
+    item.affiliateConfirmed === true &&
+    item.affiliateConfirmationSource === 'use_copied_link' &&
+    isAffiliateLink(item.link)
+  );
+}
+
+function normalizeAffiliateItem(item) {
+  if (!isAffiliateConfirmed(item)) {
+    item.affiliateConfirmed = false;
+    item.affiliateConfirmationSource = '';
+    item.affiliateConfirmedAt = 0;
+    item.status = 'blocked_link';
+  }
+  return item;
+}
+
+function parseBatchPaste(raw='') {
+  const text = normalizeBatchPaste(raw);
+  const linkRegex =
+    /https?:\/\/(?:[\w.-]+\.)?(?:meli\.la|mercadolivre\.com\.br|mercadolibre\.com)[^\s<>()]*/gi;
+  const matches = [...text.matchAll(linkRegex)];
+
+  if (!matches.length) return [];
+
+  return matches.map((match,index) => {
+    const previousEnd = index === 0
+      ? 0
+      : matches[index - 1].index + matches[index - 1][0].length;
+
+    const currentEnd = match.index + match[0].length;
+    const originalLink = match[0].replace(/[),.;!?]+$/,'');
+
+    let message = cleanBatchMessage(text.slice(previousEnd,currentEnd));
+    message = message.replace(
+      /https?:\/\/(?:[\w.-]+\.)?(?:meli\.la|mercadolivre\.com\.br|mercadolibre\.com)[^\s<>()]*/gi,
+      originalLink
+    );
+
+    if (!message.includes(originalLink)) {
+      message = `${message}\n${originalLink}`.trim();
+    }
+
+    return normalizeAffiliateItem({
+      id:uid(),
+      title:extractBatchTitle(message),
+      originalLink,
+      link:originalLink,
+      price:extractBatchPrice(message),
+      category:'',
+      channel:'WhatsApp',
+      image:'',
+      message,
+      source:'bulk_paste',
+      affiliateConfirmed:false,
+      affiliateConfirmationSource:'',
+      affiliateConfirmedAt:0,
+      status:'blocked_link',
+      createdAt:Date.now()
+    });
+  });
+}
+
+function mergeBatchPaste(existing=[],incoming=[]) {
+  const merged = existing.map(item => normalizeAffiliateItem({...item}));
+  const seen = new Set(
+    existing
+      .map(item => String(item.link || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  let duplicates = 0;
+
+  for (const item of incoming) {
+    const key = String(item.link || '').trim().toLowerCase();
+    if (!key || seen.has(key)) {
+      duplicates++;
+      continue;
+    }
+
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return {
+    items:merged,
+    added:merged.length-existing.length,
+    duplicates
+  };
+}
+
+function updateBatchSelectedCount() {
+  const selected = document.querySelectorAll('[data-batch-check]:checked').length;
+  const badge = $('batchSelectedCount');
+  if (badge) badge.textContent = `${selected} selecionado${selected===1?'':'s'}`;
+}
+
+function renderBatch() {
+  const items = read(K.batch);
+
+  $('batchList').innerHTML = items.length
+    ? items.map(item => offerCard(item,'batch')).join('')
+    : '<p>Nenhum anúncio no lote. Cole várias mensagens no campo acima.</p>';
+
+  const summary = $('batchSummary');
+  if (summary) {
+    const pasted = items.filter(item => item.source === 'bulk_paste').length;
+    summary.textContent = items.length
+      ? `${items.length} anúncio(s) no lote • ${pasted} recebido(s) pela colagem em massa`
+      : 'Nenhum anúncio no lote.';
+  }
+
+  updateBatchSelectedCount();
+}
+
+$('selectAllBatch').onclick = () => { document.querySelectorAll('[data-batch-check]').forEach(c => c.checked = true); updateBatchSelectedCount(); };
+$('clearBatchSelection').onclick = () => { document.querySelectorAll('[data-batch-check]').forEach(c => c.checked = false); updateBatchSelectedCount(); };
+
+
+async function readClipboardText() {
+  try {
+    const androidValue = window.Android?.getClipboardText?.();
+    if (androidValue) return String(androidValue).trim();
+  } catch (_) {}
+
+  try {
+    const browserValue = await navigator.clipboard.readText();
+    if (browserValue) return String(browserValue).trim();
+  } catch (_) {}
+
+  return String(prompt('Cole aqui seu link afiliado meli.la:','https://meli.la/') || '').trim();
+}
+
+async function writeClipboardText(value='') {
+  const text = String(value || '');
+  if (!text) return false;
+
+  try {
+    if (window.Android?.copyText?.(text)) return true;
+  } catch (_) {}
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    prompt('Copie o link:',text);
+    return true;
+  }
+}
+
+function openExternalLink(value='') {
+  const link = String(value || '').trim();
+  if (!link) return;
+
+  try {
+    if (window.Android?.openExternal) {
+      Android.openExternal(link);
+      return;
+    }
+  } catch (_) {}
+
+  window.open(link,'_blank','noopener');
+}
+
+function replaceBatchAffiliateLink(id,newLink) {
+  const affiliateLink = String(newLink || '').trim();
+
+  if (!isAffiliateLink(affiliateLink)) {
+    throw new Error('O link copiado não é um afiliado válido meli.la.');
+  }
+
+  const items = read(K.batch);
+  const item = items.find(entry => entry.id === id);
+  if (!item) throw new Error('Oferta não encontrada.');
+
+  const currentLink = String(item.link || item.originalLink || '');
+  let message = String(item.message || '');
+
+  if (currentLink && message.includes(currentLink)) {
+    message = message.split(currentLink).join(affiliateLink);
+  } else {
+    message = message.replace(
+      /https?:\/\/(?:[\w.-]+\.)?(?:meli\.la|mercadolivre\.com\.br|mercadolibre\.com)[^\s<>()]*/gi,
+      affiliateLink
+    );
+  }
+
+  item.link = affiliateLink;
+  item.message = message;
+  item.affiliateConfirmed = true;
+  item.affiliateConfirmationSource = 'use_copied_link';
+  item.affiliateConfirmedAt = Date.now();
+  item.status = 'affiliate_ready';
+
+  save(K.batch,items);
+  renderBatch();
+  return item;
+}
+
+function ensureBatchAffiliate(item) {
+  if (!isAffiliateConfirmed(item)) {
+    throw new Error('Use primeiro o botão “Usar link copiado” para confirmar seu afiliado.');
+  }
+  return item;
+}
+
+$('separateBatchPaste').onclick = () => {
+  const raw = $('batchPasteInput')?.value || '';
+  const incoming = parseBatchPaste(raw);
+
+  if (!incoming.length) {
+    return status(
+      'batchPasteStatus',
+      'Nenhum link do Mercado Livre foi encontrado no texto colado.',
+      true
+    );
+  }
+
+  const before = read(K.batch);
+  const result = mergeBatchPaste(before,incoming);
+  save(K.batch,result.items);
+
+  if (result.added > 0) {
+    $('batchPasteInput').value = '';
+  }
+
+  renderBatch();
+
+  const duplicateText = result.duplicates
+    ? ` • ${result.duplicates} repetida(s) ignorada(s)`
+    : '';
+
+  status(
+    'batchPasteStatus',
+    result.added
+      ? `${result.added} anúncio(s) adicionado(s). O lote anterior foi preservado.${duplicateText}`
+      : `Nenhum anúncio novo foi adicionado.${duplicateText}`,
+    result.added === 0
+  );
+};
+
+$('clearBatchPaste').onclick = () => {
+  if ($('batchPasteInput')) $('batchPasteInput').value = '';
+  status('batchPasteStatus','Campo de colagem limpo.');
+};
+
+$('clearEntireBatch').onclick = () => {
+  if (!read(K.batch).length) {
+    return status('batchPasteStatus','O lote já está vazio.',true);
+  }
+
+  if (!confirm('Apagar todos os anúncios do lote?')) return;
+
+  save(K.batch,[]);
+  renderBatch();
+  status('batchPasteStatus','Lote apagado.');
+};
+
+document.addEventListener('change', event => {
+  if (event.target.matches?.('[data-batch-check]')) {
+    updateBatchSelectedCount();
+  }
+});
+
+document.addEventListener('click', async event => {
+  const del = event.target.closest?.('[data-batch-delete]');
+  if (del) {
+    save(
+      K.batch,
+      read(K.batch).filter(item => item.id !== del.dataset.batchDelete)
+    );
+    renderBatch();
+    status('batchStatus','Anúncio removido do lote.');
+    return;
+  }
+
+  const openProduct = event.target.closest?.('[data-batch-open-product]');
+  if (openProduct) {
+    const item = read(K.batch).find(
+      entry => entry.id === openProduct.dataset.batchOpenProduct
+    );
+    openExternalLink(item?.originalLink || item?.link);
+    status('batchStatus','Produto aberto no Mercado Livre. Gere seu link de afiliado e copie.');
+    return;
+  }
+
+  const copyOriginal = event.target.closest?.('[data-batch-copy-original]');
+  if (copyOriginal) {
+    const item = read(K.batch).find(
+      entry => entry.id === copyOriginal.dataset.batchCopyOriginal
+    );
+    await writeClipboardText(item?.originalLink || item?.link || '');
+    status('batchStatus','Link original copiado.');
+    return;
+  }
+
+  const useAffiliate = event.target.closest?.('[data-batch-use-affiliate]');
+  if (useAffiliate) {
+    try {
+      const value = await readClipboardText();
+      replaceBatchAffiliateLink(
+        useAffiliate.dataset.batchUseAffiliate,
+        value
+      );
+      status('batchStatus','Seu link afiliado foi aplicado e o checkbox foi ativado.');
+    } catch (error) {
+      status('batchStatus',error.message,true);
+    }
+    return;
+  }
+
+  const queueOne = event.target.closest?.('[data-batch-one-queue]');
+  if (queueOne) {
+    try {
+      const item = ensureBatchAffiliate(
+        read(K.batch).find(
+          entry => entry.id === queueOne.dataset.batchOneQueue
+        )
+      );
+      addQueue(item);
+      renderQueue();
+      status('batchStatus','Oferta afiliada adicionada à fila.');
+    } catch (error) {
+      status('batchStatus',error.message,true);
+    }
+    return;
+  }
+
+  const sendOne = event.target.closest?.('[data-batch-one-send]');
+  if (sendOne) {
+    try {
+      const item = ensureBatchAffiliate(
+        read(K.batch).find(
+          entry => entry.id === sendOne.dataset.batchOneSend
+        )
+      );
+      shareOffer(item);
+      status('batchStatus','WhatsApp Business aberto com a oferta afiliada.');
+    } catch (error) {
+      status('batchStatus',error.message,true);
+    }
+  }
+});
+
 function selectedBatch() {
   const ids = new Set([...document.querySelectorAll('[data-batch-check]:checked')].map(c => c.dataset.batchCheck));
   return read(K.batch).filter(i => ids.has(i.id));
@@ -563,22 +1071,51 @@ function selectedBatch() {
 $('batchToQueue').onclick = () => {
   const items = selectedBatch();
   if (!items.length) return status('batchStatus','Selecione pelo menos uma oferta.',true);
-  items.forEach(addQueue);
-  status('batchStatus',`${items.length} oferta(s) adicionada(s) à fila.`);
+
+  const confirmed = items.filter(isAffiliateConfirmed);
+  const blocked = items.length - confirmed.length;
+
+  confirmed.forEach(addQueue);
+
+  if (!confirmed.length) {
+    return status(
+      'batchStatus',
+      'Nenhuma selecionada possui seu link afiliado confirmado.',
+      true
+    );
+  }
+
+  status(
+    'batchStatus',
+    `${confirmed.length} afiliada(s) adicionada(s) à fila${blocked ? ` • ${blocked} bloqueada(s)` : ''}.`
+  );
 };
 $('batchSendNow').onclick = () => {
   const item = selectedBatch()[0];
   if (!item) return status('batchStatus','Selecione uma oferta.',true);
-  shareOffer(item);
+
+  try {
+    shareOffer(ensureBatchAffiliate(item));
+    status('batchStatus','WhatsApp Business aberto com a oferta afiliada.');
+  } catch (error) {
+    status('batchStatus',error.message,true);
+  }
 };
 
 function addQueue(item) {
-  if (!item) return;
+  if (!item) return false;
+
+  if (item.source === 'bulk_paste' && !isAffiliateConfirmed(item)) {
+    return false;
+  }
+
   const queue = read(K.queue);
   if (!queue.some(q => q.offerId === item.id && q.status !== 'sent')) {
     queue.push({id:uid(),offerId:item.id,...item,status:'pending',createdAt:Date.now(),retryCount:0});
     save(K.queue,queue);
+    return true;
   }
+  return false;
 }
 
 function renderQueue() {
@@ -822,7 +1359,8 @@ document.addEventListener('DOMContentLoaded', () => {
     '#automationDailyLimit,#automationOpenDelay,' +
     '#automationGroupDelay,#automationReturnDelay,' +
     '#automationAttempts,#automationClickStrategy,' +
-    '#automationStopOnError'
+    '#automationTapDuration,#automationGroupOffsetX,#automationGroupOffsetY,' +
+    '#automationSendOffsetX,#automationSendOffsetY,#automationStopOnError'
   ).forEach(node => node?.addEventListener('change', () => {
     autoSaveFromForm();
     autoDiagnostic();
@@ -834,6 +1372,30 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {
       autoSetStatus('Abra Configurações > Acessibilidade.',true);
     }
+  });
+
+  document.getElementById('oldPhonePreset')?.addEventListener('click', () => {
+    const set = (id,value) => {
+      const node=document.getElementById(id);
+      if(node) node.value=String(value);
+    };
+
+    set('automationClickStrategy','coordinates');
+    set('automationOpenDelay',3800);
+    set('automationGroupDelay',2400);
+    set('automationReturnDelay',1900);
+    set('automationAttempts',5);
+    set('automationTapDuration',280);
+    set('automationGroupOffsetX',0);
+    set('automationGroupOffsetY',0);
+    set('automationSendOffsetX',0);
+    set('automationSendOffsetY',0);
+
+    autoSaveFromForm();
+    autoDiagnostic();
+    autoSetStatus(
+      'Perfil de celular antigo aplicado. Agora calibre o grupo e o botão Enviar.'
+    );
   });
 
   document.getElementById('calibrateGroup')?.addEventListener('click', () => {
@@ -962,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('exportQueue')?.addEventListener('click', () => {
     const payload={
       type:'cbofertas-queue',
-      version:'12.2.0',
+      version:'12.3.0',
       exportedAt:new Date().toISOString(),
       queue:read(K.queue),
       automation:autoRead()

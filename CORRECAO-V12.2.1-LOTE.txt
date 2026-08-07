@@ -1,0 +1,12 @@
+CbOfertas V12.2.1
+
+A colagem em lote foi restaurada sem remover:
+- automação por rodadas;
+- 3 mensagens por rodada;
+- intervalo de 30 minutos;
+- calibração de cliques;
+- exportação/importação da fila.
+
+Fluxo restaurado:
+colar mensagens -> separar por link -> ignorar duplicados ->
+preservar lote anterior -> selecionar -> adicionar à fila.

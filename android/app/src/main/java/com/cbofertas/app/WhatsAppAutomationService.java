@@ -213,21 +213,35 @@ public class WhatsAppAutomationService extends AccessibilityService {
             SharedPreferences prefs
     ) {
         int strategy = prefs.getInt("click_strategy", 2);
+        int offsetX = prefs.getInt("group_offset_x", 0);
+        int offsetY = prefs.getInt("group_offset_y", 0);
         int x = prefs.getInt("group_x", 0);
         int y = prefs.getInt("group_y", 0);
         boolean hasCoordinates = x > 0 && y > 0;
 
         if (strategy == 1 && hasCoordinates) {
-            return tapPoint(x, y);
+            return tapPoint(
+                    x + offsetX,
+                    y + offsetY,
+                    prefs.getInt("tap_duration", 180)
+            );
         }
 
         AccessibilityNodeInfo destination =
-                findExactText(root, prefs.getString("group_name", ""));
-        if (destination != null && clickNodeOrParent(destination)) {
+                findBestDestinationNode(root, prefs.getString("group_name", ""));
+
+        if (destination != null &&
+                clickDestinationNode(destination, prefs)) {
             return true;
         }
 
-        return strategy == 2 && hasCoordinates && tapPoint(x, y);
+        return strategy == 2 &&
+                hasCoordinates &&
+                tapPoint(
+                        x + offsetX,
+                        y + offsetY,
+                        prefs.getInt("tap_duration", 180)
+                );
     }
 
     private boolean canClickSend(
@@ -248,20 +262,121 @@ public class WhatsAppAutomationService extends AccessibilityService {
             SharedPreferences prefs
     ) {
         int strategy = prefs.getInt("click_strategy", 2);
+        int offsetX = prefs.getInt("send_offset_x", 0);
+        int offsetY = prefs.getInt("send_offset_y", 0);
         int x = prefs.getInt("send_x", 0);
         int y = prefs.getInt("send_y", 0);
         boolean hasCoordinates = x > 0 && y > 0;
 
         if (strategy == 1 && hasCoordinates) {
-            return tapPoint(x, y);
+            return tapPoint(
+                    x + offsetX,
+                    y + offsetY,
+                    prefs.getInt("tap_duration", 180)
+            );
         }
 
         AccessibilityNodeInfo node = findSendNode(root);
-        if (node != null && clickNodeOrParent(node)) {
+        if (node != null &&
+                clickNodeOrParentWithOffset(
+                        node,
+                        offsetX,
+                        offsetY,
+                        prefs.getInt("tap_duration", 180)
+                )) {
             return true;
         }
 
-        return strategy == 2 && hasCoordinates && tapPoint(x, y);
+        return strategy == 2 &&
+                hasCoordinates &&
+                tapPoint(
+                        x + offsetX,
+                        y + offsetY,
+                        prefs.getInt("tap_duration", 180)
+                );
+    }
+
+
+    private AccessibilityNodeInfo findBestDestinationNode(
+            AccessibilityNodeInfo root,
+            String text
+    ) {
+        AccessibilityNodeInfo exact = findExactText(root, text);
+        if (exact != null) return exact;
+
+        if (text == null || text.trim().isEmpty()) return null;
+        List<AccessibilityNodeInfo> nodes =
+                root.findAccessibilityNodeInfosByText(text.trim());
+
+        if (nodes == null || nodes.isEmpty()) return null;
+
+        AccessibilityNodeInfo best = null;
+        int bestArea = 0;
+
+        for (AccessibilityNodeInfo node : nodes) {
+            AccessibilityNodeInfo row = findWidestRow(node);
+            Rect rect = new Rect();
+            row.getBoundsInScreen(rect);
+            int area = Math.max(0, rect.width()) * Math.max(0, rect.height());
+
+            if (area > bestArea) {
+                best = node;
+                bestArea = area;
+            }
+        }
+        return best == null ? nodes.get(0) : best;
+    }
+
+    private AccessibilityNodeInfo findWidestRow(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo current = node;
+        AccessibilityNodeInfo best = node;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int bestWidth = 0;
+
+        for (int i = 0; current != null && i < 8; i++) {
+            Rect rect = new Rect();
+            current.getBoundsInScreen(rect);
+
+            if (rect.width() > bestWidth &&
+                    rect.height() >= 38 &&
+                    rect.height() <= 360 &&
+                    rect.width() <= screenWidth) {
+                best = current;
+                bestWidth = rect.width();
+            }
+
+            current = current.getParent();
+        }
+        return best;
+    }
+
+    private boolean clickDestinationNode(
+            AccessibilityNodeInfo node,
+            SharedPreferences prefs
+    ) {
+        AccessibilityNodeInfo row = findWidestRow(node);
+        AccessibilityNodeInfo current = row;
+
+        for (int i = 0; current != null && i < 7; i++) {
+            if (current.isClickable() &&
+                    current.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                return true;
+            }
+            current = current.getParent();
+        }
+
+        Rect rect = new Rect();
+        row.getBoundsInScreen(rect);
+        if (rect.isEmpty()) {
+            node.getBoundsInScreen(rect);
+        }
+
+        return !rect.isEmpty() &&
+                tapPoint(
+                        rect.centerX() + prefs.getInt("group_offset_x", 0),
+                        rect.centerY() + prefs.getInt("group_offset_y", 0),
+                        prefs.getInt("tap_duration", 180)
+                );
     }
 
     private AccessibilityNodeInfo findExactText(
@@ -366,9 +481,18 @@ public class WhatsAppAutomationService extends AccessibilityService {
     }
 
     private boolean clickNodeOrParent(AccessibilityNodeInfo node) {
+        return clickNodeOrParentWithOffset(node, 0, 0, 180);
+    }
+
+    private boolean clickNodeOrParentWithOffset(
+            AccessibilityNodeInfo node,
+            int offsetX,
+            int offsetY,
+            int duration
+    ) {
         AccessibilityNodeInfo current = node;
 
-        for (int i = 0; current != null && i < 6; i++) {
+        for (int i = 0; current != null && i < 7; i++) {
             if (current.isClickable() &&
                     current.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                 return true;
@@ -378,17 +502,33 @@ public class WhatsAppAutomationService extends AccessibilityService {
 
         Rect rect = new Rect();
         node.getBoundsInScreen(rect);
-        return !rect.isEmpty() && tapPoint(rect.centerX(), rect.centerY());
+
+        return !rect.isEmpty() &&
+                tapPoint(
+                        rect.centerX() + offsetX,
+                        rect.centerY() + offsetY,
+                        duration
+                );
     }
 
     private boolean tapPoint(int x, int y) {
+        return tapPoint(x, y, 180);
+    }
+
+    private boolean tapPoint(int x, int y, int duration) {
         if (x <= 0 || y <= 0) return false;
 
         Path path = new Path();
         path.moveTo(x, y);
 
         GestureDescription gesture = new GestureDescription.Builder()
-                .addStroke(new GestureDescription.StrokeDescription(path, 0, 90))
+                .addStroke(
+                        new GestureDescription.StrokeDescription(
+                                path,
+                                0,
+                                Math.max(60, Math.min(800, duration))
+                        )
+                )
                 .build();
 
         return dispatchGesture(gesture, null, null);

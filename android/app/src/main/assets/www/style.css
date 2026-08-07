@@ -25,3 +25,17 @@ main{max-width:1120px;margin:auto;padding:18px}.page{display:none}.page.active{d
 .calibration-box h3{margin:0 0 7px}
 .coordinate-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:12px 0}
 @media(max-width:800px){.coordinate-grid{grid-template-columns:1fr 1fr}}
+
+.batch-paste-panel textarea{min-height:245px;resize:vertical;line-height:1.45}
+.batch-paste-panel{border:2px solid #b9dfc0;background:linear-gradient(180deg,#fbfffa,#f5faf4)}
+.batch-check{width:22px;height:22px;margin-top:4px;accent-color:var(--green)}
+.batch-message-preview{white-space:pre-wrap;max-height:92px;overflow:hidden;margin-top:8px;padding:8px;background:#f7faf6;border-radius:9px;color:var(--muted);font-size:12px}
+.batch-item-actions{display:flex;flex-direction:column;gap:7px}
+@media(max-width:800px){.batch-item-actions{flex-direction:row;flex-wrap:wrap}}
+
+.affiliate-confirm-line{display:flex;flex-direction:row;align-items:center;gap:8px;margin:8px 0;font-size:12px}
+.affiliate-confirm-line input{width:20px;height:20px;accent-color:var(--green)}
+.affiliate-ready{border:2px solid #28a657;background:#f5fff6}
+.affiliate-blocked{border:2px solid #e4b5b5;background:#fffafa}
+.affiliate-blocked .affiliate-confirm-line{color:#a43131}
+.affiliate-ready .affiliate-confirm-line{color:#087b34}

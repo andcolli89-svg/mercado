@@ -1,0 +1,19 @@
+CbOfertas V12.3
+
+LOTE
+- Colagem em bloco limpa.
+- Remove data, hora, nome do remetente, encaminhada/editada e duplicações.
+- Preserva link original.
+- Afiliado começa sempre desmarcado.
+- Checkbox só ativa por Usar link copiado.
+- Abrir produto no Mercado Livre.
+- Copiar link original.
+- Enviar cada oferta separadamente no WhatsApp Business.
+- Adicionar à fila somente com afiliado confirmado.
+
+ACESSIBILIDADE
+- Clique no grupo usa o contêiner mais largo da linha.
+- Fallback por coordenadas.
+- Duração do toque configurável.
+- Ajustes X/Y separados para grupo e Enviar.
+- Perfil celular antigo com esperas maiores.

@@ -48,3 +48,33 @@ Na página Fila:
 A automação continua dependendo da interface do WhatsApp e do Serviço de
 Acessibilidade. A calibração por aparelho reduz as diferenças entre celulares,
 mas pode precisar ser refeita após atualizações do WhatsApp.
+
+
+## Correção V12.2.1 — colagem em lote restaurada
+
+- Campo grande para colar várias ofertas copiadas do WhatsApp.
+- Uma oferta separada para cada link do Mercado Livre.
+- O lote anterior é preservado.
+- Links duplicados são ignorados.
+- Título e preço são extraídos do texto.
+- Seleção de todas ou algumas ofertas.
+- Envio das selecionadas para a fila automática.
+- Envio individual para o WhatsApp.
+- Exclusão individual.
+- Botão para apagar o lote completo.
+
+
+## V12.3 — lote afiliado e clique reforçado
+
+- Limpeza de cabeçalhos do WhatsApp, data, hora, remetente e linhas repetidas.
+- Uma oferta separada por link.
+- Link original preservado.
+- Afiliado desmarcado por padrão, mesmo quando o texto colado contém meli.la.
+- Checkbox afiliado somente após o botão `Usar link copiado`.
+- Botão `Abrir produto no ML`.
+- Botão `Copiar link original`.
+- Envio individual para WhatsApp Business somente após confirmação do afiliado.
+- Fila automática bloqueia ofertas de colagem sem afiliado confirmado.
+- Clique do destino usa a linha inteira, não apenas as letras do nome.
+- Duração e ajustes X/Y configuráveis.
+- Perfil pronto para celular antigo.

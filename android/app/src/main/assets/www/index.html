@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>CbOfertas V12.2</title>
-  <link rel="stylesheet" href="style.css?v=1220">
+  <title>CbOfertas V12.3</title>
+  <link rel="stylesheet" href="style.css?v=1230">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <strong>CbOfertas</strong>
-      <small>V12.2 — rodadas e calibração</small>
+      <small>V12.3 — lote afiliado e clique reforçado</small>
     </div>
     <button id="menuBtn" class="icon-btn" type="button">☰</button>
   </header>
@@ -35,7 +35,7 @@
           <h1>Painel de Afiliados</h1>
           <p>Dados internos, relatórios importados e campanhas rastreadas.</p>
         </div>
-        <span class="badge">V12.2 AUTOMÁTICA</span>
+        <span class="badge">V12.3</span>
       </div>
 
       <div class="metrics">
@@ -88,14 +88,51 @@
     </section>
 
     <section id="batchPage" class="page">
-      <div class="hero"><div><small>Preparação</small><h1>Lote</h1><p>Selecione ofertas e mande para a fila ou para o WhatsApp.</p></div></div>
+      <div class="hero">
+        <div>
+          <small>Colagem em massa</small>
+          <h1>Lote WhatsApp</h1>
+          <p>Cole várias mensagens copiadas do WhatsApp. O CbOfertas separa uma oferta para cada link e preserva o lote existente.</p>
+        </div>
+        <span class="badge">COLAGEM EM LOTE</span>
+      </div>
+
+      <section class="panel batch-paste-panel">
+        <label class="full">
+          Cole aqui todos os anúncios
+          <textarea
+            id="batchPasteInput"
+            rows="12"
+            placeholder="Cole várias ofertas completas aqui.&#10;&#10;Exemplo:&#10;Título da oferta&#10;De R$ 199 por R$ 99&#10;Cupom...&#10;https://meli.la/...&#10;&#10;Próxima oferta..."></textarea>
+        </label>
+
+        <div class="actions">
+          <button id="separateBatchPaste" class="primary" type="button">📥 Adicionar anúncios ao lote</button>
+          <button id="clearBatchPaste" type="button">Limpar campo</button>
+          <button id="clearEntireBatch" class="danger" type="button">Apagar lote</button>
+        </div>
+
+        <p id="batchPasteStatus" class="status">
+          O lote anterior será mantido. Links repetidos não serão adicionados novamente.
+        </p>
+      </section>
+
       <section class="panel">
+        <div class="title-row">
+          <div>
+            <h2>Anúncios separados</h2>
+            <p id="batchSummary" class="hint">Nenhum anúncio no lote.</p>
+          </div>
+          <strong id="batchSelectedCount" class="tag">0 selecionados</strong>
+        </div>
+
         <div class="actions">
           <button id="selectAllBatch">Selecionar todas</button>
           <button id="clearBatchSelection">Desmarcar</button>
-          <button id="batchToQueue" class="primary">Adicionar à fila</button>
-          <button id="batchSendNow" class="whatsapp">Enviar selecionada agora</button>
+          <button id="batchToQueue" class="primary">Adicionar selecionadas à fila</button>
+          <button id="batchSendNow" class="whatsapp">Enviar uma selecionada agora</button>
         </div>
+
         <p id="batchStatus" class="status"></p>
         <div id="batchList" class="list"></div>
       </section>
@@ -167,6 +204,25 @@
               <option value="text">Somente elementos/texto da tela</option>
             </select>
           </label>
+          <label>Duração do toque (ms)
+            <input id="automationTapDuration" type="number" min="60" max="800" step="20" value="220">
+          </label>
+
+          <label>Ajuste do grupo X
+            <input id="automationGroupOffsetX" type="number" min="-500" max="500" value="0">
+          </label>
+
+          <label>Ajuste do grupo Y
+            <input id="automationGroupOffsetY" type="number" min="-500" max="500" value="0">
+          </label>
+
+          <label>Ajuste de Enviar X
+            <input id="automationSendOffsetX" type="number" min="-500" max="500" value="0">
+          </label>
+
+          <label>Ajuste de Enviar Y
+            <input id="automationSendOffsetY" type="number" min="-500" max="500" value="0">
+          </label>
         </div>
 
         <label class="check-line">
@@ -183,6 +239,7 @@
           </p>
 
           <div class="actions">
+            <button id="oldPhonePreset" type="button">📱 Perfil celular antigo</button>
             <button id="calibrateGroup" type="button">🎯 Capturar clique do grupo</button>
             <button id="calibrateSend" type="button">🎯 Capturar clique de Enviar</button>
             <button id="clearCalibration" class="danger" type="button">Apagar calibração</button>
@@ -296,6 +353,6 @@
     <button data-page="settings">⚙️<span>Ajustes</span></button>
   </nav>
 
-  <script src="app.js?v=1220"></script>
+  <script src="app.js?v=1230"></script>
 </body>
 </html>
