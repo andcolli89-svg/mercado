@@ -1,0 +1,2 @@
+Correção do conflito de classes duplicadas do Kotlin.
+Todas as configurações Gradle agora forçam kotlin-stdlib 1.8.22.

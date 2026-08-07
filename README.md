@@ -24,3 +24,9 @@ Projeto completo com automação configurável por aparelho.
 A automação usa o Serviço de Acessibilidade e depende da interface do WhatsApp.
 Ela é configurável para reduzir diferenças entre aparelhos, mas pode precisar de
 ajuste quando o WhatsApp alterar a tela.
+
+
+## Correção V12.1.1
+
+- Unifica todas as dependências Kotlin em 1.8.22.
+- Corrige `checkDebugDuplicateClasses` entre Kotlin 1.8.22 e 1.6.21.
