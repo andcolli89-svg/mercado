@@ -1,8 +1,0 @@
-CbOfertas V5.1
-
-- Corrige preço promocional no Radar.
-- Confere cada anúncio antes de exibir o preço.
-- Lê centavos em aria-label do Mercado Livre.
-- Usa o desconto visível para separar preço, preço original, parcela e cashback.
-- Corrige busca por link meli.la quando o preço está apenas na página.
-- Mantém biblioteca de afiliados e demais recursos da V5.0.

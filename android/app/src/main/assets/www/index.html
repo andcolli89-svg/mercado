@@ -3,473 +3,236 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#dff7cf">
-  <title>CbOfertas V10.1</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=637">
+  <title>CbOfertas V12.1</title>
+  <link rel="stylesheet" href="style.css?v=1210">
 </head>
 <body>
-  <div id="menuOverlay" class="menu-overlay hidden"></div>
-  <aside id="sideMenu" class="side-menu" aria-label="Menu principal">
-    <div class="side-menu-head">
-      <div class="mini-logo">🏷️</div>
-      <div><b>CbOfertas</b><small>V10.1 • Criador de Ofertas Inteligente</small></div>
-      <button id="closeMenuBtn" type="button" aria-label="Fechar menu">✕</button>
+  <header class="topbar">
+    <div class="brand">
+      <strong>CbOfertas</strong>
+      <small>V12.1 — automação configurável</small>
     </div>
-    <button class="menu-link" data-page="offers" type="button">⌂ <span>Início</span></button>
-    <button class="menu-link" data-page="history" type="button">◷ <span>Histórico e agendamentos</span></button>
-    <button class="menu-link" data-page="coupons" type="button">🎟️ <span>Cupons inteligentes</span></button>
-    <button class="menu-link" data-page="batch" type="button">📥 <span>Lote WhatsApp</span></button>
-    <button class="menu-link" data-page="automation" type="button">🤖 <span>Piloto Automático</span></button>
-    <button class="menu-link" data-page="settings" type="button">⚙️ <span>Configurações</span></button>
-    <div class="side-menu-separator"></div>
-    <button id="menuNewItemBtn" class="menu-link" type="button">＋ <span>Nova oferta</span></button>
-    <button id="menuClearBtn" class="menu-link danger-link" type="button">🧹 <span>Limpar formulário</span></button>
-  </aside>
-
-  <header class="app-header">
-    <button id="menuBtn" class="header-icon" type="button" aria-label="Abrir menu">☰</button>
-    <div class="header-brand">
-      <div class="brand-mark">🏷️</div>
-      <div>
-        <div class="brand"><span>Cb</span><b>Ofertas</b></div>
-        <small>V10.1 • Criador de Ofertas Inteligente</small>
-      </div>
-    </div>
-    <button id="themeToggleBtn" class="header-icon theme-button" type="button" aria-label="Alternar tema">☾</button>
+    <button id="menuBtn" class="icon-btn" type="button">☰</button>
   </header>
 
-  <nav id="offersToolbar" class="hidden" aria-hidden="true"></nav>
-  <p id="topActionStatus" class="top-action-status" aria-live="polite"></p>
+  <aside id="drawer" class="drawer">
+    <button data-page="dashboard">📊 Painel</button>
+    <button data-page="offers">🏷️ Ofertas</button>
+    <button data-page="batch">📦 Lote</button>
+    <button data-page="queue">🕒 Fila</button>
+    <button data-page="history">🗂️ Histórico</button>
+    <button data-page="import">📥 Relatórios</button>
+    <button data-page="campaigns">🔗 Campanhas</button>
+    <button data-page="settings">⚙️ Configurações</button>
+  </aside>
+  <div id="overlay" class="overlay"></div>
 
-  <button id="showRadarPageBtn" type="button" hidden aria-hidden="true"></button>
-<button id="showFavoritesPageBtn" type="button" hidden aria-hidden="true"></button>
-<main>
-    <section id="offersPage" class="page-view">
-      <section id="editorCollapsedNotice" class="card saved-notice hidden">
-        <div class="saved-check">✓</div>
+  <main>
+    <section id="dashboardPage" class="page active">
+      <div class="hero">
         <div>
-          <b>Oferta salva no histórico</b>
-          <p>Toque em <strong>Nova oferta</strong> para cadastrar outro produto ou abra o histórico para publicar.</p>
+          <small>Visão geral</small>
+          <h1>Painel de Afiliados</h1>
+          <p>Dados internos, relatórios importados e campanhas rastreadas.</p>
         </div>
-        <button id="newItemBtn" class="btn compact primary" type="button">＋ Nova oferta</button>
-      </section>
+        <span class="badge">V12.1 AUTOMÁTICA</span>
+      </div>
 
-      <div id="editorArea" class="editor-area">
-        <section class="step-card search-step">
-          <div class="step-heading">
-            <span class="step-number">1</span>
-            <div><h2>Buscar Produto</h2><p>Cole o link do Mercado Livre ou Shopee</p></div>
-            <button id="pasteLinkBtn" class="round-soft" type="button" title="Colar link">🔗</button>
-          </div>
-          <div class="search-row">
-            <div class="input-with-icon"><span>🔗</span><input id="productLink" type="url" placeholder="https://produto.mercadolivre.com.br/..."></div>
-            <button id="fetchBtn" class="btn search-button" type="button">⌕ <span>Buscar</span></button>
-          </div>
-          <p id="fetchStatus" class="status" aria-live="polite"></p>
-          <div class="affiliate-link-box">
-            <button id="affiliateLinkBtn" class="btn affiliate-button" type="button" disabled>💰 Gerar link de afiliado</button>
-            <small>O Mercado Livre gera o rastreamento da sua conta. Abra o produto, toque em <b>Compartilhar</b> na faixa <b>Ganhos</b> e escolha <b>CbOfertas</b>.</small>
-          </div>
-          <p id="affiliateStatus" class="status affiliate-status" aria-live="polite"></p>
+      <div class="metrics">
+        <article><span>Ofertas</span><strong id="mOffers">0</strong></article>
+        <article><span>Cliques</span><strong id="mClicks">0</strong></article>
+        <article><span>Vendas</span><strong id="mSales">0</strong></article>
+        <article><span>Faturamento</span><strong id="mRevenue">R$ 0,00</strong></article>
+        <article><span>Comissão</span><strong id="mCommission">R$ 0,00</strong></article>
+      </div>
+
+      <div class="grid two">
+        <section class="panel">
+          <h2>Mais clicados</h2>
+          <div id="topClicks"></div>
         </section>
-
-        <section class="step-card product-step">
-          <div class="step-heading">
-            <span class="step-number">2</span>
-            <div><h2>Informações do Produto</h2><p>Confira os dados encontrados e ajuste o que precisar</p></div>
-            <span id="productFoundBadge" class="found-badge hidden">✓ Produto encontrado</span>
-          </div>
-
-          <div class="product-overview">
-            <div class="image-box">
-              <img id="productImage" alt="Imagem do produto">
-              <label class="image-picker">📷 Trocar foto<input id="imageFile" type="file" accept="image/*" hidden></label>
-            </div>
-            <div class="product-main">
-              <div class="badge-line"><span id="fullBadge" class="full-badge hidden">FULL</span><span id="discountBadge" class="discount-badge hidden"></span></div>
-              <label class="title-field">Título<input id="productTitle" placeholder="Nome do produto"></label>
-              <button id="openLinkBtn" class="text-link" type="button">↗ Abrir anúncio original</button>
-            </div>
-          </div>
-
-          <div class="price-summary">
-            <label class="price-cell old-cell"><span>Preço original</span><input id="oldPrice" inputmode="decimal" placeholder="399,90"></label>
-            <label class="price-cell offer-cell"><span>Preço final</span><input id="offerPrice" inputmode="decimal" placeholder="351,91"></label>
-            <div class="price-cell save-cell"><span>Você economiza</span><strong id="savingsValue">R$ 0,00</strong></div>
-          </div>
-
-          <div class="product-meta">
-            <label class="meta-cell coupon-meta-cell"><span>🏷️ Cupons da oferta</span><input id="coupon" placeholder="OFERTA10 ou FRETEGRATIS" autocomplete="off"><small>Você pode digitar, alterar ou selecionar vários cupons.</small><div id="offerCouponQuickList" class="coupon-quick-list"></div><button id="openCouponManagerBtn" class="inline-link-button" type="button">Gerenciar cupons salvos</button></label>
-            <label class="meta-cell"><span>🚚 Frete</span><select id="freight"><option value="Frete grátis">Grátis</option><option value="Entrega FULL">Entrega FULL</option><option value="Consulte o frete">Consultar</option><option value="">Não informar</option></select></label>
-            <label class="meta-cell seller-meta-cell"><span>🏬 Vendido por <b>(automático)</b></span><input id="seller" list="sellerSuggestions" placeholder="Preenchido automaticamente quando disponível" autocomplete="off"><small>Se o vendedor não for encontrado, esta informação não aparecerá no anúncio. Você ainda pode corrigir manualmente.</small></label>
-          </div>
-          <datalist id="sellerSuggestions"></datalist>
-
-          <div class="installment-box">
-            <div class="installment-heading">
-              <div><b>💳 Parcelamento</b><small>Deixe vazio quando o anúncio não mostrar parcelas.</small></div>
-              <label class="check-option"><input id="installmentNoInterest" type="checkbox" checked><span id="interestLabel">Sem juros</span></label>
-            </div>
-            <div class="installment-fields">
-              <label>Nº de parcelas<input id="installmentQty" type="number" inputmode="numeric" min="2" max="48" placeholder="10"></label>
-              <label>Valor da parcela<input id="installmentValue" inputmode="decimal" placeholder="35,19"></label>
-            </div>
-            <p id="installmentPreview" class="calculated-total"></p>
-          </div>
-
-          <div class="product-actions">
-            <button id="saveItemBtn" class="btn primary" type="button">♡ Salvar no histórico</button>
-            <button id="addCurrentToBatchBtn" class="btn secondary" type="button">📥 Adicionar ao Lote</button>
-            <button id="addCurrentToPilotBtn" class="btn secondary" type="button">🤖 Adicionar ao Piloto</button>
-            <button id="saveCurrentAndPilotBtn" class="btn primary" type="button">✅ Salvar + Piloto</button>
-            <button id="favoriteCurrentBtn" class="btn favorite-action" type="button">☆ Favoritar</button>
-            <button id="clearBtn" class="btn outline-danger" type="button">🧹 Limpar</button>
-            <button id="clearCouponBtn" class="btn outline" type="button">🗑️ Limpar cupons desta oferta</button>
-          </div>
-        </section>
-
-        <section class="step-card automatic-message-step">
-          <div class="step-heading">
-            <span class="step-number">3</span>
-            <div><h2>Mensagem automática</h2><p>A CbOfertas escolhe uma frase engraçada conforme o produto e coloca antes do título.</p></div>
-          </div>
-          <input id="smartPhrase" type="hidden">
-          <div id="preview" class="whatsapp-preview hidden"></div>
-          <div class="message-editor automatic-message-editor">
-            <textarea id="finalText" rows="9" maxlength="1200" aria-label="Mensagem automática pronta" readonly></textarea>
-            <div class="message-side-actions">
-              <button id="copySideBtn" type="button" title="Copiar mensagem">▣</button>
-            </div>
-          </div>
-          <div class="message-counter"><span>Frase e mensagem geradas automaticamente</span><strong id="charCounter">0/1200</strong></div>
-        </section>
-
-        <section class="step-card share-step">
-          <div class="step-heading">
-            <span class="step-number">4</span>
-            <div><h2>Compartilhar sua oferta</h2><p>Escolha como deseja publicar</p></div>
-          </div>
-          <div class="share-actions">
-            <button id="copyBtn" class="btn share-copy" type="button">▣ Copiar Texto</button>
-            <button id="whatsappBtn" class="btn whatsapp" type="button">◉ WhatsApp</button>
-            <button id="shareBtn" class="btn share-other" type="button">↗ Outros Apps</button>
-            <button id="quickSaveBtn" class="heart-button" type="button" title="Salvar no histórico">♡</button>
-          </div>
+        <section class="panel">
+          <h2>Mais vendidos</h2>
+          <div id="topSales"></div>
         </section>
       </div>
-    </section>
 
-    <section id="radarPage" class="page-view hidden" hidden aria-hidden="true">
-      <button id="refreshRadarBtn" type="button"></button>
-      <button id="searchRadarBtn" type="button"></button>
-      <input id="radarQuery"><select id="radarCategory"></select>
-      <input id="radarMinDiscount"><input id="radarMaxPrice">
-      <input id="radarOnlyFull" type="checkbox"><input id="radarHideUsed" type="checkbox"><input id="radarAutoOpen" type="checkbox">
-      <p id="radarStatus"></p><div id="radarResults"></div><div id="radarEmpty"></div>
-      <span id="radarFoundCount"></span><span id="radarNewCount"></span><span id="radarBestDiscount"></span><span id="radarLastUpdate"></span>
-      <button id="restoreHiddenRadarBtn" type="button"></button>
-    </section>
-
-    <section id="historyPage" class="page-view hidden">
-      <section class="page-intro"><span>◷</span><div><h1>Histórico de ofertas</h1><p>Edite, agende ou envie cada publicação separadamente.</p></div></section>
-      <section class="card publication-card">
-        <div class="section-title publication-title">
-          <span>📚</span><div><h2>Itens salvos</h2><p>Cada produto pode ter sua própria data e horário.</p></div><strong id="publicationCount" class="publication-count">0</strong>
-        </div>
-        <div id="publicationQueue" class="publication-queue"></div>
-        <div class="publication-footer">
-          <button id="scheduleSavedBtn" class="btn schedule full" type="button">📅 Agendar itens com data e hora</button>
-          <button id="sendSavedBtn" class="btn whatsapp full" type="button">📨 Enviar todas no WhatsApp Business</button>
-          <button id="clearSavedBtn" class="btn outline-danger full" type="button">🗑️ Apagar lista salva</button>
-          <p id="publicationStatus" class="status" aria-live="polite"></p>
-        </div>
-      </section>
-      <section class="notice"><b>Envio separado e com confirmação</b><p>Cada produto abre uma mensagem separada. O WhatsApp Business exige que você escolha o grupo e confirme cada envio.</p></section>
-    </section>
-    <section id="favoritesPage" class="page-view hidden" hidden aria-hidden="true">
-      <input id="favoritesSearch"><span id="favoritesCount"></span><div id="favoritesList"></div><div id="favoritesEmpty"></div><p id="favoritesStatus"></p><button id="clearFavoritesBtn" type="button"></button>
-    </section>
-
-    <section id="couponsPage" class="page-view hidden">
-      <section class="page-intro"><span>🎟️</span><div><h1>Cupons</h1><p>Cadastre vários cupons, altere quando precisar e escolha quais usar nas ofertas.</p></div></section>
-
-      <section id="couponManagerCard" class="card coupon-manager-card">
-        <div class="section-title coupon-library-title">
-          <span>🏷️</span><div><h2>Meus cupons inteligentes</h2><p>Cadastre a categoria de cada cupom para o programa reconhecer automaticamente quais combinam com o produto.</p></div><strong id="couponLibraryCount" class="publication-count">0</strong>
-        </div>
-        <div class="coupon-add-row">
-          <label>Cupom ou código<input id="couponCodeInput" placeholder="Ex.: MELIOFFHJ" autocomplete="off"></label>
-          <label>Categoria do cupom<select id="couponCategoryInput">
-            <option value="todo_site">Todo o site</option>
-            <option value="moda">Moda</option>
-            <option value="casa">Casa</option>
-            <option value="saude_diversos">Saúde e diversos</option>
-            <option value="diversos">Diversos</option>
-            <option value="especifico">Produto específico</option>
-          </select></label>
-          <label id="couponTargetLabel" class="coupon-target-label">Produto específico / palavras-chave<input id="couponTargetInput" placeholder="Ex.: Air Fryer, tênis Adidas ou link do produto" autocomplete="off"><small>Obrigatório apenas para cupom específico. Separe várias opções por vírgula.</small></label>
-          <label>Valor mínimo da oferta<input id="couponMinPriceInput" inputmode="decimal" placeholder="Ex.: 199,90"></label>
-          <label>Desconto mínimo (%)<input id="couponMinDiscountInput" type="number" min="0" max="95" inputmode="numeric" placeholder="Ex.: 20"></label>
-          <label>Validade rápida<select id="couponValidityPreset"><option value="">Sem validade</option><option value="0.5">30 minutos</option><option value="1">1 hora</option><option value="3">3 horas</option><option value="6">6 horas</option><option value="12">12 horas</option><option value="24">1 dia</option><option value="72">3 dias</option><option value="custom">Data e hora</option></select></label>
-          <label id="couponCustomExpiryLabel" class="hidden">Expira em<input id="couponExpiresAtInput" type="datetime-local"></label><input id="couponExpiresInput" type="hidden">
-          <label>Prioridade<select id="couponPriorityInput"><option value="1">Normal</option><option value="2">Alta</option><option value="3">Máxima</option></select></label>
-          <button id="saveCouponCodeBtn" class="btn primary" type="button">＋ Adicionar cupom</button>
-          <button id="cancelCouponEditBtn" class="btn outline hidden" type="button">Cancelar alteração</button>
-        </div>
-        <div class="coupon-smart-note">🤖 O programa cruza categoria, palavras-chave, preço mínimo, desconto, validade e prioridade. Cupons vencidos deixam de ser aplicados automaticamente.</div>
-        <div class="active-coupon-box">
-          <div><small>Cupons habilitados para reconhecimento</small><strong id="activeCouponPreview">Nenhum cupom habilitado</strong></div>
-          <button id="applyCouponsToOfferBtn" class="btn secondary" type="button">Aplicar todos manualmente</button>
-        </div>
-        <div id="couponSavedList" class="coupon-saved-list"></div>
-        <p id="couponLibraryStatus" class="status" aria-live="polite"></p>
-      </section>
-
-      <section id="couponBlastCard" class="card coupon-blast-card">
-        <div class="coupon-blast-grid">
-          <div class="coupon-blast-image-box">
-            <div id="couponImagePlaceholder" class="coupon-image-placeholder">🖼️<b>Nenhuma foto escolhida</b><small>Toque abaixo para abrir sua galeria</small></div>
-            <img id="couponBlastImage" alt="Foto salva para divulgação de cupons">
-            <label class="coupon-blast-picker">📷 Abrir galeria<input id="couponBlastImageFile" type="file" accept="image/*" hidden></label>
-            <button id="removeCouponBlastImageBtn" class="mini-btn danger-mini" type="button">Remover foto</button>
-          </div>
-          <div>
-            <label>Grupo preferido<input id="couponGroupName" placeholder="GRUPO DE OFERTAS CB #1"><small>Você ainda escolhe o grupo dentro do WhatsApp Business.</small></label>
-            <label>Link oficial dos cupons<input id="couponPageLink" type="url" value="https://www.mercadolivre.com.br/cupons?source_page=mperfil#nav-header"></label>
-          </div>
-        </div>
-        <label>Texto do aviso de cupons<textarea id="couponBlastText" rows="7" placeholder="Use {cupons} para inserir automaticamente os cupons ativos e {link} para inserir o link"></textarea><small>Marcadores disponíveis: <b>{cupons}</b> e <b>{link}</b>.</small></label>
-        <div class="coupon-blast-actions">
-          <button id="saveCouponBlastBtn" class="btn secondary" type="button">💾 Salvar modelo</button>
-          <button id="sendCouponBlastBtn" class="btn whatsapp" type="button">🚀 Enviar no WhatsApp Business</button>
-        </div>
-        <p id="couponBlastStatus" class="status" aria-live="polite"></p>
+      <section class="panel">
+        <h2>Desempenho por canal</h2>
+        <div id="channelStats" class="table-wrap"></div>
       </section>
     </section>
 
-
-
-    <section id="batchPage" class="page-view hidden">
-      <section class="card" id="batchBulkActionsCard">
-        <h2>📦 Ações das mensagens selecionadas</h2>
-        <div class="actions two-buttons">
-          <button id="selectAllBatchBtn" class="btn secondary" type="button">Selecionar todas</button>
-          <button id="clearBatchSelectionBtn" class="btn outline" type="button">Desmarcar todas</button>
+    <section id="offersPage" class="page">
+      <div class="hero"><div><small>Cadastro</small><h1>Ofertas</h1><p>Crie e edite ofertas antes de enviar.</p></div></div>
+      <section class="panel">
+        <div class="form-grid">
+          <label>Título<input id="offerTitle" placeholder="Nome do produto"></label>
+          <label>Link afiliado<input id="offerLink" placeholder="https://meli.la/..."></label>
+          <label>Preço<input id="offerPrice" inputmode="decimal" placeholder="999,90"></label>
+          <label>Categoria<input id="offerCategory" placeholder="Tecnologia"></label>
+          <label>Canal/etiqueta<input id="offerChannel" placeholder="WHATSAPP_GRUPO1"></label>
+          <label>Imagem<input id="offerImage" placeholder="https://..."></label>
+          <label class="full">Mensagem<textarea id="offerMessage" rows="7" placeholder="Texto que será enviado ao WhatsApp"></textarea></label>
         </div>
-        <div class="actions two-buttons">
-          <button id="sendSelectedBatchWhatsAppBtn" class="btn primary" type="button">Enviar ao WhatsApp</button>
-          <button id="sendSelectedBatchPilotBtn" class="btn secondary" type="button">Adicionar ao Piloto</button>
+        <div class="actions">
+          <button id="saveOffer" class="primary">Salvar</button>
+          <button id="clearOfferForm">Limpar</button>
         </div>
-        <label class="check-row"><input id="keepBatchAfterSendCheck" type="checkbox"><span>Manter no Lote depois de enviar</span></label>
-        <p id="batchBulkStatus" class="status">Selecione as mensagens no Lote.</p>
+        <p id="offerStatus" class="status"></p>
       </section>
+      <section class="panel">
+        <div class="title-row"><h2>Ofertas salvas</h2><strong id="offerCount">0</strong></div>
+        <div id="offerList" class="list"></div>
+      </section>
+    </section>
 
-      <section class="page-intro batch-intro"><span>📥</span><div><h1>Lote WhatsApp</h1><p>Cole vários anúncios, separe e envie somente os afiliados confirmados para o Piloto Automático.</p></div></section>
-      <section class="card batch-card">
-        <label class="batch-input-label">Cole aqui os anúncios copiados do WhatsApp
-          <textarea id="batchInput" rows="11" placeholder="Texto do anúncio...&#10;Cupom...&#10;https://meli.la/..."></textarea>
+    <section id="batchPage" class="page">
+      <div class="hero"><div><small>Preparação</small><h1>Lote</h1><p>Selecione ofertas e mande para a fila ou para o WhatsApp.</p></div></div>
+      <section class="panel">
+        <div class="actions">
+          <button id="selectAllBatch">Selecionar todas</button>
+          <button id="clearBatchSelection">Desmarcar</button>
+          <button id="batchToQueue" class="primary">Adicionar à fila</button>
+          <button id="batchSendNow" class="whatsapp">Enviar selecionada agora</button>
+        </div>
+        <p id="batchStatus" class="status"></p>
+        <div id="batchList" class="list"></div>
+      </section>
+    </section>
+
+    <section id="queuePage" class="page">
+      <div class="hero"><div><small>Modo seguro</small><h1>Fila de envio</h1><p>Cada envio abre o WhatsApp Business; você escolhe o grupo e confirma.</p></div></div>
+      
+      <section class="panel automation-panel">
+        <div class="title-row">
+          <h2>Piloto automático configurável</h2>
+          <strong id="automationStateBadge" class="tag">Parado</strong>
+        </div>
+
+        <div class="form-grid">
+          <label>Aplicativo
+            <select id="automationApp">
+              <option value="business" selected>WhatsApp Business</option>
+              <option value="normal">WhatsApp comum</option>
+            </select>
+          </label>
+          <label>Grupo ou contato padrão
+            <input id="automationGroup" value="GRUPO DE OFERTAS CB #1 🛒">
+          </label>
+          <label>Intervalo entre mensagens (minutos)
+            <input id="automationInterval" type="number" min="1" max="180" value="10">
+          </label>
+          <label>Limite diário
+            <input id="automationDailyLimit" type="number" min="1" max="500" value="80">
+          </label>
+          <label>Espera ao abrir o WhatsApp (ms)
+            <input id="automationOpenDelay" type="number" min="300" max="10000" step="100" value="1500">
+          </label>
+          <label>Espera depois do grupo (ms)
+            <input id="automationGroupDelay" type="number" min="200" max="10000" step="100" value="900">
+          </label>
+          <label>Tempo para voltar ao CbOfertas (ms)
+            <input id="automationReturnDelay" type="number" min="400" max="10000" step="100" value="1200">
+          </label>
+          <label>Máximo de tentativas
+            <select id="automationAttempts">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="check-line">
+          <input id="automationStopOnError" type="checkbox" checked>
+          <span>Parar toda a fila quando uma mensagem falhar</span>
         </label>
-        <button id="batchSeparateBtn" class="btn primary full" type="button">📥 Adicionar anúncios ao lote</button>
-        <p id="batchStatus" class="status" aria-live="polite"></p>
-      </section>
-      <section class="card batch-results-card">
-        <div class="batch-heading"><div><h2>⚡ Anúncios separados</h2><p id="batchSummary">Nenhum lote separado.</p></div><span id="batchReadyBadge" class="batch-ready-badge">0 prontos</span></div>
-        <div class="actions two-buttons">
-          <button id="batchPrepareBtn" class="btn secondary" type="button">🖼 Buscar fotos faltantes</button>
-          <button id="batchApplyAffiliateBtn" class="btn outline" type="button">🔗 Aplicar afiliados salvos</button>
+
+        <div class="actions">
+          <button id="openAccessibility" type="button">1. Autorizar Acessibilidade</button>
+          <button id="testAutomation" type="button">2. Enviar teste</button>
+          <button id="startAutomaticQueue" class="primary" type="button">▶ Ativar fila automática</button>
+          <button id="stopAutomaticQueue" class="danger" type="button">■ Parar automação</button>
         </div>
-        <div id="batchItemsList" class="batch-items-list"></div>
-        <button id="batchSendPilotBtn" class="btn whatsapp full" type="button">🔀 Enviar afiliados para o Piloto — embaralhado</button>
-        <small class="setting-help">Anúncios com link comum, sem link ou link inválido ficam bloqueados e não entram na fila.</small>
-        <p id="batchPilotStatus" class="status" aria-live="polite"></p>
+
+        <p id="automationStatus" class="status">Configure o perfil deste aparelho.</p>
+        <pre id="automationDiagnostic" class="diagnostic"></pre>
+      </section>
+
+      <section class="panel">
+        <div class="form-grid">
+          <label>Intervalo em minutos<input id="queueInterval" type="number" min="1" value="10"></label>
+          <label>Limite diário<input id="queueDailyLimit" type="number" min="1" value="80"></label>
+        </div>
+        <p id="queueStatus" class="status"></p>
+        <div id="queueList" class="list"></div>
       </section>
     </section>
 
-    <section id="automationPage" class="page-view hidden">
-
-<section class="card" id="v9SendControlPanel">
-  <div class="setting-title">
-    <span>🛡️</span>
-    <div>
-      <h2>Envio V9</h2>
-      <p>Modo Seguro é o padrão. O Piloto Experimental continua opcional.</p>
-    </div>
-  </div>
-
-  <strong id="v9ModeBadge" class="v9-mode-badge safe">Modo Seguro ativo</strong>
-
-  <label class="check-row">
-    <input id="v9SafeMode" type="radio" name="v9SendMode" value="safe" checked>
-    <span><b>Modo Seguro</b> — abre foto e texto no WhatsApp; você escolhe o grupo e envia.</span>
-  </label>
-
-  <label class="check-row">
-    <input id="v9ExperimentalMode" type="radio" name="v9SendMode" value="experimental">
-    <span><b>Piloto Experimental</b> — tenta selecionar e enviar automaticamente.</span>
-  </label>
-
-  <label class="field">
-    <span>Máximo de tentativas por oferta</span>
-    <select id="v9RetryLimit">
-      <option value="1">1</option>
-      <option value="2" selected>2</option>
-      <option value="3">3</option>
-      <option value="5">5</option>
-    </select>
-  </label>
-
-  <p id="v9QueueSummary" class="status">Carregando fila...</p>
-  <p id="v9SendStatus" class="status">Nenhum envio iniciado.</p>
-
-  <button id="v9RunDiagnostic" class="btn secondary full" type="button">
-    🔎 Executar diagnóstico
-  </button>
-
-  <pre id="v9DiagnosticOutput" class="status" style="white-space:pre-wrap">Execute o diagnóstico.</pre>
-</section>
-
-      <section class="page-intro"><span>🤖</span><div><h1>Piloto Automático</h1><p>Prepare a fila no celular novo e importe no aparelho enviador.</p></div></section>
-      <section class="card v6-mode-card">
-        <h2>Modo deste aparelho</h2>
-        <div class="v6-mode-grid"><button id="creatorModeBtn" class="btn primary" type="button">📱 Criador</button><button id="senderModeBtn" class="btn outline" type="button">📤 Enviador</button></div>
-        <p id="deviceModeStatus" class="status"></p>
-      </section>
-      <section class="card">
-        <h2>Fila do dia</h2>
-        <div class="v6-stats"><div><b id="v6QueueCount">0</b><small>ofertas</small></div><div><b id="v6ReadyCount">0</b><small>prontas</small></div><div><b id="v6NextTime">—</b><small>próximo envio</small></div></div>
-        <div class="v6-config-grid">
-          <label>Início<input id="v6StartTime" type="time" value="08:00"></label>
-          <label>Fim<input id="v6EndTime" type="time" value="21:00"></label>
-          <label>Ofertas por rodada<input id="v6BatchSize" type="number" min="1" max="5" value="3"></label>
-          <label>Intervalo entre rodadas (min)<input id="v6RoundInterval" type="number" min="15" max="180" value="30"></label>
-          <label>Intervalo interno (min)<input id="v6ItemInterval" type="number" min="1" max="10" value="2"></label>
-          <label>Máximo diário<input id="v6DailyLimit" type="number" min="1" max="100" value="36"></label>
+    <section id="historyPage" class="page">
+      <div class="hero"><div><small>Registro</small><h1>Histórico</h1><p>Enviadas ficam salvas sem cupom e com data.</p></div></div>
+      <section class="panel">
+        <div class="actions">
+          <button id="clearHistory" class="danger">Limpar histórico</button>
         </div>
-        <div class="actions two-buttons"><button id="buildDailyQueueBtn" class="btn secondary" type="button">🗓 Montar horários</button><button id="exportQueueBtn" class="btn primary" type="button">⬆ Exportar fila</button></div>
-        <label class="btn outline full import-button">⬇ Importar fila<input id="importQueueInput" type="file" accept=".cbofertas,application/json" hidden></label>
-        <p id="v6QueueStatus" class="status"></p>
-        <section class="saved-exports-card">
-          <div class="section-title"><span>🗃️</span><div><h2>Exportações salvas</h2><p>Reutilize anúncios antigos, retire cupons vencidos e aplique cupons ativos novamente.</p></div></div>
-          <div class="actions two-buttons"><button id="exportPendingBtn" class="btn outline" type="button">Exportar pendentes</button><button id="clearExportHistoryBtn" class="btn outline-danger" type="button">Limpar exportações</button></div>
-          <div id="savedExportsList" class="saved-exports-list"></div>
-        </section>
-        <div id="v6QueueList" class="v6-queue-list"></div>
-      </section>
-      <section class="card sender-control-card">
-        <h2>Central de envio automático</h2>
-        <p>Configure o nome exato do grupo. O módulo atua somente no WhatsApp e somente quando houver uma oferta agendada pela CbOfertas.</p>
-        <label>Nome exato do grupo<input id="automationGroupName" type="text" placeholder="Ex.: Ofertas do Fabio"></label>
-        <label class="check-line"><input id="automationEnabled" type="checkbox"><span>Ativar cliques automáticos no aparelho enviador</span></label>
-        <label class="check-line"><input id="automationTestMode" type="checkbox" checked><span>Modo de teste: prepara tudo, mas não toca em Enviar</span></label>
-        <div class="actions two-buttons">
-          <button id="openAccessibilityBtn" class="btn outline" type="button">⚙ Ativar acessibilidade</button>
-          <button id="testAutomationBtn" class="btn secondary" type="button">🧪 Testar primeira oferta</button>
-        </div>
-        <button id="activateSenderBtn" class="btn whatsapp full" type="button">▶ Ativar fila automática</button>
-        <button id="pauseSenderBtn" class="btn danger full" type="button">⏸ Pausar agendamentos</button>
-        <p id="accessibilityStatus" class="status"></p>
-        <p id="senderStatus" class="status"></p>
-        <small class="setting-help">Use primeiro o modo de teste em um grupo criado só para testes. O aparelho deve permanecer desbloqueado, conectado ao carregador e com o WhatsApp Business logado.</small>
-      </section>
-      <section class="card v62-preflight-card">
-        <h2>Verificação antes de iniciar</h2>
-        <div id="v62PreflightList" class="v62-check-list"></div>
-        <button id="v62RunPreflightBtn" class="btn outline full" type="button">✓ Verificar aparelho e fila</button>
-      </section>
-      <section class="card v62-report-card">
-        <h2>Relatório do piloto</h2>
-        <div class="v6-stats"><div><b id="v62SentCount">0</b><small>enviadas</small></div><div><b id="v62FailedCount">0</b><small>falharam</small></div><div><b id="v62PendingCount">0</b><small>pendentes</small></div></div>
-        <div id="v62ReportList" class="v6-queue-list"></div>
-        <div class="actions two-buttons"><button id="v62RefreshReportBtn" class="btn outline" type="button">↻ Atualizar</button><button id="v62ExportReportBtn" class="btn secondary" type="button">⬆ Exportar relatório</button></div>
+        <div id="historyList" class="list"></div>
       </section>
     </section>
-    <section id="settingsPage" class="page-view hidden">
-      <section class="card setting-card" id="historyStorageSettings">
-        <h2>🗂️ Histórico sem cupons</h2>
-        <label class="field"><span>Limite de mensagens</span>
-          <select id="historyLimitSelect">
-            <option value="100">100</option><option value="250">250</option>
-            <option value="500" selected>500</option><option value="1000">1000</option>
-          </select>
-        </label>
-        <button id="trimHistoryBtn" class="btn outline full" type="button">Limpar excedentes</button>
-        <p id="historyStorageStatus" class="status">Limite atual: 500 mensagens.</p>
-      </section>
 
-      <section class="page-intro"><span>⚙️</span><div><h1>Configurações</h1><p>O servidor oficial já vem preenchido e pronto para uso.</p></div></section>
-      <section class="card server-card">
-        <div class="setting-title"><span>🌐</span><div><h2>Servidor de busca</h2><p>Usado para consultar os anúncios do Mercado Livre.</p></div></div>
-        <label>Endereço do servidor<input id="apiServer" type="url" value="https://mercado-yvqn.onrender.com"></label>
-        <div class="actions two-buttons">
-          <button id="saveServerBtn" class="btn secondary" type="button">Salvar servidor</button>
-          <button id="testServerBtn" class="btn outline" type="button">Testar conexão</button>
+    <section id="importPage" class="page">
+      <div class="hero"><div><small>Mercado Livre</small><h1>Importar relatório</h1><p>CSV/TXT com produto, cliques, vendas, faturamento, comissão e etiqueta.</p></div></div>
+      <section class="panel">
+        <label class="upload">Selecionar arquivo<input id="reportFile" type="file" accept=".csv,.txt"></label>
+        <div class="actions">
+          <button id="importReport" class="primary">Importar</button>
+          <button id="clearReport" class="danger">Apagar relatório</button>
         </div>
-        <p id="serverStatus" class="status"></p>
+        <p id="importStatus" class="status"></p>
+        <div id="reportPreview" class="table-wrap"></div>
       </section>
-      <section class="card setting-card affiliate-setting-card">
-        <div class="setting-title"><span>💰</span><div><h2>Links de afiliado</h2><p>O CbOfertas recebe o link oficial criado pelo Mercado Livre e o aplica automaticamente à oferta.</p></div></div>
-        <ol class="affiliate-steps"><li>Abra ou busque o produto no CbOfertas.</li><li>Toque em <b>Gerar link de afiliado</b>.</li><li>No Mercado Livre, toque em <b>Compartilhar</b> na faixa Ganhos.</li><li>Escolha <b>CbOfertas</b> na lista de aplicativos.</li></ol>
-        <small class="setting-help">Não é necessário informar senha, token ou código de afiliado ao CbOfertas.</small>
-      </section>
-      <section class="card setting-card">
-        <div class="setting-title"><span>🧹</span><div><h2>Formulário</h2><p>Limpe os campos sem apagar as ofertas já salvas.</p></div></div>
-        <button id="settingsNewItemBtn" class="btn primary full" type="button">＋ Abrir nova oferta</button>
-      </section>
+    </section>
 
-      <section class="card setting-card radar-settings-card">
-        <div class="setting-title"><span>⚡</span><div><h2>Automação do Radar</h2><p>Quando ativado, o aplicativo procura novas ofertas ao abrir a tela do Radar.</p></div></div>
-        <label class="check-option radar-setting-toggle"><input id="settingsRadarAuto" type="checkbox" checked><span>Atualizar automaticamente ao abrir</span></label>
-        <small class="setting-help">As ofertas repetidas são reconhecidas pelo link e podem ficar ocultas depois de usadas.</small>
-      </section>
-
-      <section class="card setting-card">
-        <div class="setting-title"><span>🎯</span><div><h2>Calibração do Piloto</h2><p>Salve posições diferentes em cada celular para o grupo e a seta de envio.</p></div></div>
-        <div class="actions two-buttons">
-          <button id="calibrateGroupBtn" class="btn secondary" type="button">Calibrar grupo</button>
-          <button id="calibrateSendBtn" class="btn secondary" type="button">Calibrar seta</button>
+    <section id="campaignsPage" class="page">
+      <div class="hero"><div><small>Rastreamento</small><h1>Campanhas</h1><p>Crie links separados por canal e acompanhe cliques próprios.</p></div></div>
+      <section class="panel">
+        <div class="form-grid">
+          <label>Oferta<select id="campaignOffer"></select></label>
+          <label>Canal<input id="campaignChannel" placeholder="STATUS_WHATSAPP"></label>
+          <label class="full">Servidor do rastreador<input id="trackerBase" placeholder="https://seu-backend.com"></label>
         </div>
-        <button id="clearCalibrationBtn" class="btn outline full" type="button">Apagar calibração</button>
-        <p id="calibrationStatus" class="status">Verificando calibração...</p>
-        <small class="setting-help">O CbOfertas abrirá o WhatsApp Business automaticamente. Para a seta, escolha uma conversa de teste e depois toque na seta preta. A posição fica salva apenas neste aparelho.</small>
+        <button id="createCampaign" class="primary">Criar campanha</button>
+        <p id="campaignStatus" class="status"></p>
+        <div id="campaignList" class="list"></div>
       </section>
+    </section>
 
-      <section class="card about-card"><b>CbOfertas V8.4</b><p>Preços brasileiros corrigidos, links oficiais de afiliado recebidos pelo compartilhamento, Radar, cupons, histórico e favoritos.</p></section>
+    <section id="settingsPage" class="page">
+      <div class="hero"><div><small>Manutenção</small><h1>Configurações</h1><p>Backup, restauração e limpeza.</p></div></div>
+      <section class="panel">
+        <div class="form-grid">
+          <label>Limite do histórico<select id="historyLimit"><option>100</option><option>250</option><option selected>500</option><option>1000</option></select></label>
+          <label>Grupo padrão<input id="defaultGroup" value="GRUPO DE OFERTAS CB #1 🛒"></label>
+        </div>
+        <div class="actions">
+          <button id="exportBackup" class="primary">Exportar backup</button>
+          <label class="button-label">Restaurar backup<input id="restoreBackup" type="file" accept=".json"></label>
+          <button id="resetAll" class="danger">Apagar tudo</button>
+        </div>
+        <p id="settingsStatus" class="status"></p>
+      </section>
     </section>
   </main>
 
-  <nav class="bottom-nav" aria-label="Navegação principal">
-    <button id="showOffersPageBtn" class="bottom-tab active" data-page="offers" type="button"><span>⌂</span><b>Início</b></button>
-    <button id="showHistoryPageBtn" class="bottom-tab" data-page="history" type="button"><span>◷</span><b>Histórico</b></button>
-    <button id="showCouponsPageBtn" class="bottom-tab" data-page="coupons" type="button"><span>🎟</span><b>Cupons</b></button>
-    <button id="showBatchPageBtn" class="bottom-tab" data-page="batch" type="button"><span>📥</span><b>Lote</b></button>
-    <button id="showAutomationPageBtn" class="bottom-tab" data-page="automation" type="button"><span>🤖</span><b>Piloto</b></button>
-    <button id="showSettingsPageBtn" class="bottom-tab" data-page="settings" type="button"><span>⚙</span><b>Configurações</b></button>
+  <nav class="bottom-nav">
+    <button data-page="dashboard" class="active">📊<span>Painel</span></button>
+    <button data-page="offers">🏷️<span>Ofertas</span></button>
+    <button data-page="batch">📦<span>Lote</span></button>
+    <button data-page="queue">🕒<span>Fila</span></button>
+    <button data-page="settings">⚙️<span>Ajustes</span></button>
   </nav>
 
-  <script src="modules/core/event-bus.js?v=800"></script>
-  <script src="modules/core/storage.js?v=800"></script>
-  <script src="modules/core/safe-runtime.js?v=800"></script>
-  <script src="modules/features/affiliate-module.js?v=800"></script>
-  <script src="modules/features/navigation-module.js?v=800"></script>
-  <script src="modules/features/queue-transfer-module.js?v=800"></script>
-  <script src="app.js?v=1001"></script>
-  <script src="modules/features/calibration-module.js?v=870"></script>
-  <script src="modules/features/current-offer-actions.js?v=870"></script>
-
-  <script src="modules/features/queue-governance-module.js?v=872"></script>
-  <script src="modules/features/startup-module.js?v=870"></script>
-  <script src="modules/features/v88-lote-runtime.js?v=900"></script>
-  <script src="modules/features/v9-safe-send-runtime.js?v=900"></script>
-
-  <script src="modules/v10/storage.js?v=1001"></script>
-  <script src="modules/v10/affiliate.js?v=1001"></script>
-  <script src="modules/v10/history.js?v=1001"></script>
-  <script src="modules/v10/send.js?v=1001"></script>
-  <script src="modules/v10/queue.js?v=1001"></script>
-  <script src="modules/v10/bootstrap.js?v=1001"></script>
-
-  <script src="modules/v10/navigation.js?v=1001"></script>
+  <script src="app.js?v=1210"></script>
 </body>
 </html>

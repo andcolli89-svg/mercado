@@ -1,8 +1,0 @@
-CbOfertas V8.6
-
-- Máximo diário padrão: 80 ofertas.
-- Campo editável até 500 ofertas por dia.
-- Configurações antigas com 36 ou 70 migram para 80.
-- Grupo padrão: GRUPO DE OFERTAS CB #1 🛒
-- O grupo continua editável.
-- Valores personalizados existentes não são sobrescritos.

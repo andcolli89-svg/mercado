@@ -1,7 +1,0 @@
-CbOfertas V8.0
-Versão Android: 8.0.0
-Version code: 800
-
-Nova base modular criada.
-O app legado foi mantido somente como compatibilidade para preservar as funções existentes.
-Os módulos novos carregam antes dele e corrigem dependências quebradas.

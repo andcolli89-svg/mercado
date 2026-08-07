@@ -1,1 +1,0 @@
-V10.1: módulo independente de navegação para Início, Histórico, Cupons, Lote, Piloto e Configurações.
