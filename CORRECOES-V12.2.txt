@@ -1,0 +1,16 @@
+CbOfertas V12.2
+
+- 3 mensagens por rodada por padrão.
+- 30 minutos entre rodadas por padrão.
+- Intervalo interno em segundos.
+- Configuração de quantidade por rodada.
+- Calibração do clique do grupo.
+- Calibração do clique de Enviar.
+- Coordenadas editáveis manualmente.
+- Três estratégias de clique.
+- Espera real ao abrir o WhatsApp.
+- Espera real depois do grupo.
+- Somente dois cliques por trabalho.
+- Exportação e importação da fila.
+- Somar ou substituir fila.
+- Prevenção de duplicados.

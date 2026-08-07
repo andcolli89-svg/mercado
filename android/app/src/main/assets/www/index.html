@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>CbOfertas V12.1</title>
-  <link rel="stylesheet" href="style.css?v=1210">
+  <title>CbOfertas V12.2</title>
+  <link rel="stylesheet" href="style.css?v=1220">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <strong>CbOfertas</strong>
-      <small>V12.1 — automação configurável</small>
+      <small>V12.2 — rodadas e calibração</small>
     </div>
     <button id="menuBtn" class="icon-btn" type="button">☰</button>
   </header>
@@ -35,7 +35,7 @@
           <h1>Painel de Afiliados</h1>
           <p>Dados internos, relatórios importados e campanhas rastreadas.</p>
         </div>
-        <span class="badge">V12.1 AUTOMÁTICA</span>
+        <span class="badge">V12.2 AUTOMÁTICA</span>
       </div>
 
       <div class="metrics">
@@ -102,11 +102,11 @@
     </section>
 
     <section id="queuePage" class="page">
-      <div class="hero"><div><small>Modo seguro</small><h1>Fila de envio</h1><p>Cada envio abre o WhatsApp Business; você escolhe o grupo e confirma.</p></div></div>
+      <div class="hero"><div><small>Piloto automático</small><h1>Fila de envio</h1><p>Envio por rodadas, intervalos configuráveis e perfil de clique por aparelho.</p></div></div>
       
       <section class="panel automation-panel">
         <div class="title-row">
-          <h2>Piloto automático configurável</h2>
+          <h2>Piloto automático por aparelho</h2>
           <strong id="automationStateBadge" class="tag">Parado</strong>
         </div>
 
@@ -117,30 +117,54 @@
               <option value="normal">WhatsApp comum</option>
             </select>
           </label>
+
           <label>Grupo ou contato padrão
             <input id="automationGroup" value="GRUPO DE OFERTAS CB #1 🛒">
           </label>
-          <label>Intervalo entre mensagens (minutos)
-            <input id="automationInterval" type="number" min="1" max="180" value="10">
+
+          <label>Mensagens por rodada
+            <input id="automationPerRound" type="number" min="1" max="20" value="3">
           </label>
+
+          <label>Intervalo entre rodadas (minutos)
+            <input id="automationRoundInterval" type="number" min="1" max="360" value="30">
+          </label>
+
+          <label>Intervalo interno entre mensagens (segundos)
+            <input id="automationInternalInterval" type="number" min="5" max="600" value="20">
+          </label>
+
           <label>Limite diário
             <input id="automationDailyLimit" type="number" min="1" max="500" value="80">
           </label>
+
           <label>Espera ao abrir o WhatsApp (ms)
-            <input id="automationOpenDelay" type="number" min="300" max="10000" step="100" value="1500">
+            <input id="automationOpenDelay" type="number" min="300" max="15000" step="100" value="2500">
           </label>
-          <label>Espera depois do grupo (ms)
-            <input id="automationGroupDelay" type="number" min="200" max="10000" step="100" value="900">
+
+          <label>Espera depois do clique no grupo (ms)
+            <input id="automationGroupDelay" type="number" min="200" max="15000" step="100" value="1600">
           </label>
+
           <label>Tempo para voltar ao CbOfertas (ms)
-            <input id="automationReturnDelay" type="number" min="400" max="10000" step="100" value="1200">
+            <input id="automationReturnDelay" type="number" min="400" max="15000" step="100" value="1400">
           </label>
-          <label>Máximo de tentativas
+
+          <label>Máximo de tentativas por etapa
             <select id="automationAttempts">
               <option value="1">1</option>
-              <option value="2" selected>2</option>
-              <option value="3">3</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
               <option value="5">5</option>
+              <option value="8">8</option>
+            </select>
+          </label>
+
+          <label>Estratégia de clique
+            <select id="automationClickStrategy">
+              <option value="fallback" selected>Texto e coordenadas de reserva</option>
+              <option value="coordinates">Somente coordenadas calibradas</option>
+              <option value="text">Somente elementos/texto da tela</option>
             </select>
           </label>
         </div>
@@ -150,6 +174,31 @@
           <span>Parar toda a fila quando uma mensagem falhar</span>
         </label>
 
+        <section class="calibration-box">
+          <h3>Calibração dos cliques de Acessibilidade</h3>
+          <p class="hint">
+            No celular antigo, calibre primeiro o destino e depois o botão Enviar.
+            A calibração do botão Enviar deve ser feita em uma conversa de teste,
+            pois o toque será executado de verdade.
+          </p>
+
+          <div class="actions">
+            <button id="calibrateGroup" type="button">🎯 Capturar clique do grupo</button>
+            <button id="calibrateSend" type="button">🎯 Capturar clique de Enviar</button>
+            <button id="clearCalibration" class="danger" type="button">Apagar calibração</button>
+          </div>
+
+          <div class="coordinate-grid">
+            <label>Grupo X<input id="calibrationGroupX" type="number" min="0"></label>
+            <label>Grupo Y<input id="calibrationGroupY" type="number" min="0"></label>
+            <label>Enviar X<input id="calibrationSendX" type="number" min="0"></label>
+            <label>Enviar Y<input id="calibrationSendY" type="number" min="0"></label>
+          </div>
+
+          <button id="saveManualCalibration" type="button">Salvar coordenadas manuais</button>
+          <p id="calibrationStatus" class="status"></p>
+        </section>
+
         <div class="actions">
           <button id="openAccessibility" type="button">1. Autorizar Acessibilidade</button>
           <button id="testAutomation" type="button">2. Enviar teste</button>
@@ -157,15 +206,29 @@
           <button id="stopAutomaticQueue" class="danger" type="button">■ Parar automação</button>
         </div>
 
-        <p id="automationStatus" class="status">Configure o perfil deste aparelho.</p>
+        <p id="automationStatus" class="status">Configure e calibre o perfil deste aparelho.</p>
         <pre id="automationDiagnostic" class="diagnostic"></pre>
       </section>
 
       <section class="panel">
-        <div class="form-grid">
-          <label>Intervalo em minutos<input id="queueInterval" type="number" min="1" value="10"></label>
-          <label>Limite diário<input id="queueDailyLimit" type="number" min="1" value="80"></label>
+        <div class="title-row">
+          <h2>Mensagens da fila</h2>
+          <strong id="queueTransferCount">0</strong>
         </div>
+
+        <div class="actions">
+          <button id="exportQueue" type="button">⬆ Exportar fila</button>
+          <label class="button-label">
+            ⬇ Importar fila
+            <input id="importQueueFile" type="file" accept=".json,application/json">
+          </label>
+          <select id="importQueueMode">
+            <option value="merge" selected>Somar à fila atual</option>
+            <option value="replace">Substituir fila atual</option>
+          </select>
+        </div>
+
+        <p id="queueTransferStatus" class="status"></p>
         <p id="queueStatus" class="status"></p>
         <div id="queueList" class="list"></div>
       </section>
@@ -233,6 +296,6 @@
     <button data-page="settings">⚙️<span>Ajustes</span></button>
   </nav>
 
-  <script src="app.js?v=1210"></script>
+  <script src="app.js?v=1220"></script>
 </body>
 </html>

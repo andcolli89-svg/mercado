@@ -1,4 +1,4 @@
-name: Gerar APK CbOfertas V12.1.1
+name: Gerar APK CbOfertas V12.2
 
 on:
   workflow_dispatch:
@@ -48,13 +48,13 @@ jobs:
 
       - name: Preparar APK
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk CbOfertas-V12.1.1.apk
-          sha256sum CbOfertas-V12.1.1.apk > CbOfertas-V12.1.1.apk.sha256
+          cp android/app/build/outputs/apk/debug/app-debug.apk CbOfertas-V12.2.apk
+          sha256sum CbOfertas-V12.2.apk > CbOfertas-V12.2.apk.sha256
 
       - uses: actions/upload-artifact@v4
         with:
-          name: CbOfertas-V12.1.1-APK
+          name: CbOfertas-V12.2-APK
           path: |
-            CbOfertas-V12.1.1.apk
-            CbOfertas-V12.1.1.apk.sha256
+            CbOfertas-V12.2.apk
+            CbOfertas-V12.2.apk.sha256
           retention-days: 30

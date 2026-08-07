@@ -1,32 +1,50 @@
-# CbOfertas V12.1
+# CbOfertas V12.2
 
-Projeto completo com automação configurável por aparelho.
+## Automação por rodadas
 
-## Piloto automático
+Configuração padrão:
 
-- WhatsApp Business ou WhatsApp comum.
-- Grupo/contato padrão editável.
-- Intervalo configurável.
-- Limite diário.
-- Tempos de espera ajustáveis.
-- Máximo de tentativas.
-- Parar ou continuar após erro.
-- Teste guiado.
-- Botão de emergência.
-- Máquina de estados com no máximo dois cliques:
-  1. destino;
-  2. enviar.
-- Trava pós-envio e retorno ao CbOfertas.
-- Enviadas saem da fila e vão ao histórico sem cupons.
+- 3 mensagens por rodada;
+- 20 segundos entre as mensagens da mesma rodada;
+- 30 minutos entre as rodadas;
+- limite diário de 80 mensagens.
 
-## Atenção
+Todos os valores são editáveis no celular.
 
-A automação usa o Serviço de Acessibilidade e depende da interface do WhatsApp.
-Ela é configurável para reduzir diferenças entre aparelhos, mas pode precisar de
-ajuste quando o WhatsApp alterar a tela.
+## Calibração para aparelhos antigos
 
+Há três estratégias:
 
-## Correção V12.1.1
+1. somente elementos e textos da tela;
+2. somente coordenadas calibradas;
+3. texto primeiro e coordenadas como reserva.
 
-- Unifica todas as dependências Kotlin em 1.8.22.
-- Corrige `checkDebugDuplicateClasses` entre Kotlin 1.8.22 e 1.6.21.
+Passos:
+
+1. ativar Acessibilidade;
+2. tocar em **Capturar clique do grupo** e selecionar o destino;
+3. tocar em **Capturar clique de Enviar**;
+4. usar uma conversa de teste, pois essa segunda calibração envia a mensagem;
+5. executar **Enviar teste**;
+6. ativar a fila.
+
+A máquina de estados permite apenas dois cliques por mensagem:
+
+1. destino;
+2. Enviar.
+
+## Transferência entre celulares
+
+Na página Fila:
+
+- Exportar fila;
+- Importar fila;
+- Somar à fila atual;
+- Substituir fila atual;
+- evitar duplicados pelo link ou identificador.
+
+## Observação
+
+A automação continua dependendo da interface do WhatsApp e do Serviço de
+Acessibilidade. A calibração por aparelho reduz as diferenças entre celulares,
+mas pode precisar ser refeita após atualizações do WhatsApp.
